@@ -3,144 +3,186 @@ const P = require('pino');
 const express = require('express');
 
 const app = express();
-app.get('/', (req, res) => res.send('🌍 د معلوماتو نړۍ - د ګروپ اډمین بوټ فعال دی 24/7'));
-app.listen(process.env.PORT || 5000, () => console.log('✅ Server Alive - Admin Bot Ready'));
+app.get('/', (req, res) => res.send('🌍 د معلوماتو نړۍ - Ultimate AI & Admin Bot Active 24/7'));
+app.listen(process.env.PORT || 5000, () => console.log('✅ Server Alive'));
 
 const PHONE = '93707285093';
 
-// ۱. د ممنوعه بدو کلمو لیست (د حذف کولو لپاره)
+// ۱. ممنوعه او سپکې کلمې
 const BAD_WORDS = [
   'کنځل','ښکنځل','خر','سګ','بیغیرت','لعنت','کوس','کون','مادر',
   'fuck','shit','bitch','pussy','harami','احمق','چوتیا','کونی',
   'بی ناموس','حرامی','fucking','بیادبه','مردار'
 ];
 
-// ۲. د ګروپ قوانین
+// ۲. د ګروپ رسمي قوانین
 const GROUP_RULES = `📜 *د معلوماتو نړۍ - د ګروپ رسمي قوانین* 📜
 
-1️⃣ *ادب او احترام:* د ټولو محترمو غړو درناوی فرض دی 🙏
-2️⃣ *د لینکونو خپرول منع دي:* هر ډول سوداګریز یا د ګروپونو لینکونه سمدستي حذفیږي 🚫
-3️⃣ *سپکې او بدې خبرې منع دي:* سپکاوی او بدې کلمې سمدستي حذفیږي ❌
-4️⃣ *علمي او ګټور مطالب:* هیله ده یوازې ګټور او علمي معلومات شریک کړئ 📚
+1️⃣ *یوازې علمي او دقیق معلومات:* دا د معلوماتو تخصصي ګروپ دی 📚
+2️⃣ *عامې خبرې او ګپ شپ منع دي:* عامې خبرې سمدستي حذفیږي ❌
+3️⃣ *د لینکونو خپرول منع دي:* هر ډول سوداګریز او د نورو ګروپونو لینکونه حذفیږي 🚫
+4️⃣ *د بدو خبرو مخنیوی:* سپکاوی مطلق منع دی 🛑`;
 
-💡 *یادونه:* د قوانینو د نه مراعاتولو په صورت کې بوټ ستاسو پیغامونه په اتومات ډول ډیلیټ کوي.`;
+// د علمي پوښتنو د پیژندلو ځیرک فلټر
+function isQuestionOrInfo(text) {
+  const lower = text.toLowerCase().trim();
+  const qWords = ['څوک', 'څه', 'ولې', 'څنګه', 'کوم', 'کله', 'چېرته', 'ایا', 'آیا', 'کولی', 'معلومات', 'پوښتنه', 'توضيح', 'تعریف', '؟', '?'];
+  
+  const hasQuestionWord = qWords.some(w => lower.includes(w));
+  const isLongInformative = text.length > 50; 
+  
+  return hasQuestionWord || isLongInformative;
+}
+
+// د مصنوعي ځیرکتیا د ځوابولو سیستم (Gemini REST API + Fallback)
+async function askAI(promptText, userName) {
+  const apiKey = (process.env.GEMINI_API_KEY || '').trim();
+  const systemInstruction = `ستاسو نوم "د معلوماتو نړۍ مصنوعي ځیرکتیا" دی. د پوښتونکي نوم "${userName}" دی. یوازې همدې علمي پوښتنې ته پوره، موثق او منظم پښتو ځواب ورکړئ.`;
+
+  // لومړۍ هڅه: مستقیم له Google API څخه
+  if (apiKey) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: `${systemInstruction}\n\nپوښتنه: ${promptText}` }] }] })
+      });
+      const data = await res.json();
+      if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+        return `🤖 *محترم ${userName} جانه!* 🌟\n\n${data.candidates[0].content.parts[0].text}`;
+      }
+    } catch (e) {
+      console.log('Gemini API Error:', e.message);
+    }
+  }
+
+  // دوهمه هڅه: که ګوګل ځواب ورنه کړ، له وړیا بیک اپ سرور څخه ځواب اخلي
+  try {
+    const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(systemInstruction + '\n\n' + promptText)}`);
+    const textData = await res.text();
+    if (textData && textData.length > 10) {
+      return `🤖 *محترم ${userName} جانه!* 🌟\n\n${textData}`;
+    }
+  } catch (e) {
+    console.log('Fallback AI Error:', e.message);
+  }
+
+  return `⚠️ *محترم ${userName} جانه!* د اطلاعاتو په پروسس کې لنډمهاله ځنډ راغلی. مهرباني وکړئ لږ وروسته بیا پوښتنه وکړئ.`;
+}
 
 async function startBot() {
   const { version } = await fetchLatestBaileysVersion();
   const { state, saveCreds } = await useMultiFileAuthState('auth_info');
   
-  const sock = makeWASocket({ 
-    version, 
-    auth: state, 
-    logger: P({level:'silent'}), 
+  const sock = makeWASocket({
+    version,
+    auth: state,
+    logger: P({level:'silent'}),
     browser: ['Ubuntu', 'Chrome', '20.0.0'],
     markOnlineOnConnect: true
   });
-  
-  sock.ev.on('creds.update', saveCreds);
 
-  if (!sock.authState.creds.registered) {
-    setTimeout(async () => {
-      try {
-        const code = await sock.requestPairingCode(PHONE);
-        console.log(`\n============================\n✅ PAIRING CODE: ${code}\n============================\n`);
-      } catch (e) {
-        console.log('Pairing error:', e.message);
-      }
-    }, 4000);
-  }
+  sock.ev.on('creds.update', saveCreds);
 
   sock.ev.on('connection.update', u => {
     const { connection, lastDisconnect } = u;
-    if (connection === 'open') console.log('✅ د معلوماتو نړۍ اډمین بوټ فعال شو!');
+    if (connection === 'open') console.log('✅ نهایي بوټ فعال شو!');
     if (connection === 'close') {
-      const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-      if (shouldReconnect) startBot();
+      if (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) startBot();
     }
   });
 
-  // نوي غړي ته بې له کښته-پورته نوم ښه راغلاست او قوانین لېږل
+  // نوي غړي ته قوانین لېږل
   sock.ev.on('group-participants.update', async a => {
     if (a.action === 'add') {
       for (let p of a.participants) {
         const num = p.split('@')[0];
         await sock.sendMessage(a.id, { 
-          text: `🌍 *سلام محترم @${num} جانه! د معلوماتو نړۍ ګروپ ته ښه راغلاست!* 🌸\n\nمهرباني وکړئ د ګروپ د ښه نظم لپاره دا لاندې قوانین مراعات کړئ:\n\n${GROUP_RULES}`, 
+          text: `🌍 *سلام محترم @${num} جانه! د معلوماتو نړۍ ګروپ ته ښه راغلاست!* 🌸\n\n${GROUP_RULES}`, 
           mentions: [p] 
         }).catch(() => {});
       }
     }
   });
 
-  // د پیغامونو انضباطي پروسس او اتومات کنټرول
+  // د پیغامونو پروسس
   sock.ev.on('messages.upsert', async m => {
     const msg = m.messages[0];
     if (!msg.message || msg.key.fromMe) return;
-    
+
     const from = msg.key.remoteJid;
     const isGroup = from.endsWith('@g.us');
     const text = msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || '';
     if (!text) return;
-    
-    // د کارونکي د پاک نوم استخراج
+
     const rawName = msg.pushName || msg.key.participant?.split('@')[0] || from.split('@')[0] || 'ملګری';
     const name = rawName.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
     const lower = text.toLowerCase().trim();
     const participant = msg.key.participant || from;
 
-    // A. د لینکونو کشف او اتومات ډیلیټ کول (Anti-Link)
-    const hasLink = /(chat\.whatsapp\.com|https?:\/\/|www\.|t\.me|facebook\.com|tiktok\.com|youtube\.com|youtu\.be)/i.test(text);
-    if (hasLink && isGroup) {
-      try {
-        // د ناسم پیغام ډیلیټ کول
-        await sock.sendMessage(from, { delete: msg.key });
-        
-        // د غړي خبردارول
-        await sock.sendMessage(from, { 
-          text: `⚠️ *محترم ${name} جانه!*\nپه ګروپ کې د لینکونو خپرول منع دي! ستاسو پیغام د ګروپ د اصولو خلاف و او حذف شو. 🚫`, 
-          mentions: [participant] 
-        });
-      } catch (err) {
-        console.log('د پیغام حذف کولو کې ستونزه (بوټ اډمین کړئ):', err.message);
-      }
-      return;
-    }
-
-    // B. د بدو کلمو او سپکاوي کشف او اتومات ډیلیټ کول (Anti-Bad Words)
-    const hasBadWord = BAD_WORDS.some(word => lower.includes(word));
-    if (hasBadWord && isGroup) {
-      try {
-        // د بد پیغام حذف کول
-        await sock.sendMessage(from, { delete: msg.key });
-        
-        // غړي ته جدي اتومات تبصره
-        await sock.sendMessage(from, { 
-          text: `⚠️ *محترم ${name} جانه!*\nمهرباني وکړئ د ګروپ اخلاقي او ادبي فضا وپالئ. ستاسو پیغام د بې ځایه او سپکو کلمو درلودلو له امله حذف شو! ❌`, 
-          mentions: [participant] 
-        });
-      } catch (err) {
-        console.log('د پیغام حذف کولو کې ستونزه (بوټ اډمین کړئ):', err.message);
-      }
-      return;
-    }
-
-    // C. د قوانینو غوښتنه
-    if (['قوانین', 'قانون', 'rules', 'قوانين'].includes(lower)) {
+    // ۱. د بدو خبرو ډیلیټ کول
+    if (BAD_WORDS.some(w => lower.includes(w)) && isGroup) {
+      await sock.sendMessage(from, { delete: msg.key }).catch(() => {});
       await sock.sendMessage(from, { 
-        text: `📜 *محترم ${name} جانه، دا د ګروپ ټول قوانین دي:*\n\n${GROUP_RULES}`, 
+        text: `⚠️ *محترم ${name} جانه!* ستاسو پیغام د بدو کلمو له امله حذف شو! ❌`, 
+        mentions: [participant] 
+      });
+      return;
+    }
+
+    // ۲. د لینکونو ډیلیټ کول
+    if (/(chat\.whatsapp\.com|https?:\/\/|www\.|t\.me|facebook\.com|tiktok\.com|youtube\.com)/i.test(text) && isGroup) {
+      await sock.sendMessage(from, { delete: msg.key }).catch(() => {});
+      await sock.sendMessage(from, { 
+        text: `⚠️ *محترم ${name} جانه!* په ګروپ کې د لینکونو خپرول منع دي! 🚫`, 
+        mentions: [participant] 
+      });
+      return;
+    }
+
+    // ۳. د قوانینو پوښتنه
+    if (['قوانین', 'قانون', 'rules'].includes(lower)) {
+      await sock.sendMessage(from, { 
+        text: `📜 *محترم ${name} جانه:*\n\n${GROUP_RULES}`, 
         mentions: [participant] 
       }, { quoted: msg });
       return;
     }
 
-    // D. د اتومات درانه سلام ځواب
+    // ۴. د سلام ځواب (لنډ)
     const salamList = ['سلام', 'salam', 'hi', 'hello', 'السلام', 'عليكم', 'علیکم'];
-    if (salamList.some(s => lower.includes(s))) {
-      await sock.sendMessage(from, {
-        text: `🌍 *و علیکم سلام محترم ${name} جانه!* 🌸\n\nد **د معلوماتو نړۍ** ګروپ ته ښه راغلاست! د ګروپ د قوانینو د لیدلو لپاره *قوانین* ولیکئ.`,
-        mentions: [participant]
+    if (salamList.some(s => lower.includes(s)) && text.length < 20) {
+      await sock.sendMessage(from, { 
+        text: `🌍 *و علیکم سلام محترم ${name} جانه!* 🌸 مهرباني وکړئ یوازې علمي پوښتنې مطرح کړئ.`, 
+        mentions: [participant] 
       }, { quoted: msg });
       return;
+    }
+
+    // ۵. د عامو خبرو ډیلیټ کول (چې نه پوښتنه وي او نه معلومات)
+    if (isGroup && !isQuestionOrInfo(text)) {
+      await sock.sendMessage(from, { delete: msg.key }).catch(() => {});
+      await sock.sendMessage(from, { 
+        text: `⚠️ *محترم ${name} جانه!*\nدا د معلوماتو ګروپ دی. عامې خبرې (ګپ شپ) دلته منع دي او ستاسو پیغام حذف شو! 🚫`, 
+        mentions: [participant] 
+      });
+      return;
+    }
+
+    // ۶. یوازې علمي پوښتنو ته د AI ځواب
+    if (isGroup && isQuestionOrInfo(text)) {
+      await sock.sendMessage(from, { 
+        text: `⏳ *محترم ${name} جانه، د پوښتنې علمي ځواب مو چمتو کېږي...* 🧠✨` 
+      }, { quoted: msg }).catch(() => {});
+
+      const aiResponse = await askAI(text, name);
+      if (aiResponse) {
+        await sock.sendMessage(from, { 
+          text: aiResponse, 
+          mentions: [participant] 
+        }, { quoted: msg });
+      }
     }
   });
 }
