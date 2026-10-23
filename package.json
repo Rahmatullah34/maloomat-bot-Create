@@ -1,8 +1,11 @@
 {
   "name": "maloomat-group-admin-bot",
   "version": "4.0.0",
-  "description": "د معلوماتو نړۍ - د ګروپ اتومات مدبر او کنټرولر",
+  "description": "د معلوماتو نړۍ - د ګروپ اتومات مدیر او کنټرولر",
   "main": "index.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node index.js"
   },
