@@ -73,7 +73,9 @@ async function askAI(promptText, userName) {
 
 async function startBot() {
   const { version } = await fetchLatestBaileysVersion();
-  const { state, saveCreds } = await useMultiFileAuthState('auth_info');
+  
+  // دلته مې بدلون راوست ترڅو نوی کوډ درکړي (auth_new)
+  const { state, saveCreds } = await useMultiFileAuthState('auth_new');
   
   const sock = makeWASocket({
     version,
@@ -84,6 +86,17 @@ async function startBot() {
   });
 
   sock.ev.on('creds.update', saveCreds);
+
+  if (!sock.authState.creds.registered) {
+    setTimeout(async () => {
+      try {
+        const code = await sock.requestPairingCode(PHONE);
+        console.log(`\n============================\n✅ PAIRING CODE: ${code}\n============================\n`);
+      } catch (e) {
+        console.log('Pairing error:', e.message);
+      }
+    }, 4000);
+  }
 
   sock.ev.on('connection.update', u => {
     const { connection, lastDisconnect } = u;
