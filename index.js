@@ -2,12 +2,13 @@ const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLat
 const P = require('pino');
 const express = require('express');
 const app = express();
-app.get('/', (req,res)=>res.send('🌍 د معلوماتو نړۍ - Gemini فعال - 24/7 Online'));
-app.listen(process.env.PORT || 5000, ()=>console.log('✅ Web server alive - Bot Ready'));
+
+app.get('/', (req, res) => res.send('🌍 د معلوماتو نړۍ - Gemini AI فعال - 24/7 Online'));
+app.listen(process.env.PORT || 5000, () => console.log('✅ Web server alive - Bot Ready'));
 
 const PHONE = '93707285093';
 
-// بدې خبرې - مکمل لست
+// بدې خبرې - د قوانینو لپاره لست
 const BAD_WORDS = ['کنځل','ښکنځل','خر','سګ','بیغیرت','لعنت','کوس','کون','مادر','fuck','shit','bitch','pussy','harami','احمق','چوتیا','کونی','بی ناموس','حرامی','fucking'];
 
 const GROUP_RULES = `📜 *د معلوماتو نړۍ - د ګروپ قوانین* 📜
@@ -24,7 +25,7 @@ const GROUP_RULES = `📜 *د معلوماتو نړۍ - د ګروپ قوانین
 💡 *قانون ولیکئ* - قوانین درته وایم
 `;
 
-// جیمینای غوندې مفصل ځواب - هره برخه
+// جیمینای غوندې مفصل ځواب د نوم سره
 function getGeminiAnswer(question, name) {
   const q = question.toLowerCase().trim();
 
@@ -78,14 +79,14 @@ function getGeminiAnswer(question, name) {
 🏛️ *افغانستان - د تاریخ زړه:*
 
 • 5000 کلن تاریخ! آریانا، باختر، خراسان
-• 1747 کې احمد شاه بابا (احمد شاه دراني) عصري افغانستان جوړ کړ
+• 1747 کې احمد شاه بابا عصري افغانستان جوړ کړ
 • محمود غزنوي، د علومو او فرهنگ ملاتړی
 • افغانستان د ورېښمو لارې زړه وو!
 
 📖 *تاریخي درس:*
 "څوک چې خپل تاریخ نه زده کوي، مجبور دی چې هغه تکرار کړي"
 
-د کومې دورې په اړه نور معلومات غواړې؟`;
+د کومې دورې په اړه نور معلومات غواړې ${name} جانه؟`;
   }
 
   // تکنالوژي / AI / کمپیوټر
@@ -101,9 +102,8 @@ function getGeminiAnswer(question, name) {
 3️⃣ *انترنت:* د معلوماتو سمندر - هر څه پکې شته!
 4️⃣ *موبایل:* ټوله نړۍ ستاسو په جیب کې!
 
-💡 *زما مشوره ${name} جانه:*
+💡 *زما مشوره ${name} جانه ته:*
 هره ورځ 1 ساعت کوډینګ زده کړه!
-په 6 میاشتو کې به ته یو مسلکي پروګرامر شې!
 
 څه شی غواړې چې زده کړې؟`;
   }
@@ -118,153 +118,147 @@ function getGeminiAnswer(question, name) {
 
 ✅ هره ورځ 10 نوي انګلیسي کلمې زده کړه
 ✅ ګرامر مه زده کوه، خبرې کول زده کړه!
-✅ انګلیسي فلمونه له سبټایټل سره وګوره
 ✅ زما سره هره ورځ تمرین وکړه - زه ستاسو ښوونکی یم!
 
 📝 *نننی درس:*
 *"Knowledge is power - علم ځواک دی"*
-*"Learning never stops - زده کړه هیڅکله نه دریږي"*
 
 سبا کومه موضوع زده کړو ${name} جانه؟`;
   }
 
-  // عمومي معلومات - جیمینای غوندې هر څه ته ځواب
-  return `🤖 *سلام ${name} جانه! زه د معلوماتو نړۍ یم - ستاسو شخصي جیمینای!* 🌟
+  // عمومي معلومات - جیمینای ځواب
+  return `🤖 *سلام ${name} جانه! زه د معلوماتو نړۍ یم - ستاسو شخصي جیمینای AI!* 🌟
 
 *ستاسو پوښتنه:* "${question}"
 
-💡 *مفصل، جیمینای غوندې ځواب:*
+💡 *مفصل ځواب:*
 
 دا یوه ډیره مهمه او جالبه موضوع ده ${name} جانه! راځئ چې په تفصیل سره یې وڅیړو:
 
 1️⃣ *تعریف او اهمیت:*
-"${question}" د ژوند یوه مهمه برخه ده. هر هوښیار انسان باید پدې اړه پوره معلومات ولري، ځکه چې علم رڼا ده او جهالت تیاره!
+"${question}" د علم او فکر یوه مهمه برخه ده.
 
 2️⃣ *ژور تحلیل:*
-د نړۍ لوی لوی پوهان وایي چې د ${question} په اړه زده کړه انسان ته نوی لید لوری ورکوي. دا انسان سره مرسته کوي چې ښه پریکړې وکړي.
+د دې موضوع په اړه زده کړه انسان ته نوی لیدلوری ورکوي.
 
 3️⃣ *عملي لارښوونې:*
-• هره ورځ لږ تر لږه 20 دقیقې دې موضوع ته ځانګړې کړه
-• کتابونه، مقالې او مستند فلمونه وګوره
-• له متخصصینو سره خبرې وکړه
-• او تر ټولو مهم: پوښتنه کول مه پریږده! پوښتنه د علم نیمایي ده!
+• هره ورځ لږ تر لږه 20 دقیقې مطالعې ته ځانګړې کړه
+• له متخصصینو څخه وپوښته
+• پوښتنه کول د علم نیمایي ده!
 
-4️⃣ *زما ځانګړې مشوره ${name} جانه ته:*
-زه ستاسو لپاره 24 ساعته حاضر یم! که د دین، دنیا، ساینس، تاریخ، تکنالوژي، روغتیا، انګلیسي یا هرې بلې برخې په اړه پوښتنه لرې، یوازې ولیکه!
+4️⃣ *زما مشوره ${name} جانه ته:*
+زه ستاسو لپاره 24 ساعته چمتو یم! د دین، ساینس، تاریخ، تکنالوژۍ او انګلیسي هر ډول پوښتنه کولی شې.
 
-🚀 *نور څه غواړې چې درته تشریح کړم؟ زه چمتو یم!*`;
+🚀 *نور څه غواړې چې درته تشریح کړم؟*`;
 }
 
 async function startBot() {
   const { version } = await fetchLatestBaileysVersion();
   const { state, saveCreds } = await useMultiFileAuthState('auth_info');
+  
   const sock = makeWASocket({ 
     version, 
     auth: state, 
     logger: P({level:'silent'}), 
-    browser:['Maloomat-Gemini','Chrome','1.0'],
+    browser: ['Ubuntu', 'Chrome', '20.0.0'], // بلاک کیدو ضد براوزر
     markOnlineOnConnect: true
   });
   
   sock.ev.on('creds.update', saveCreds);
 
   if (!sock.authState.creds.registered) {
-    setTimeout(async()=>{
-      try{
+    setTimeout(async () => {
+      try {
         const code = await sock.requestPairingCode(PHONE);
-        console.log(`\n\n============================\n✅ ستا PAIRING CODE: ${code}\nواټساپ: Settings > Linked devices > Link with phone number\nفون نمبر: ${PHONE}\n============================\n\n`);
-      }catch(e){ console.log('Pairing error:', e.message); }
-    },4000);
+        console.log(`\n============================\n✅ ستا PAIRING CODE: ${code}\n============================\n`);
+      } catch (e) {
+        console.log('Pairing error:', e.message);
+      }
+    }, 4000);
   }
 
-  sock.ev.on('connection.update', u=>{
+  sock.ev.on('connection.update', u => {
     const { connection, lastDisconnect } = u;
-    if(connection==='open') console.log('✅ بوټ وصل شو - جیمینای فعال! د معلوماتو نړۍ چالانه ده - نوم پیژندنه فعاله!');
-    if(connection==='close'){
+    if (connection === 'open') console.log('✅ بوټ وصل شو - جیمینای AI فعال!');
+    if (connection === 'close') {
       const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-      console.log('Connection closed, reconnect:', shouldReconnect);
-      if(shouldReconnect) startBot();
+      if (shouldReconnect) startBot();
     }
   });
 
-  // نوی غړی - نوم سره ښه راغلاست
-  sock.ev.on('group-participants.update', async a=>{
-    if(a.action==='add'){
-      for(let p of a.participants){
-        const n = p.split('@')[0];
+  // نوی غړی - په خپل نوم ښه راغلاست
+  sock.ev.on('group-participants.update', async a => {
+    if (a.action === 'add') {
+      for (let p of a.participants) {
+        const num = p.split('@')[0];
         await sock.sendMessage(a.id, { 
-          text: `🌍 *سلام @${n} جانه! د معلوماتو نړۍ ته ښه راغلاست!* 📚
+          text: `🌍 *سلام @${num} جانه! د معلوماتو نړۍ ته ښه راغلاست!* 📚
 
-🤖 *زه ستاسو جیمینای یم!*
-هره پوښتنه رانه کولی شئ:
-🕌 دین | 🔬 ساینس | 📚 تاریخ | 💻 تکنالوژي | 🇬🇧 انګلیسي
+🤖 *زه ستاسو جیمینای AI یم!*
+مهرباني وکړئ د ګروپ قوانین مراعات کړئ:
 
-${GROUP_RULES}
-
-🚀 *علم، پوهاوی، پرمختګ!*`, 
-          mentions:[p] 
-        }).catch(()=>{});
+${GROUP_RULES}`, 
+          mentions: [p] 
+        }).catch(() => {});
       }
     }
   });
 
-  // هر پیغام
-  sock.ev.on('messages.upsert', async m=>{
+  // پیغامونه ترلاسه کول
+  sock.ev.on('messages.upsert', async m => {
     const msg = m.messages[0];
-    if(!msg.message || msg.key.fromMe) return;
+    if (!msg.message || msg.key.fromMe) return;
     
     const from = msg.key.remoteJid;
-    const isGroup = from.endsWith('@g.us');
     const text = msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || '';
-    if(!text) return;
+    if (!text) return;
     
-    // د هرچا نوم پیژندل - تر ټولو مهم
-    const name = msg.pushName || msg.key.participant?.split('@')[0] || from.split('@')[0] || 'وروره';
+    // د غړي نوم اخیستل (نوم پیژندنه)
+    const name = msg.pushName || msg.key.participant?.split('@')[0] || from.split('@')[0] || 'ملګری';
     const lower = text.toLowerCase().trim();
     const participant = msg.key.participant || from;
 
-    // بدې خبرې چیک
-    for(let b of BAD_WORDS){
-      if(lower.includes(b)){
+    // ۱. د بدو خبرو مراعات کول (قوانین)
+    for (let b of BAD_WORDS) {
+      if (lower.includes(b)) {
         await sock.sendMessage(from, { 
-          text: `⚠️ *@${name} جانه!* مهرباني وکړئ بدې خبرې مه کوئ! 🙏\n\nدا د معلوماتو نړۍ ده، د ادب او علم ځای دی! 📚\n\n${GROUP_RULES.split('\n').slice(0,3).join('\n')}`, 
-          mentions:[participant] 
-        }, {quoted:msg});
+          text: `⚠️ *@${name} جانه!* مهرباني وکړئ بدې خبرې مه کوئ! 🙏\n\nدا د معلوماتو نړۍ ده، د ادب او علم ځای دی!\n\n${GROUP_RULES.split('\n').slice(0, 3).join('\n')}`, 
+          mentions: [participant] 
+        }, { quoted: msg });
         return;
       }
     }
 
-    // قوانین - د هرچا نوم سره
-    if(['قوانین','قانون','قوانين','rules','law','قانونونه'].includes(lower)){
+    // ۲. قوانین ښودل
+    if (['قوانین', 'قانون', 'قوانين', 'rules', 'law'].includes(lower)) {
       await sock.sendMessage(from, { 
-        text: `📜 *@${name} جانه، د معلوماتو نړۍ قوانین:*\n\n${GROUP_RULES}`, 
-        mentions:[participant] 
-      }, {quoted:msg});
+        text: `📜 *@${name} جانه، د ګروپ قوانین:*\n\n${GROUP_RULES}`, 
+        mentions: [participant] 
+      }, { quoted: msg });
       return;
     }
 
-    // سلامونه - نوم سره
-    if(['سلام','salam','hi','hello','مرحبا'].includes(lower)){
+    // ۳. سلام ته ځواب
+    if (['سلام', 'salam', 'hi', 'hello'].includes(lower)) {
       await sock.sendMessage(from, {
-        text: `🌍 *و علیکم سلام @${name} جانه!* 🙏\n\nزه د معلوماتو نړۍ یم - ستاسو جیمینای! 🤖\nهره پوښتنه رانه وکړئ - زه ستاسو نوم پیژنم او ځواب درکوم!\n\n🚀 څه پوښتنه لرې؟`,
-        mentions:[participant]
-      }, {quoted:msg});
+        text: `🌍 *و علیکم سلام @${name} جانه!* 🙏\n\nزه د معلوماتو نړۍ جیمینای AI یم! 🤖\nستاسو نوم پیژنم او هر ډول پوښتنې ته ځواب درکوم.\n\n🚀 څه پوښتنه لرې؟`,
+        mentions: [participant]
+      }, { quoted: msg });
       return;
     }
 
-    // هره پوښتنه - جیمینای غوندې مفصل ځواب - د نوم سره
-    if(text.length > 1){
+    // ۴. د مصنوعي ځیرکتیا (AI) غوندې مفصل ځواب له نوم سره
+    if (text.length > 1) {
       await sock.sendMessage(from, { 
-        text: `⏳ *@${name} جانه، فکر کوم... جیمینای ځواب تیاروي...* 🤔✨` 
-      }, {quoted:msg}).catch(()=>{});
+        text: `⏳ *@${name} جانه، جیمینای AI ځواب تیاروي...* 🤔✨` 
+      }, { quoted: msg }).catch(() => {});
       
       let finalAnswer = '';
       try {
-        // وړیا AI هڅه
         const r = await fetch(`https://api.popcat.xyz/chatbot?msg=${encodeURIComponent(text)}&owner=Maloomat&botname=Gemini`);
         const d = await r.json();
-        if(d.response && d.response.length > 30) {
-          finalAnswer = `🤖 *@${name} جانه!* 🌟\n\n${d.response}\n\n━━━\n${getGeminiAnswer(text, name)}\n\n🚀 *نوره پوښتنه لرې؟*`;
+        if (d.response && d.response.length > 20) {
+          finalAnswer = `🤖 *@${name} جانه!* 🌟\n\n${d.response}\n\n━━━\n${getGeminiAnswer(text, name)}`;
         } else {
           finalAnswer = getGeminiAnswer(text, name);
         }
@@ -274,9 +268,10 @@ ${GROUP_RULES}
       
       await sock.sendMessage(from, { 
         text: finalAnswer, 
-        mentions:[participant] 
-      }, {quoted:msg});
+        mentions: [participant] 
+      }, { quoted: msg });
     }
   });
 }
+
 startBot();
