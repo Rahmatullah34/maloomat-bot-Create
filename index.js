@@ -1,5 +1,8 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+
 const {
   default: makeWASocket,
   useMultiFileAuthState,
@@ -11,7 +14,7 @@ const P = require('pino');
 const express = require('express');
 
 // ======================================================
-// 1. Render سرور
+// 1. د Render سرور
 // ======================================================
 
 const app = express();
@@ -43,17 +46,101 @@ app.listen(
 // 2. د WhatsApp تنظیمات
 // ======================================================
 
-// یوازې هغه وخت ورته اړتیا ده چې نوی اتصال جوړوې.
+// د WhatsApp شمېره باید د هېواد له کوډ سره وي.
+// د شمېره په پیل کې + مه لیکه.
+// بېلګه: 937XXXXXXXX
+// دا یوازې بېلګه ده؛ خپله اصلي شمېره په Render کې ولیکه.
+
 const PHONE = String(
   process.env.WHATSAPP_PHONE || ''
 ).replace(/\D/g, '');
 
+// د پخوانۍ ناستې فولډر.
+const AUTH_DIR = path.resolve(
+  process.cwd(),
+  'session_auth_1'
+);
+
+// د یو ځل لپاره د ناستې د پاکولو نښه.
+// دا د دې لپاره ده چې د RESET متغیر په فعال پاتې کېدو
+// سره په هر عادي Restart کې ناسته بیا بیا پاکه نه شي.
+const RESET_MARKER = path.resolve(
+  process.cwd(),
+  '.whatsapp-session-reset-done'
+);
+
 // ======================================================
-// 3. د منع شویو کلیمو او سپکاوي لېست
+// 3. د نوي اتصال لپاره د پخوانۍ ناستې پاکول
 // ======================================================
 
-// دا لېست د اړتیا له مخې وروسته هم زیاتولای شو.
-// ځینې کلمې په بېلابېلو سیاقونو کې بېلابېلې ماناوې لري.
+// په Render کې Environment ته دا متغیر ورزیات کړه:
+//
+// RESET_WHATSAPP_SESSION=true
+//
+// بیا Deploy کړه.
+//
+// کوډ به پخوانۍ ناسته یوازې یو ځل پاکه کړي.
+// د نښې فایل تر موجودیت پورې به دا کار تکرار نه شي.
+//
+// وروسته له دې چې نوی اتصال بشپړ شو،
+// RESET_WHATSAPP_SESSION متغیر له Environment څخه لرې کړه
+// یا یې false کړه.
+
+function prepareAuthSessionForOneTimeReset() {
+  const resetRequested = /^(1|true|yes)$/i.test(
+    String(
+      process.env.RESET_WHATSAPP_SESSION || ''
+    ).trim()
+  );
+
+  if (!resetRequested) {
+    return;
+  }
+
+  // که د پاکولو نښه موجوده وي، بیا ناسته مه پاکوه.
+  if (fs.existsSync(RESET_MARKER)) {
+    console.log(
+      'ℹ️ د ناستې د پاکولو یو ځلنی کار مخکې ترسره شوی.'
+    );
+
+    return;
+  }
+
+  try {
+    // د زړې WhatsApp ناستې پاکول.
+    fs.rmSync(AUTH_DIR, {
+      recursive: true,
+      force: true,
+    });
+
+    // ثبتول چې د پاکولو کار ترسره شو.
+    fs.writeFileSync(
+      RESET_MARKER,
+      new Date().toISOString(),
+      'utf8'
+    );
+
+    console.log(
+      '🔄 پخوانۍ WhatsApp ناسته پاکه شوه.'
+    );
+
+    console.log(
+      '🔐 بوټ به د نوي اتصال کوډ جوړولو هڅه وکړي.'
+    );
+
+  } catch (err) {
+    console.error(
+      '❌ د پخوانۍ ناستې پاکول ناکام شول:',
+      err?.message || err
+    );
+
+    throw err;
+  }
+}
+
+// ======================================================
+// 4. د منع شویو کلیمو او سپکاوي لېست
+// ======================================================
 
 const BAD_WORDS = [
   // پښتو سپکاوی
@@ -98,7 +185,7 @@ const BAD_WORDS = [
   'خره',
   'لعنتي',
 
-  // دري او ورته سپکاوی کوونکي عبارتونه
+  // دري او فارسي سپکاوی
   'بی‌شرف',
   'بیشرف',
   'بی شرف',
@@ -119,7 +206,7 @@ const BAD_WORDS = [
   'خبیث',
   'لعنت بر تو',
 
-  // انګلیسي کنځلې او سپکاوی
+  // انګلیسي
   'fuck',
   'fucking',
   'motherfucker',
@@ -141,7 +228,7 @@ const BAD_WORDS = [
 ];
 
 // ======================================================
-// 4. د ګروپ قوانین
+// 5. د ګروپ رسمي قوانین
 // ======================================================
 
 const GROUP_RULES = `📜 *د معلوماتو نړۍ — د ګروپ رسمي قوانین* 📜
@@ -159,7 +246,7 @@ const GROUP_RULES = `📜 *د معلوماتو نړۍ — د ګروپ رسمي �
 🤝 د همکارۍ مننه!`;
 
 // ======================================================
-// 5. د سپکاوي پېژندل
+// 6. د سپکاوي پېژندل
 // ======================================================
 
 function containsBadWord(text) {
@@ -188,14 +275,17 @@ function containsBadWord(text) {
 }
 
 // ======================================================
-// 6. د لینکونو پېژندل
+// 7. د لینکونو پېژندل
 // ======================================================
 
 const LINK_PATTERN =
   /(?:https?:\/\/|www\.|chat\.whatsapp\.com|wa\.me\/|t\.me\/|facebook\.com|fb\.com|instagram\.com|tiktok\.com|youtube\.com|youtu\.be|snapchat\.com|x\.com|twitter\.com|(?:[a-z0-9-]+\.)+(?:com|net|org|io|co|info|app|site|me|ly|dev|ai|xyz|online|shop|tech|af|us|uk)\b)/i;
 
+// یادونه: دا پېژندنه د متن په مرسته کېږي؛
+ // ټول ممکن لینکونه او ټولې کنځلې نه شي پېژندلای.
+
 // ======================================================
-// 7. د WhatsApp پیغام متن ترلاسه کول
+// 8. د WhatsApp پیغام متن ترلاسه کول
 // ======================================================
 
 function extractText(message) {
@@ -209,7 +299,9 @@ function extractText(message) {
       content.viewOnceMessageV2Extension?.message ||
       content.documentWithCaptionMessage?.message;
 
-    if (!wrapped) break;
+    if (!wrapped) {
+      break;
+    }
 
     content = wrapped;
   }
@@ -229,7 +321,7 @@ function extractText(message) {
 }
 
 // ======================================================
-// 8. د تکراري پیغامونو مخنیوی
+// 9. د تکراري پیغامونو مخنیوی
 // ======================================================
 
 const seenMessages = new Map();
@@ -262,7 +354,7 @@ function rememberMessage(id) {
 }
 
 // ======================================================
-// 9. د ۳۰ ثانیو په موده کې د پیغامونو شمېر
+// 10. په ۳۰ ثانیو کې د پیغامونو شمېر
 // ======================================================
 
 const messageBursts = new Map();
@@ -289,7 +381,6 @@ function recordGroupMessage(
     };
   }
 
-  // یوازې د تېرو ۳۰ ثانیو پیغامونه شمېرل کېږي.
   entry.timestamps = entry.timestamps.filter(
     (time) => now - time < BURST_WINDOW_MS
   );
@@ -297,7 +388,6 @@ function recordGroupMessage(
   entry.timestamps.push(now);
   entry.lastSeenAt = now;
 
-  // زاړه معلومات پاکول.
   for (const [oldKey, oldEntry] of messageBursts) {
     if (
       now - oldEntry.lastSeenAt >
@@ -324,7 +414,7 @@ function recordGroupMessage(
 }
 
 // ======================================================
-// 10. د پیغام لېږلو خوندي طریقه
+// 11. د پیغام لېږلو خوندي طریقه
 // ======================================================
 
 async function safeSend(
@@ -353,7 +443,7 @@ async function safeSend(
 }
 
 // ======================================================
-// 11. د منع شوي پیغام د حذف هڅه
+// 12. د منع شوي پیغام د حذف هڅه
 // ======================================================
 
 async function deleteGroupMessage(
@@ -363,10 +453,16 @@ async function deleteGroupMessage(
   participantName,
   reason
 ) {
+  let deleted = false;
+
   try {
-    await socket.sendMessage(jid, {
+    const result = await socket.sendMessage(jid, {
       delete: messageKey,
     });
+
+    if (result) {
+      deleted = true;
+    }
 
     console.log(
       `🗑️ د حذف غوښتنه واستول شوه: ${reason}`
@@ -380,16 +476,21 @@ async function deleteGroupMessage(
     );
   }
 
+  const statusText = deleted
+    ? 'د پیغام د حذف غوښتنه واستول شوه.'
+    : 'د پیغام حذف تایید نه شو؛ د بوټ د مدیر اجازه او د اتصال حالت وګوره.';
+
   await safeSend(socket, jid, {
     text:
       `⚠️ محترم ${participantName} جانه!\n\n` +
       `${reason}\n` +
+      `${statusText}\n` +
       'مهرباني وکړئ د ګروپ قوانین مراعات کړئ. 🤝',
   });
 }
 
 // ======================================================
-// 12. د اتصال او بیا وصل کېدو مدیریت
+// 13. د اتصال او بیا وصل کېدو مدیریت
 // ======================================================
 
 let isStarting = false;
@@ -398,7 +499,9 @@ let currentSocket = null;
 let pairingTimer = null;
 
 function scheduleReconnect() {
-  if (reconnectTimer) return;
+  if (reconnectTimer) {
+    return;
+  }
 
   console.log(
     '🔄 بوټ به پنځه ثانیې وروسته بیا وصل شي.'
@@ -419,20 +522,26 @@ function scheduleReconnect() {
 }
 
 // ======================================================
-// 13. د WhatsApp بوټ پیل
+// 14. د WhatsApp بوټ پیل
 // ======================================================
 
 async function startBot() {
-  if (isStarting) return;
+  if (isStarting) {
+    return;
+  }
 
   isStarting = true;
 
   try {
+    // که د نوي اتصال لپاره RESET متغیر فعال وي،
+    // د پخوانۍ ناستې د پاکولو یو ځلنی میکانېزم اجرا کېږي.
+    prepareAuthSessionForOneTimeReset();
+
     const {
       state,
       saveCreds,
     } = await useMultiFileAuthState(
-      'session_auth_1'
+      AUTH_DIR
     );
 
     let version;
@@ -489,9 +598,9 @@ async function startBot() {
       });
     });
 
-    // ================================================
-    // 14. د لومړي ځل اتصال
-    // ================================================
+    // ==================================================
+    // 15. د نوي اتصال کوډ جوړول
+    // ==================================================
 
     if (!state.creds.registered) {
       if (pairingTimer) {
@@ -511,35 +620,48 @@ async function startBot() {
 
           if (!PHONE) {
             console.error(
-              '❌ که نوی اتصال ته اړتیا وي، ' +
-              'WHATSAPP_PHONE په Render Environment کې تنظیم کړه.'
+              '❌ د نوي اتصال لپاره باید ' +
+              'WHATSAPP_PHONE په Render Environment کې تنظیم وي.'
             );
 
             return;
           }
 
+          console.log(
+            '🔐 د WhatsApp د نوي اتصال کوډ غوښتنه روانه ده...'
+          );
+
           const code =
             await socket.requestPairingCode(PHONE);
 
           console.log(
-            '🔐 د WhatsApp اتصال کوډ جوړ شو. ' +
-            'له چا سره یې مه شریکوه.'
+            '✅ د نوي اتصال کوډ جوړ شو.'
           );
 
+          // امنیتي یادونه:
+          // دا کوډ محرم دی؛ له هیچا سره یې مه شریکوه.
           console.log(`PAIRING CODE: ${code}`);
+
+          console.log(
+            '📱 په خپل موبایل کې WhatsApp > Linked Devices > Link a device > Link with phone number وکاروه.'
+          );
 
         } catch (err) {
           console.error(
             '❌ د اتصال کوډ جوړول ناکام شول:',
             err?.message || err
           );
+
+          console.error(
+            'ℹ️ د شمېره بڼه، د شبکې اتصال او د WhatsApp حالت وګوره.'
+          );
         }
       }, 5000);
     }
 
-    // ================================================
-    // 15. د اتصال حالت
-    // ================================================
+    // ==================================================
+    // 16. د اتصال حالت
+    // ==================================================
 
     socket.ev.on(
       'connection.update',
@@ -561,6 +683,11 @@ async function startBot() {
           console.log(
             '⏱️ په ۳۰ ثانیو کې له ۳ پیغامونو وروسته خبرداری.'
           );
+
+          if (pairingTimer) {
+            clearTimeout(pairingTimer);
+            pairingTimer = null;
+          }
         }
 
         if (connection === 'close') {
@@ -586,7 +713,7 @@ async function startBot() {
           ) {
             console.error(
               '❌ حساب له WhatsApp څخه وتلی؛ ' +
-              'بیا اتصال ته اړتیا ده.'
+              'د نوي اتصال اړتیا شته.'
             );
 
             return;
@@ -597,9 +724,9 @@ async function startBot() {
       }
     );
 
-    // ================================================
-    // 16. نویو غړو ته ښه راغلاست
-    // ================================================
+    // ==================================================
+    // 17. نویو غړو ته ښه راغلاست
+    // ==================================================
 
     socket.ev.on(
       'group-participants.update',
@@ -641,9 +768,9 @@ async function startBot() {
       }
     );
 
-    // ================================================
-    // 17. د ګروپ پیغامونه
-    // ================================================
+    // ==================================================
+    // 18. د ګروپ پیغامونه
+    // ==================================================
 
     socket.ev.on(
       'messages.upsert',
@@ -653,7 +780,6 @@ async function startBot() {
             ? event.messages
             : [];
 
-        // زاړه پیغامونه نه پروسس کېږي.
         if (event?.type !== 'notify') {
           return;
         }
@@ -697,7 +823,9 @@ async function startBot() {
             const text =
               extractText(msg.message);
 
-            if (!text) continue;
+            if (!text) {
+              continue;
+            }
 
             const participantJid =
               msg.key?.participant ||
@@ -736,7 +864,7 @@ async function startBot() {
             );
 
             // ==========================================
-            // 18. د کنځلو او سپکاوي مخنیوی
+            // 19. د کنځلو او سپکاوي مخنیوی
             // ==========================================
 
             if (containsBadWord(text)) {
@@ -752,7 +880,7 @@ async function startBot() {
             }
 
             // ==========================================
-            // 19. د لینکونو مخنیوی
+            // 20. د لینکونو مخنیوی
             // ==========================================
 
             if (LINK_PATTERN.test(text)) {
@@ -768,11 +896,8 @@ async function startBot() {
             }
 
             // ==========================================
-            // 20. درې یا ډېر پیغامونه په ۳۰ ثانیو کې
+            // 21. درې یا ډېر پیغامونه په ۳۰ ثانیو کې
             // ==========================================
-
-            // یوازې خبرداری ورکوي.
-            // عادي پیغام نه حذف کوي.
 
             if (burst.shouldWarn) {
               const sent = await safeSend(
@@ -794,7 +919,7 @@ async function startBot() {
             }
 
             // ==========================================
-            // 21. د قوانینو غوښتنه
+            // 22. د قوانینو غوښتنه
             // ==========================================
 
             const ruleCommands = [
@@ -821,7 +946,7 @@ async function startBot() {
             }
 
             // ==========================================
-            // 22. سلام ته ځواب
+            // 23. سلام ته ځواب
             // ==========================================
 
             const greetings = [
@@ -856,13 +981,12 @@ async function startBot() {
             }
 
             // ==========================================
-            // 23. نور عادي پیغامونه
+            // 24. نور عادي پیغامونه
             // ==========================================
 
             // عادي خبرې نه حذف کېږي.
             // علمي پوښتنې نه حذف کېږي.
             // لنډ معلومات نه حذف کېږي.
-            // د بې‌ځایه خبرو د متن پر بنسټ قضاوت نه کېږي.
             // AI یا Gemini ته هېڅ غوښتنه نه لېږل کېږي.
 
           } catch (err) {
@@ -889,7 +1013,7 @@ async function startBot() {
 }
 
 // ======================================================
-// 24. د بوټ پیل
+// 25. د بوټ پیل
 // ======================================================
 
 startBot().catch((err) => {
