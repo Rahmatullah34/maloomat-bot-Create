@@ -1,0 +1,15 @@
+{
+  "name": "maloomat-gemini-bot",
+  "version": "2.0.0",
+  "description": "د معلوماتو نړۍ - Gemini like bot - هره پوښتنه ځوابوي - نوم پیژني - قوانین لري",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "6.7.24",
+    "express": "^4.18.2",
+    "pino": "^8.17.2",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
