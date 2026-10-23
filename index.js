@@ -1,5 +1,4 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const P = require('pino');
 const express = require('express');
 
@@ -9,7 +8,7 @@ app.listen(process.env.PORT || 5000, () => console.log('✅ Web server alive - B
 
 const PHONE = '93707285093';
 
-// بدې خبرې
+// بدې خبرې - د اصولو د حفظ لپاره لست
 const BAD_WORDS = ['کنځل','ښکنځل','خر','سګ','بیغیرت','لعنت','کوس','کون','مادر','fuck','shit','bitch','pussy','harami','احمق','چوتیا','کونی','بی ناموس','حرامی','fucking'];
 
 const GROUP_RULES = `📜 *د معلوماتو نړۍ - د ګروپ قوانین* 📜
@@ -19,9 +18,9 @@ const GROUP_RULES = `📜 *د معلوماتو نړۍ - د ګروپ قوانین
 3️⃣ *علم شریک کړئ:* هر څوک کولی شي پوښتنه وکړي 📚
 4️⃣ *سپیم منع:* بې ځایه لینک او اعلان منع 🚫
 
-🚀 *زه د معلوماتو نړۍ مصنوعي ځیرکتیا یم!* د هرې موضوع په اړه معلومات له ما غوښتلی شئ.`;
+🚀 *زه د معلوماتو نړۍ مصنوعي ځیرکتیا یم!* د هرې موضوع په اړه موثق او دقیق معلومات له ما غوښتلی شئ.`;
 
-// له Google AI څخه د ځواب ترلاسه کولو هوښیار فنکشن
+// له Google Gemini REST API څخه د مستقیم ځواب ترلاسه کولو تر ټولو ډاډمنه طریقه
 async function askGeminiAI(promptText, userName) {
   const rawKey = process.env.GEMINI_API_KEY;
   if (!rawKey) {
@@ -29,32 +28,45 @@ async function askGeminiAI(promptText, userName) {
   }
 
   const apiKey = rawKey.trim();
-  const genAI = new GoogleGenerativeAI(apiKey);
-  
-  const systemInstruction = `ستاسو نوم "د معلوماتو نړۍ مصنوعي ځیرکتیا" دی. 
-تاسو د "د معلوماتو نړۍ" واټساپ ګروپ رسمي او ځیرک مرستیال یاست. 
-د پوښتونکي غړي نوم "${userName}" دی. 
-تاسو باید هرې پوښتنې ته دقیق، کامل، موثق او علمي ځوابونه په پښتو ژبه ورکړئ. 
-ځوابونه د ایموجي او ښکلو لیستونو په کارولو سره تنظیم کړئ.`;
 
-  // ۱. هڅه: له اپډیټ شوي جیمینای فلیش ماډل څخه
-  try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
-    const result = await model.generateContent(`${systemInstruction}\n\nپوښتنه: ${promptText}`);
-    return `🤖 *محترم ${userName} جانه!* 🌟\n\n${result.response.text()}`;
-  } catch (error1) {
-    console.error('Flash Model Failed, trying Pro model:', error1.message);
-    
-    // ۲. دوهمه هڅه: له پرو ماډل (Pro Model) څخه
+  const systemInstruction = `ستاسو نوم "د معلوماتو نړۍ مصنوعي ځیرکتیا" دی. 
+تاسو د "د معلوماتو نړۍ" واټساپ ګروپ رسمي او خورا ځیرک مرستیال یاست. 
+د پوښتونکي غړي نوم "${userName}" دی. 
+تاسو باید تل هرې پوښتنې ته دقیق، کامل، موثق، علمي او روښانه ځوابونه په پښتو ژبه ورکړئ. 
+ځوابونه د ایموجي او ښکلو لستونو په کارولو سره بډایه او منظم ترتیب کړئ.`;
+
+  // د ګوګل له رسمي جیمینای تر ټولو فعالو ماډلونو څخه ترتیب وار هڅه
+  const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+
+  for (const modelName of modelsToTry) {
     try {
-      const fallbackModel = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
-      const result = await fallbackModel.generateContent(`${systemInstruction}\n\nپوښتنه: ${promptText}`);
-      return `🤖 *محترم ${userName} جانه!* 🌟\n\n${result.response.text()}`;
-    } catch (error2) {
-      console.error('All Gemini Models Failed:', error2.message);
-      return `⚠️ *محترم ${userName} جانه!*\nد ګوګل API لخوا دا ارور راغلو:\n\`${error2.message || error1.message}\``;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: `${systemInstruction}\n\nپوښتنه: ${promptText}` }]
+          }]
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+        const aiText = data.candidates[0].content.parts[0].text;
+        return `🤖 *محترم ${userName} جانه!* 🌟\n\n${aiText}`;
+      }
+
+      if (data.error) {
+        console.error(`Model ${modelName} error:`, data.error.message);
+      }
+    } catch (err) {
+      console.error(`Fetch error with model ${modelName}:`, err.message);
     }
   }
+
+  return `⚠️ *محترم ${userName} جانه!*\nبخښنه غواړم، د اطلاعاتو پروسس کې شېبه ایز ځنډ راغلو. مهرباني وکړئ لږ وروسته بیرته هڅه وکړئ.`;
 }
 
 async function startBot() {
@@ -88,6 +100,24 @@ async function startBot() {
     if (connection === 'close') {
       const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
       if (shouldReconnect) startBot();
+    }
+  });
+
+  // نوی غړی
+  sock.ev.on('group-participants.update', async a => {
+    if (a.action === 'add') {
+      for (let p of a.participants) {
+        const num = p.split('@')[0];
+        await sock.sendMessage(a.id, { 
+          text: `🌍 *سلام @${num} جانه! د معلوماتو نړۍ ته ښه راغلاست!* 📚
+
+🤖 *زه د معلوماتو نړۍ مصنوعي ځیرکتیا یم!*
+مهرباني وکړئ د ګروپ قوانین مراعات کړئ:
+
+${GROUP_RULES}`, 
+          mentions: [p] 
+        }).catch(() => {});
+      }
     }
   });
 
