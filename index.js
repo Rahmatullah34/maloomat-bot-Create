@@ -1,14 +1,22 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const P = require('pino');
 const express = require('express');
-const app = express();
 
-app.get('/', (req, res) => res.send('🌍 د معلوماتو نړۍ - Gemini AI فعال - 24/7 Online'));
-app.listen(process.env.PORT || 5000, () => console.log('✅ Web server alive - Bot Ready'));
+const app = express();
+app.get('/', (req, res) => res.send('🌍 د معلوماتو نړۍ - Official Google Gemini AI Active 24/7'));
+app.listen(process.env.PORT || 5000, () => console.log('✅ Web server alive - Gemini Bot Ready'));
 
 const PHONE = '93707285093';
 
-// بدې خبرې - د قوانینو لپاره لست
+// 🔑 د AI Studio جوړه شوې API Key دلته داخل کړئ
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY_HERE';
+
+// د گوګل رسمي Gemini AI امستنې
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+// بدې خبرې - د اخلاقو او اصولو د حفظ لپاره لست
 const BAD_WORDS = ['کنځل','ښکنځل','خر','سګ','بیغیرت','لعنت','کوس','کون','مادر','fuck','shit','bitch','pussy','harami','احمق','چوتیا','کونی','بی ناموس','حرامی','fucking'];
 
 const GROUP_RULES = `📜 *د معلوماتو نړۍ - د ګروپ قوانین* 📜
@@ -16,140 +24,26 @@ const GROUP_RULES = `📜 *د معلوماتو نړۍ - د ګروپ قوانین
 1️⃣ *ادب او احترام:* د ټولو غړو احترام وکړئ 🙏
 2️⃣ *بدې خبرې منع:* ښکنځل، سپکې خبرې مطلق منع دي ❌
 3️⃣ *علم شریک کړئ:* هر څوک کولی شي پوښتنه وکړي 📚
-4️⃣ *سپیم منع:* بې ځایه لینک، اعلان منع 🚫
-5️⃣ *ادمین:* یوازې ادمین کولی شي لینک واستوي 👑
+4️⃣ *سپیم منع:* بې ځایه لینک او اعلان منع 🚫
 
-🚀 *زه ستاسو جیمینای یم!* هر ډول پوښتنه رانه وکړئ:
-🕌 دین | 🔬 ساینس | 📚 تاریخ | 💻 تکنالوژي | 🇬🇧 انګلیسي | 🧠 عمومي معلومات
+🚀 *زه ستاسو اصلي Gemini AI یم!* د هرې موضوع په اړه موثق، دقیق او پوره معلومات له ما غوښتلی شئ.`;
 
-💡 *قانون ولیکئ* - قوانین درته وایم
-`;
+// له Google Gemini AI څخه د نغدو او کامل ځواب غوښتنه
+async function askGeminiAI(promptText, userName) {
+  try {
+    const systemInstruction = `تاسو د "د معلوماتو نړۍ" ګروپ رسمي او خورا ځیرک مرستیال Google Gemini AI یاست. 
+د پوښتونکي غړي نوم "${userName}" دی. 
+تاسو باید هرې پوښتنې ته دقیق، کامل، موثق، علمی او روښانه ځوابونه په پښتو ژبه ورکړئ. 
+ځوابونه د ایموجي او ښکلي لیستونو په کارولو سره پورته او نظم لرونکي ترتيب کړئ.`;
 
-// جیمینای غوندې مفصل ځواب د نوم سره
-function getGeminiAnswer(question, name) {
-  const q = question.toLowerCase().trim();
-
-  // اسلام / دین
-  if (/(نماز|روژه|اسلام|قرآن|حدیث|زکات|حج|وضو|دعا|الله|پیغمبر|سنت|فرض)/.test(q)) {
-    return `🕌 *سلام ${name} جانه! دیني پوښتنه مو ډیره ارزښتناکه ده!* 🌟
-
-*ستاسو پوښتنه:* "${question}"
-
-📖 *مفصل ځواب:*
-
-اسلام د علم، عمل او اخلاقو دین دی! قرآن کریم کې الله تعالی فرمایي:
-> *اقْرَأْ بِاسْمِ رَبِّكَ الَّذِي خَلَقَ* - په خپل رب په نوم ولوله!
-
-💡 *د ${question} په اړه اسلامي لارښود:*
-1. هره ورځ قرآن له ترجمې سره ولولئ
-2. د معتبرو علماوو څخه پوښتنه وکړئ
-3. علم زده کول په هر مسلمان فرض دی
-4. عمل په اخلاص سره وکړئ
-
-🙏 *حدیث:* "د علم غوښتنه په هر مسلمان فرض ده"
-
-نور څه غواړې چې درته تشریح کړم ${name} جانه؟`;
+    const result = await model.generateContent(`${systemInstruction}\n\nپوښتنه: ${promptText}`);
+    const responseText = result.response.text();
+    
+    return `🤖 *@${userName} جانه!* 🌟\n\n${responseText}`;
+  } catch (error) {
+    console.error('Gemini API Error:', error.message);
+    return `⚠️ *@${userName} جانه!* بخښنه غواړم، د Gemini AI له سرور سره د پیوستون لنډ مهاله ځنډ راغلو. مهرباني وکړئ خپله پوښتنه بېرته وپوښتئ.`;
   }
-
-  // ساینس
-  if (/(ساینس|ځمکه|اسمان|ستوری|کائنات|science|physics|کیمیا|بیولوژي|انسان|بدن|حجره)/.test(q)) {
-    return `🔬 *واه ${name} جانه! ساینسي پوښتنه!* 🚀
-
-*پوښتنه:* "${question}"
-
-🌍 *ساینسي حقایق:*
-
-• ځمکه 4.5 میلیارده کاله عمر لري او په ساعت کې 107,000 کیلومتره ګرځي!
-• کائنات 93 میلیارده نوري کاله پراخ دی!
-• ستاسو بدن کې 37 ټریلیونه حجرې شتون لري!
-• ستاسو مغز کې 86 میلیارده نیورونونه دي!
-
-💡 *د ساینس پیغام:* پوښتنه وکړه، تجربه وکړه، کشف وکړه!
-ساینس وایي: هره پوښتنه د یوې نوې نړۍ دروازه ده!
-
-کومه برخه کې نور معلومات غواړې ${name} جانه؟`;
-  }
-
-  // تاریخ - افغانستان
-  if (/(تاریخ|افغانستان|احمد شاه|آریانا|خراسان|غزنوي|تیموری|history)/.test(q)) {
-    return `📚 *تاریخي پوښتنه ${name} جانه!* 👑
-
-*موضوع:* "${question}"
-
-🏛️ *افغانستان - د تاریخ زړه:*
-
-• 5000 کلن تاریخ! آریانا، باختر، خراسان
-• 1747 کې احمد شاه بابا عصري افغانستان جوړ کړ
-• محمود غزنوي، د علومو او فرهنگ ملاتړی
-• افغانستان د ورېښمو لارې زړه وو!
-
-📖 *تاریخي درس:*
-"څوک چې خپل تاریخ نه زده کوي، مجبور دی چې هغه تکرار کړي"
-
-د کومې دورې په اړه نور معلومات غواړې ${name} جانه؟`;
-  }
-
-  // تکنالوژي / AI / کمپیوټر
-  if (/(کمپیوټر|موبایل|انترنت|تکنالوژي|tech|هک|بوټ|پروګرام|AI|مصنوعي|کوډ|python|جاوا)/.test(q)) {
-    return `💻 *تکنالوژي ${name} جانه! راتلونکی دلته دی!* 🤖
-
-*پوښتنه:* "${question}"
-
-🚀 *نننۍ تکنالوژي:*
-
-1️⃣ *AI / مصنوعي ځیرکتیا:* لکه زه! ستاسو جیمینای - هره پوښتنه ځوابوم
-2️⃣ *پروګرامینګ:* Python او JavaScript زده کړه - راتلونکی دې روښانه ده!
-3️⃣ *انترنت:* د معلوماتو سمندر - هر څه پکې شته!
-4️⃣ *موبایل:* ټوله نړۍ ستاسو په جیب کې!
-
-💡 *زما مشوره ${name} جانه ته:*
-هره ورځ 1 ساعت کوډینګ زده کړه!
-
-څه شی غواړې چې زده کړې؟`;
-  }
-
-  // انګلیسي / زده کړه
-  if (/(انګلیسي|english|زده|درس|ښوونځی|پوهنتون|کتاب|learn|study)/.test(q)) {
-    return `📖 *د زده کړې پوښتنه ${name} جانه!* 🎓
-
-*موضوع:* "${question}"
-
-🎯 *د بریالیتوب فورمول:*
-
-✅ هره ورځ 10 نوي انګلیسي کلمې زده کړه
-✅ ګرامر مه زده کوه، خبرې کول زده کړه!
-✅ زما سره هره ورځ تمرین وکړه - زه ستاسو ښوونکی یم!
-
-📝 *نننی درس:*
-*"Knowledge is power - علم ځواک دی"*
-
-سبا کومه موضوع زده کړو ${name} جانه؟`;
-  }
-
-  // عمومي معلومات - جیمینای ځواب
-  return `🤖 *سلام ${name} جانه! زه د معلوماتو نړۍ یم - ستاسو شخصي جیمینای AI!* 🌟
-
-*ستاسو پوښتنه:* "${question}"
-
-💡 *مفصل ځواب:*
-
-دا یوه ډیره مهمه او جالبه موضوع ده ${name} جانه! راځئ چې په تفصیل سره یې وڅیړو:
-
-1️⃣ *تعریف او اهمیت:*
-"${question}" د علم او فکر یوه مهمه برخه ده.
-
-2️⃣ *ژور تحلیل:*
-د دې موضوع په اړه زده کړه انسان ته نوی لیدلوری ورکوي.
-
-3️⃣ *عملي لارښوونې:*
-• هره ورځ لږ تر لږه 20 دقیقې مطالعې ته ځانګړې کړه
-• له متخصصینو څخه وپوښته
-• پوښتنه کول د علم نیمایي ده!
-
-4️⃣ *زما مشوره ${name} جانه ته:*
-زه ستاسو لپاره 24 ساعته چمتو یم! د دین، ساینس، تاریخ، تکنالوژۍ او انګلیسي هر ډول پوښتنه کولی شې.
-
-🚀 *نور څه غواړې چې درته تشریح کړم؟*`;
 }
 
 async function startBot() {
@@ -160,7 +54,7 @@ async function startBot() {
     version, 
     auth: state, 
     logger: P({level:'silent'}), 
-    browser: ['Ubuntu', 'Chrome', '20.0.0'], // بلاک کیدو ضد براوزر
+    browser: ['Ubuntu', 'Chrome', '20.0.0'], // د واټساپ د بلاک کیدو مخنیوی
     markOnlineOnConnect: true
   });
   
@@ -170,7 +64,7 @@ async function startBot() {
     setTimeout(async () => {
       try {
         const code = await sock.requestPairingCode(PHONE);
-        console.log(`\n============================\n✅ ستا PAIRING CODE: ${code}\n============================\n`);
+        console.log(`\n============================\n✅ PAIRING CODE: ${code}\n============================\n`);
       } catch (e) {
         console.log('Pairing error:', e.message);
       }
@@ -179,14 +73,14 @@ async function startBot() {
 
   sock.ev.on('connection.update', u => {
     const { connection, lastDisconnect } = u;
-    if (connection === 'open') console.log('✅ بوټ وصل شو - جیمینای AI فعال!');
+    if (connection === 'open') console.log('✅ بوټ وصل شو - اصلي Google Gemini AI فعال شو!');
     if (connection === 'close') {
       const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
       if (shouldReconnect) startBot();
     }
   });
 
-  // نوی غړی - په خپل نوم ښه راغلاست
+  // نوی غړی - د نوم یادونه او قوانینو ښودنه
   sock.ev.on('group-participants.update', async a => {
     if (a.action === 'add') {
       for (let p of a.participants) {
@@ -194,7 +88,7 @@ async function startBot() {
         await sock.sendMessage(a.id, { 
           text: `🌍 *سلام @${num} جانه! د معلوماتو نړۍ ته ښه راغلاست!* 📚
 
-🤖 *زه ستاسو جیمینای AI یم!*
+🤖 *زه ستاسو Google Gemini AI یم!*
 مهرباني وکړئ د ګروپ قوانین مراعات کړئ:
 
 ${GROUP_RULES}`, 
@@ -204,7 +98,7 @@ ${GROUP_RULES}`,
     }
   });
 
-  // پیغامونه ترلاسه کول
+  // د پیغامونو ترلاسه کول او پروسس
   sock.ev.on('messages.upsert', async m => {
     const msg = m.messages[0];
     if (!msg.message || msg.key.fromMe) return;
@@ -213,24 +107,23 @@ ${GROUP_RULES}`,
     const text = msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || '';
     if (!text) return;
     
-    // د غړي نوم اخیستل (نوم پیژندنه)
     const name = msg.pushName || msg.key.participant?.split('@')[0] || from.split('@')[0] || 'ملګری';
     const lower = text.toLowerCase().trim();
     const participant = msg.key.participant || from;
 
-    // ۱. د بدو خبرو مراعات کول (قوانین)
+    // ۱. د بدو کلمو مخنیوی
     for (let b of BAD_WORDS) {
       if (lower.includes(b)) {
         await sock.sendMessage(from, { 
-          text: `⚠️ *@${name} جانه!* مهرباني وکړئ بدې خبرې مه کوئ! 🙏\n\nدا د معلوماتو نړۍ ده، د ادب او علم ځای دی!\n\n${GROUP_RULES.split('\n').slice(0, 3).join('\n')}`, 
+          text: `⚠️ *@${name} جانه!* مهرباني وکړئ د ګروپ قوانین او ادب مراعات کړئ! 🙏`, 
           mentions: [participant] 
         }, { quoted: msg });
         return;
       }
     }
 
-    // ۲. قوانین ښودل
-    if (['قوانین', 'قانون', 'قوانين', 'rules', 'law'].includes(lower)) {
+    // ۲. د ګروپ قوانین
+    if (['قوانین', 'قانون', 'rules'].includes(lower)) {
       await sock.sendMessage(from, { 
         text: `📜 *@${name} جانه، د ګروپ قوانین:*\n\n${GROUP_RULES}`, 
         mentions: [participant] 
@@ -238,36 +131,25 @@ ${GROUP_RULES}`,
       return;
     }
 
-    // ۳. سلام ته ځواب
+    // ۳. د سلام ځواب
     if (['سلام', 'salam', 'hi', 'hello'].includes(lower)) {
       await sock.sendMessage(from, {
-        text: `🌍 *و علیکم سلام @${name} جانه!* 🙏\n\nزه د معلوماتو نړۍ جیمینای AI یم! 🤖\nستاسو نوم پیژنم او هر ډول پوښتنې ته ځواب درکوم.\n\n🚀 څه پوښتنه لرې؟`,
+        text: `🌍 *و علیکم سلام @${name} جانه!* 🙏\n\nزه د گوګل رسمي **Gemini AI** یم! 🤖\nد هرې موضوع په اړه موثق او بشپړ اطلاعات درکولای شم. خپله پوښتنه مطرح کړئ!`,
         mentions: [participant]
       }, { quoted: msg });
       return;
     }
 
-    // ۴. د مصنوعي ځیرکتیا (AI) غوندې مفصل ځواب له نوم سره
+    // ۴. د Google Gemini AI له لارې مستقیم او ژور ځواب
     if (text.length > 1) {
       await sock.sendMessage(from, { 
-        text: `⏳ *@${name} جانه، جیمینای AI ځواب تیاروي...* 🤔✨` 
+        text: `⏳ *@${name} جانه، Gemini AI ځواب تنظیموي...* 🧠✨` 
       }, { quoted: msg }).catch(() => {});
       
-      let finalAnswer = '';
-      try {
-        const r = await fetch(`https://api.popcat.xyz/chatbot?msg=${encodeURIComponent(text)}&owner=Maloomat&botname=Gemini`);
-        const d = await r.json();
-        if (d.response && d.response.length > 20) {
-          finalAnswer = `🤖 *@${name} جانه!* 🌟\n\n${d.response}\n\n━━━\n${getGeminiAnswer(text, name)}`;
-        } else {
-          finalAnswer = getGeminiAnswer(text, name);
-        }
-      } catch {
-        finalAnswer = getGeminiAnswer(text, name);
-      }
+      const aiResponse = await askGeminiAI(text, name);
       
       await sock.sendMessage(from, { 
-        text: finalAnswer, 
+        text: aiResponse, 
         mentions: [participant] 
       }, { quoted: msg });
     }
