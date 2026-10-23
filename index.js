@@ -21,32 +21,39 @@ const GROUP_RULES = `📜 *د معلوماتو نړۍ - د ګروپ قوانین
 
 🚀 *زه د معلوماتو نړۍ مصنوعي ځیرکتیا یم!* د هرې موضوع په اړه معلومات له ما غوښتلی شئ.`;
 
-// له Google AI څخه د ځواب ترلاسه کولو فنکشن
+// له Google AI څخه د ځواب ترلاسه کولو هوښیار فنکشن
 async function askGeminiAI(promptText, userName) {
-  try {
-    const rawKey = process.env.GEMINI_API_KEY;
-    if (!rawKey) {
-      return `⚠️ *محترم ${userName} جانه!*\nپه Render کې د GEMINI_API_KEY قیمت ندی ذخیره شوی. مهرباني وکړئ په Render > Environment کې GEMINI_API_KEY واچوئ.`;
-    }
+  const rawKey = process.env.GEMINI_API_KEY;
+  if (!rawKey) {
+    return `⚠️ *محترم ${userName} جانه!*\nپه Render کې د GEMINI_API_KEY قیمت ندی ذخیره شوی. مهرباني وکړئ په Render > Environment کې GEMINI_API_KEY واچوئ.`;
+  }
 
-    const apiKey = rawKey.trim();
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-    const systemInstruction = `ستاسو نوم "د معلوماتو نړۍ مصنوعي ځیرکتیا" دی. 
+  const apiKey = rawKey.trim();
+  const genAI = new GoogleGenerativeAI(apiKey);
+  
+  const systemInstruction = `ستاسو نوم "د معلوماتو نړۍ مصنوعي ځیرکتیا" دی. 
 تاسو د "د معلوماتو نړۍ" واټساپ ګروپ رسمي او ځیرک مرستیال یاست. 
 د پوښتونکي غړي نوم "${userName}" دی. 
 تاسو باید هرې پوښتنې ته دقیق، کامل، موثق او علمي ځوابونه په پښتو ژبه ورکړئ. 
 ځوابونه د ایموجي او ښکلو لیستونو په کارولو سره تنظیم کړئ.`;
 
+  // ۱. هڅه: له اپډیټ شوي جیمینای فلیش ماډل څخه
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
     const result = await model.generateContent(`${systemInstruction}\n\nپوښتنه: ${promptText}`);
-    const responseText = result.response.text();
+    return `🤖 *محترم ${userName} جانه!* 🌟\n\n${result.response.text()}`;
+  } catch (error1) {
+    console.error('Flash Model Failed, trying Pro model:', error1.message);
     
-    return `🤖 *محترم ${userName} جانه!* 🌟\n\n${responseText}`;
-  } catch (error) {
-    console.error('Gemini API Error:', error);
-    // دلته به درته د ګوګل لخوا دقیق ارور په واټساپ کې درکړل شي ترڅو په پټه ستونزه پوه شو
-    return `⚠️ *محترم ${userName} جانه!*\nد ګوګل API لخوا دا ارور راغلو:\n\`${error.message || error}\``;
+    // ۲. دوهمه هڅه: له پرو ماډل (Pro Model) څخه
+    try {
+      const fallbackModel = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+      const result = await fallbackModel.generateContent(`${systemInstruction}\n\nپوښتنه: ${promptText}`);
+      return `🤖 *محترم ${userName} جانه!* 🌟\n\n${result.response.text()}`;
+    } catch (error2) {
+      console.error('All Gemini Models Failed:', error2.message);
+      return `⚠️ *محترم ${userName} جانه!*\nد ګوګل API لخوا دا ارور راغلو:\n\`${error2.message || error1.message}\``;
+    }
   }
 }
 
@@ -145,3 +152,4 @@ async function startBot() {
 }
 
 startBot();
+
