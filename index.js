@@ -63,7 +63,9 @@ async function askAI(promptText, userName) {
 
 async function startBot() {
   const { version } = await fetchLatestBaileysVersion();
-  const { state, saveCreds } = await useMultiFileAuthState('auth_new');
+  
+  // دلته مې د حافظې نوم بیخي نوی کړ ترڅو خامخا نوی کوډ درکړي
+  const { state, saveCreds } = await useMultiFileAuthState('session_auth_1');
   
   const sock = makeWASocket({
     version,
@@ -74,6 +76,20 @@ async function startBot() {
   });
 
   sock.ev.on('creds.update', saveCreds);
+
+  // د نښلولو کوډ (Pairing Code) جوړولو برخه
+  if (!sock.authState.creds.registered) {
+    setTimeout(async () => {
+      try {
+        const code = await sock.requestPairingCode(PHONE);
+        console.log(`\n====================================================`);
+        console.log(`✅ نوی د نښلولو کوډ (PAIRING CODE): ${code}`);
+        console.log(`====================================================\n`);
+      } catch (e) {
+        console.log('Pairing error:', e.message);
+      }
+    }, 5000); // ۵ ثانیې انتظار ترڅو سرور په ارامۍ کوډ جوړ کړي
+  }
 
   sock.ev.on('connection.update', u => {
     const { connection, lastDisconnect } = u;
@@ -139,7 +155,7 @@ async function startBot() {
       return;
     }
 
-    // ۶. هم په شخصي چټ او هم په ګروپ کې پوښتنو ته د AI ځواب
+    // هم په شخصي چټ او هم په ګروپ کې پوښتنو ته د AI ځواب
     if (isQuestionOrInfo(text)) {
       await sock.sendMessage(from, { text: `⏳ *محترم ${name} جانه، د پوښتنې علمي ځواب مو چمتو کېږي...* 🧠✨` }, { quoted: msg }).catch(() => {});
       const aiResponse = await askAI(text, name);
