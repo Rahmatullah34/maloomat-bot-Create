@@ -3,19 +3,17 @@ const P = require('pino');
 const express = require('express');
 
 const app = express();
-app.get('/', (req, res) => res.send('🌍 د معلوماتو نړۍ - AI Active Fixed 24/7'));
+app.get('/', (req, res) => res.send('🌍 د معلوماتو نړۍ - AI Active 3.8 Flash'));
 app.listen(process.env.PORT || 5000, () => console.log('✅ Server Alive'));
 
 const PHONE = '93707285093';
 
-// ۱. ممنوعه او سپکې کلمې
 const BAD_WORDS = [
   'کنځل','ښکنځل','خر','سګ','بیغیرت','لعنت','کوس','کون','مادر',
   'fuck','shit','bitch','pussy','harami','احمق','چوتیا','کونی',
   'بی ناموس','حرامی','fucking','بیادبه','مردار'
 ];
 
-// ۲. د ګروپ رسمي قوانین
 const GROUP_RULES = `📜 *د معلوماتو نړۍ - د ګروپ رسمي قوانین* 📜
 
 1️⃣ *یوازې علمي او دقیق معلومات:* دا د معلوماتو تخصصي ګروپ دی 📚
@@ -23,18 +21,15 @@ const GROUP_RULES = `📜 *د معلوماتو نړۍ - د ګروپ رسمي ق�
 3️⃣ *د لینکونو خپرول منع دي:* هر ډول سوداګریز او د نورو ګروپونو لینکونه حذفیږي 🚫
 4️⃣ *د بدو خبرو مخنیوی:* سپکاوی مطلق منع دی 🛑`;
 
-// د علمي پوښتنو د پیژندلو ځیرک فلټر
 function isQuestionOrInfo(text) {
   const lower = text.toLowerCase().trim();
   const qWords = ['څوک', 'څه', 'ولې', 'څنګه', 'کوم', 'کله', 'چېرته', 'ایا', 'آیا', 'کولی', 'معلومات', 'پوښتنه', 'توضيح', 'تعریف', '؟', '?'];
-  
   const hasQuestionWord = qWords.some(w => lower.includes(w));
   const isLongInformative = text.length > 20; 
-  
   return hasQuestionWord || isLongInformative;
 }
 
-// د ګوګل جیمینای د ځوابولو سیستم (د سم شوي ماډل سره)
+// د ګوګل تر ټولو نوی ماډل (gemini-3.8-flash)
 async function askAI(promptText, userName) {
   const rawKey = process.env.GEMINI_API_KEY;
   if (!rawKey || rawKey.trim() === '') {
@@ -43,8 +38,7 @@ async function askAI(promptText, userName) {
   const apiKey = rawKey.trim();
   const systemInstruction = `ستاسو نوم "د معلوماتو نړۍ مصنوعي ځیرکتیا" دی. د پوښتونکي نوم "${userName}" دی. یوازې همدې علمي پوښتنې ته پوره، موثق او منظم ځواب په سوچه پښتو ژبه ورکړئ.`;
 
-  // دلته مو ماډل په gemini-2.5-flash بدل کړ ترڅو ارور ونکړي
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
   try {
     const res = await fetch(url, {
@@ -102,7 +96,6 @@ async function startBot() {
     }
   });
 
-  // نوي غړي ته قوانین لېږل
   sock.ev.on('group-participants.update', async a => {
     if (a.action === 'add') {
       for (let p of a.participants) {
@@ -115,7 +108,6 @@ async function startBot() {
     }
   });
 
-  // د پیغامونو پروسس
   sock.ev.on('messages.upsert', async m => {
     const msg = m.messages[0];
     if (!msg.message || msg.key.fromMe) return;
@@ -130,67 +122,40 @@ async function startBot() {
     const lower = text.toLowerCase().trim();
     const participant = msg.key.participant || from;
 
-    // ۱. د بدو خبرو ډیلیټ کول
     if (BAD_WORDS.some(w => lower.includes(w)) && isGroup) {
       await sock.sendMessage(from, { delete: msg.key }).catch(() => {});
-      await sock.sendMessage(from, { 
-        text: `⚠️ *محترم ${name} جانه!* ستاسو پیغام د بدو کلمو له امله حذف شو! ❌`, 
-        mentions: [participant] 
-      });
+      await sock.sendMessage(from, { text: `⚠️ *محترم ${name} جانه!* ستاسو پیغام د بدو کلمو له امله حذف شو! ❌`, mentions: [participant] });
       return;
     }
 
-    // ۲. د لینکونو ډیلیټ کول
     if (/(chat\.whatsapp\.com|https?:\/\/|www\.|t\.me|facebook\.com|tiktok\.com|youtube\.com)/i.test(text) && isGroup) {
       await sock.sendMessage(from, { delete: msg.key }).catch(() => {});
-      await sock.sendMessage(from, { 
-        text: `⚠️ *محترم ${name} جانه!* په ګروپ کې د لینکونو خپرول منع دي! 🚫`, 
-        mentions: [participant] 
-      });
+      await sock.sendMessage(from, { text: `⚠️ *محترم ${name} جانه!* په ګروپ کې د لینکونو خپرول منع دي! 🚫`, mentions: [participant] });
       return;
     }
 
-    // ۳. د قوانینو پوښتنه
     if (['قوانین', 'قانون', 'rules'].includes(lower)) {
-      await sock.sendMessage(from, { 
-        text: `📜 *محترم ${name} جانه:*\n\n${GROUP_RULES}`, 
-        mentions: [participant] 
-      }, { quoted: msg });
+      await sock.sendMessage(from, { text: `📜 *محترم ${name} جانه:*\n\n${GROUP_RULES}`, mentions: [participant] }, { quoted: msg });
       return;
     }
 
-    // ۴. د سلام ځواب (لنډ)
     const salamList = ['سلام', 'salam', 'hi', 'hello', 'السلام', 'عليكم', 'علیکم'];
     if (salamList.some(s => lower.includes(s)) && text.length < 20) {
-      await sock.sendMessage(from, { 
-        text: `🌍 *و علیکم سلام محترم ${name} جانه!* 🌸 خپله علمي پوښتنه مطرح کړئ.`, 
-        mentions: [participant] 
-      }, { quoted: msg });
+      await sock.sendMessage(from, { text: `🌍 *و علیکم سلام محترم ${name} جانه!* 🌸 خپله علمي پوښتنه مطرح کړئ.`, mentions: [participant] }, { quoted: msg });
       return;
     }
 
-    // ۵. د عامو خبرو ډیلیټ کول (په ګروپ کې)
     if (isGroup && !isQuestionOrInfo(text)) {
       await sock.sendMessage(from, { delete: msg.key }).catch(() => {});
-      await sock.sendMessage(from, { 
-        text: `⚠️ *محترم ${name} جانه!*\nدا د معلوماتو ګروپ دی. عامې خبرې (ګپ شپ) دلته منع دي او ستاسو پیغام حذف شو! 🚫`, 
-        mentions: [participant] 
-      });
+      await sock.sendMessage(from, { text: `⚠️ *محترم ${name} جانه!*\nدا د معلوماتو ګروپ دی. عامې خبرې (ګپ شپ) دلته منع دي او ستاسو پیغام حذف شو! 🚫`, mentions: [participant] });
       return;
     }
 
-    // ۶. هم په شخصي چټ او هم په ګروپ کې پوښتنو ته د AI ځواب
     if (isQuestionOrInfo(text)) {
-      await sock.sendMessage(from, { 
-        text: `⏳ *محترم ${name} جانه، د پوښتنې علمي ځواب مو چمتو کېږي...* 🧠✨` 
-      }, { quoted: msg }).catch(() => {});
-
+      await sock.sendMessage(from, { text: `⏳ *محترم ${name} جانه، د پوښتنې علمي ځواب مو چمتو کېږي...* 🧠✨` }, { quoted: msg }).catch(() => {});
       const aiResponse = await askAI(text, name);
       if (aiResponse) {
-        await sock.sendMessage(from, { 
-          text: aiResponse, 
-          mentions: [participant] 
-        }, { quoted: msg });
+        await sock.sendMessage(from, { text: aiResponse, mentions: [participant] }, { quoted: msg });
       }
     }
   });
