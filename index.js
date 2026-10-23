@@ -10,115 +10,157 @@ const {
 const P = require('pino');
 const express = require('express');
 
-// ============================================================
-// 1. Render server
-// ============================================================
+// ======================================================
+// 1. Render سرور
+// ======================================================
 
 const app = express();
 
 app.get('/', (_req, res) => {
   res.status(200).send(
-    '🌍 د معلوماتو نړۍ — WhatsApp bot is running'
+    '🌍 د معلوماتو نړۍ — WhatsApp Group Moderation Bot'
   );
 });
 
 app.get('/health', (_req, res) => {
   res.status(200).json({
     ok: true,
-    service: 'maloomat-bot'
+    service: 'maloomat-bot',
+    mode: 'group-only',
+    ai: false,
   });
 });
 
-app.listen(Number(process.env.PORT) || 5000, '0.0.0.0', () => {
-  console.log('✅ HTTP health server started');
-});
+app.listen(
+  Number(process.env.PORT) || 5000,
+  '0.0.0.0',
+  () => {
+    console.log('✅ د Render سرور فعال شو.');
+  }
+);
 
-// ============================================================
-// 2. Settings
-// ============================================================
+// ======================================================
+// 2. د WhatsApp تنظیمات
+// ======================================================
 
+// یوازې هغه وخت ورته اړتیا ده چې نوی اتصال جوړوې.
 const PHONE = String(
-  process.env.WHATSAPP_PHONE || '93707285093'
+  process.env.WHATSAPP_PHONE || ''
 ).replace(/\D/g, '');
 
-const GEMINI_MODEL = String(
-  process.env.GEMINI_MODEL || 'gemini-3.8-flash'
-).trim();
+// ======================================================
+// 3. د منع شویو کلیمو او سپکاوي لېست
+// ======================================================
 
-const GEMINI_API_KEY = String(
-  process.env.GEMINI_API_KEY || ''
-).trim();
-
-const GEMINI_TIMEOUT_MS = 60000;
-
-// ============================================================
-// 3. Group moderation
-// ============================================================
+// دا لېست د اړتیا له مخې وروسته هم زیاتولای شو.
+// ځینې کلمې په بېلابېلو سیاقونو کې بېلابېلې ماناوې لري.
 
 const BAD_WORDS = [
-  'کنځل',
-  'ښکنځل',
-  'خر',
-  'سګ',
-  'بیغیرت',
-  'لعنت',
-  'کوس',
-  'کون',
-  'مادر',
-  'fuck',
-  'shit',
-  'bitch',
-  'pussy',
-  'harami',
+  // پښتو سپکاوی
   'احمق',
-  'چوتیا',
-  'کونی',
+  'بې‌عقله',
+  'بی‌عقله',
+  'بې عقله',
+  'بی عقله',
+  'بې‌شعوره',
+  'بی‌شعوره',
+  'بې شعوره',
+  'بی شعوره',
+  'بې‌ادبه',
+  'بی‌ادبه',
+  'بې ادبه',
+  'بی ادبه',
+  'بې‌غیرته',
+  'بی‌غیرته',
+  'بې غیرته',
+  'بی غیرته',
   'بی ناموس',
+  'بې ناموس',
+  'بی‌ناموس',
+  'بې‌ناموس',
+  'حرامزاده',
+  'حرامي',
   'حرامی',
+  'ولدالحرام',
+  'پدرسوخته',
+  'مادرجنده',
+  'مادر جنده',
+  'مادر قحبه',
+  'خواهر جنده',
+  'جنده',
+  'کونی',
+  'کوس',
+  'کسکش',
+  'کس کش',
+  'چوتیا',
+  'چوټیا',
+  'سګ دې',
+  'خره',
+  'لعنتي',
+
+  // دري او ورته سپکاوی کوونکي عبارتونه
+  'بی‌شرف',
+  'بیشرف',
+  'بی شرف',
+  'بی‌حیا',
+  'بی حیا',
+  'گم شو',
+  'گمشو',
+  'گاو',
+  'کثافت',
+  'آشغال',
+  'پست فطرت',
+  'پست‌فطرت',
+  'مادر به خطا',
+  'مادرخطا',
+  'حرام خور',
+  'حرام‌خور',
+  'کثیف',
+  'خبیث',
+  'لعنت بر تو',
+
+  // انګلیسي کنځلې او سپکاوی
+  'fuck',
   'fucking',
-  'بیادبه',
-  'مردار'
+  'motherfucker',
+  'mother fucker',
+  'shit',
+  'bullshit',
+  'bitch',
+  'son of a bitch',
+  'asshole',
+  'dickhead',
+  'dick',
+  'pussy',
+  'bastard',
+  'slut',
+  'whore',
+  'damn you',
+  'idiot',
+  'moron',
 ];
 
-const GROUP_RULES = `📜 *د معلوماتو نړۍ - د ګروپ رسمي قوانین* 📜
+// ======================================================
+// 4. د ګروپ قوانین
+// ======================================================
 
-1️⃣ *یوازې علمي او کره معلومات:* دا د معلوماتو تخصصي ګروپ دی 📚
+const GROUP_RULES = `📜 *د معلوماتو نړۍ — د ګروپ رسمي قوانین* 📜
 
-2️⃣ *عامې خبرې او ګپ شپ منع دي:* له موضوع څخه بهر خبرې مه کوئ ❌
+1️⃣ *ګټور معلومات:* علمي پوښتنې او ګټور معلومات شریک کړئ.
 
-3️⃣ *د لینکونو خپرول منع دي:* سوداګریز او د نورو ګروپونو لینکونه مه خپروئ 🚫
+2️⃣ *د غړو درناوی:* کنځل، سپکاوی او ځورول منع دي.
 
-4️⃣ *د سپکاوي مخنیوی:* د غړو سپکاوی منع دی 🛑`;
+3️⃣ *د لینکونو خپرول:* نامجاز او تبلیغاتي لینکونه مه خپروئ.
 
-function isQuestionOrInfo(text) {
-  const lower = String(text || '').toLowerCase().trim();
+4️⃣ *د پیغامونو نظم:* پرله‌پسې ډېر لنډ پیغامونه مه استوئ؛ خبرې په یوه پیغام کې راټولې کړئ.
 
-  const questionWords = [
-    'څوک',
-    'څه',
-    'ولې',
-    'څنګه',
-    'کوم',
-    'کله',
-    'چېرته',
-    'چیرته',
-    'ایا',
-    'آیا',
-    'کولی',
-    'معلومات',
-    'پوښتنه',
-    'توضيح',
-    'تشریح',
-    'تعریف',
-    '؟',
-    '?'
-  ];
+5️⃣ *همکاري:* له ټولو غړو هیله کېږي چې قوانین مراعات کړي.
 
-  return (
-    questionWords.some((word) => lower.includes(word)) ||
-    lower.length > 20
-  );
-}
+🤝 د همکارۍ مننه!`;
+
+// ======================================================
+// 5. د سپکاوي پېژندل
+// ======================================================
 
 function containsBadWord(text) {
   const normalized = String(text || '')
@@ -131,11 +173,13 @@ function containsBadWord(text) {
       '\\$&'
     );
 
+    const flexible = escaped.replace(
+      /\s+/g,
+      '\\s+'
+    );
+
     const pattern = new RegExp(
-      `(^|[^\\p{L}\\p{N}])${escaped.replace(
-        /\s+/g,
-        '\\s+'
-      )}($|[^\\p{L}\\p{N}])`,
+      `(^|[^\\p{L}\\p{N}])${flexible}($|[^\\p{L}\\p{N}])`,
       'iu'
     );
 
@@ -143,12 +187,16 @@ function containsBadWord(text) {
   });
 }
 
-const LINK_PATTERN =
-  /(?:https?:\/\/|www\.|chat\.whatsapp\.com|t\.me|facebook\.com|tiktok\.com|youtube\.com|(?:[a-z0-9-]+\.)+(?:com|net|org|io|co|info|app|site|me|ly)\b)/i;
+// ======================================================
+// 6. د لینکونو پېژندل
+// ======================================================
 
-// ============================================================
-// 4. Extract WhatsApp message text
-// ============================================================
+const LINK_PATTERN =
+  /(?:https?:\/\/|www\.|chat\.whatsapp\.com|wa\.me\/|t\.me\/|facebook\.com|fb\.com|instagram\.com|tiktok\.com|youtube\.com|youtu\.be|snapchat\.com|x\.com|twitter\.com|(?:[a-z0-9-]+\.)+(?:com|net|org|io|co|info|app|site|me|ly|dev|ai|xyz|online|shop|tech|af|us|uk)\b)/i;
+
+// ======================================================
+// 7. د WhatsApp پیغام متن ترلاسه کول
+// ======================================================
 
 function extractText(message) {
   let content = message;
@@ -161,9 +209,7 @@ function extractText(message) {
       content.viewOnceMessageV2Extension?.message ||
       content.documentWithCaptionMessage?.message;
 
-    if (!wrapped) {
-      break;
-    }
+    if (!wrapped) break;
 
     content = wrapped;
   }
@@ -182,39 +228,123 @@ function extractText(message) {
   ).trim();
 }
 
-// ============================================================
-// 5. Safe WhatsApp message sending
-// ============================================================
+// ======================================================
+// 8. د تکراري پیغامونو مخنیوی
+// ======================================================
+
+const seenMessages = new Map();
+
+function rememberMessage(id) {
+  const now = Date.now();
+
+  for (const [key, time] of seenMessages) {
+    if (now - time > 5 * 60 * 1000) {
+      seenMessages.delete(key);
+    }
+  }
+
+  if (seenMessages.has(id)) {
+    return false;
+  }
+
+  seenMessages.set(id, now);
+
+  if (seenMessages.size > 1000) {
+    const oldestKey =
+      seenMessages.keys().next().value;
+
+    if (oldestKey) {
+      seenMessages.delete(oldestKey);
+    }
+  }
+
+  return true;
+}
+
+// ======================================================
+// 9. د ۳۰ ثانیو په موده کې د پیغامونو شمېر
+// ======================================================
+
+const messageBursts = new Map();
+
+const BURST_WINDOW_MS = 30 * 1000;
+const BURST_LIMIT = 3;
+const BURST_WARNING_COOLDOWN_MS = 30 * 1000;
+
+function recordGroupMessage(
+  groupJid,
+  participantJid
+) {
+  const now = Date.now();
+
+  const key = `${groupJid}:${participantJid}`;
+
+  let entry = messageBursts.get(key);
+
+  if (!entry) {
+    entry = {
+      timestamps: [],
+      lastWarnAt: 0,
+      lastSeenAt: now,
+    };
+  }
+
+  // یوازې د تېرو ۳۰ ثانیو پیغامونه شمېرل کېږي.
+  entry.timestamps = entry.timestamps.filter(
+    (time) => now - time < BURST_WINDOW_MS
+  );
+
+  entry.timestamps.push(now);
+  entry.lastSeenAt = now;
+
+  // زاړه معلومات پاکول.
+  for (const [oldKey, oldEntry] of messageBursts) {
+    if (
+      now - oldEntry.lastSeenAt >
+      10 * 60 * 1000
+    ) {
+      messageBursts.delete(oldKey);
+    }
+  }
+
+  messageBursts.set(key, entry);
+
+  return {
+    count: entry.timestamps.length,
+
+    shouldWarn:
+      entry.timestamps.length >= BURST_LIMIT &&
+      now - entry.lastWarnAt >=
+        BURST_WARNING_COOLDOWN_MS,
+
+    markWarned: () => {
+      entry.lastWarnAt = Date.now();
+    },
+  };
+}
+
+// ======================================================
+// 10. د پیغام لېږلو خوندي طریقه
+// ======================================================
 
 async function safeSend(
   socket,
   jid,
-  content,
-  options = undefined
+  content
 ) {
   try {
     if (!socket || !jid || !content) {
       return null;
     }
 
-    if (options) {
-      return await socket.sendMessage(
-        jid,
-        content,
-        options
-      );
-    }
-
-    return await socket.sendMessage(jid, content);
+    return await socket.sendMessage(
+      jid,
+      content
+    );
 
   } catch (err) {
-    const code =
-      err?.output?.statusCode ||
-      err?.data?.statusCode ||
-      'unknown';
-
     console.error(
-      `❌ WhatsApp send failed (status ${code}):`,
+      '❌ د WhatsApp پیغام لېږلو ستونزه:',
       err?.message || err
     );
 
@@ -222,256 +352,56 @@ async function safeSend(
   }
 }
 
-// ============================================================
-// 6. Gemini AI
-// ============================================================
+// ======================================================
+// 11. د منع شوي پیغام د حذف هڅه
+// ======================================================
 
-async function askAI(promptText, userName) {
-  if (!GEMINI_API_KEY) {
-    console.error(
-      '❌ GEMINI_API_KEY is not configured in Render.'
-    );
-
-    return (
-      `⚠️ محترم ${userName} جانه، ` +
-      'د AI خدمت کیلي په سرور کې تنظیم شوې نه ده.'
-    );
-  }
-
-  const systemInstruction =
-    `ستا نوم «د معلوماتو نړۍ مصنوعي ځیرکتیا» دی. ` +
-    `د پوښتونکي نوم «${userName}» دی. ` +
-    'په روانه، روښانه او درناوي ډکه پښتو ځواب ورکړه. ' +
-    'د پوښتنې موضوع ته مستقیم ځواب ورکړه. ' +
-    'که په کوم حقیقت ډاډه نه یې، دا خبره څرګنده کړه ' +
-    'او ناسم معلومات مه جوړوه.';
-
-  const url =
-    'https://generativelanguage.googleapis.com/v1beta/models/' +
-    `${encodeURIComponent(GEMINI_MODEL)}:generateContent`;
-
-  const controller = new AbortController();
-
-  const timeout = setTimeout(() => {
-    controller.abort();
-  }, GEMINI_TIMEOUT_MS);
-
-  const startedAt = Date.now();
-
+async function deleteGroupMessage(
+  socket,
+  jid,
+  messageKey,
+  participantName,
+  reason
+) {
   try {
-    console.log(
-      `🧠 Gemini request started; model=${GEMINI_MODEL}`
-    );
-
-    const response = await fetch(url, {
-      method: 'POST',
-
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': GEMINI_API_KEY
-      },
-
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [
-            {
-              text: systemInstruction
-            }
-          ]
-        },
-
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              {
-                text: String(promptText).slice(0, 5000)
-              }
-            ]
-          }
-        ],
-
-        generationConfig: {
-          maxOutputTokens: 1200,
-
-          thinkingConfig: {
-            thinkingLevel: 'low'
-          }
-        }
-      }),
-
-      signal: controller.signal
+    await socket.sendMessage(jid, {
+      delete: messageKey,
     });
 
     console.log(
-      `📡 Gemini HTTP ${response.status}; ` +
-      `elapsed=${Date.now() - startedAt}ms`
-    );
-
-    if (!response.ok) {
-      const details = await response.text().catch(() => '');
-
-      console.error(
-        `❌ Gemini API returned HTTP ${response.status}:`,
-        details.slice(0, 800)
-      );
-
-      if (response.status === 400) {
-        return (
-          `⚠️ محترم ${userName} جانه، ` +
-          'د Gemini غوښتنه رد شوه (HTTP 400). ' +
-          'د Render Logs وګورئ.'
-        );
-      }
-
-      if (
-        response.status === 401 ||
-        response.status === 403
-      ) {
-        return (
-          `⚠️ محترم ${userName} جانه، ` +
-          `د Gemini کیلي یا اجازې ستونزه ده ` +
-          `(HTTP ${response.status}).`
-        );
-      }
-
-      if (response.status === 404) {
-        return (
-          `⚠️ محترم ${userName} جانه، ` +
-          'د Gemini ماډل ونه موندل شو. ' +
-          'د GEMINI_MODEL تنظیم وګورئ.'
-        );
-      }
-
-      if (response.status === 429) {
-        return (
-          `⏳ محترم ${userName} جانه، ` +
-          'د Gemini د غوښتنو یا استعمال حد پوره شوی. ' +
-          'لږ وروسته بیا هڅه وکړئ.'
-        );
-      }
-
-      return (
-        `⚠️ محترم ${userName} جانه، ` +
-        `د Gemini خدمت تېروتنه ورکړه ` +
-        `(HTTP ${response.status}).`
-      );
-    }
-
-    const data = await response.json();
-
-    const candidate = data?.candidates?.[0];
-
-    const answer = candidate?.content?.parts
-      ?.map((part) => part.text || '')
-      .join('\n')
-      .trim();
-
-    if (answer) {
-      console.log(
-        `✅ Gemini answer received; ` +
-        `elapsed=${Date.now() - startedAt}ms`
-      );
-
-      return (
-        `🤖 *محترم ${userName} جانه!* 🌟\n\n` +
-        answer
-      );
-    }
-
-    console.error(
-      '⚠️ Gemini response contains no text:',
-      JSON.stringify(data).slice(0, 800)
-    );
-
-    if (candidate?.finishReason === 'SAFETY') {
-      return (
-        `⚠️ محترم ${userName} جانه، ` +
-        'دا پوښتنه د AI د خوندیتوب د اصولو له امله ځواب نه شوه.'
-      );
-    }
-
-    return (
-      `⚠️ محترم ${userName} جانه، ` +
-      'دا ځل ځواب ترلاسه نه شو. مهرباني وکړئ بیا هڅه وکړئ.'
+      `🗑️ د حذف غوښتنه واستول شوه: ${reason}`
     );
 
   } catch (err) {
-    if (
-      controller.signal.aborted ||
-      err?.name === 'TimeoutError' ||
-      /timed?\s*out|abort/i.test(err?.message || '')
-    ) {
-      console.error(
-        `❌ Gemini request timed out after ` +
-        `${Date.now() - startedAt}ms`
-      );
-
-      return (
-        `⏳ محترم ${userName} جانه، ` +
-        'د AI ځواب ځنډېدلی. لږ وروسته بیا هڅه وکړئ.'
-      );
-    }
-
     console.error(
-      '❌ Gemini connection failed:',
-      err?.stack || err?.message || err
+      '❌ د پیغام حذف ناکام شو. ' +
+      'وګوره چې بوټ د ګروپ مدیر دی که نه:',
+      err?.message || err
     );
-
-    return (
-      `⚠️ محترم ${userName} جانه، ` +
-      'د AI خدمت سره د اړیکې ستونزه ده.'
-    );
-
-  } finally {
-    clearTimeout(timeout);
   }
+
+  await safeSend(socket, jid, {
+    text:
+      `⚠️ محترم ${participantName} جانه!\n\n` +
+      `${reason}\n` +
+      'مهرباني وکړئ د ګروپ قوانین مراعات کړئ. 🤝',
+  });
 }
 
-// ============================================================
-// 7. Connection and reconnect management
-// ============================================================
+// ======================================================
+// 12. د اتصال او بیا وصل کېدو مدیریت
+// ======================================================
 
 let isStarting = false;
 let reconnectTimer = null;
 let currentSocket = null;
 let pairingTimer = null;
 
-const seenMessageIds = new Map();
-
-function rememberMessage(id) {
-  const now = Date.now();
-
-  for (const [key, timestamp] of seenMessageIds) {
-    if (now - timestamp > 5 * 60 * 1000) {
-      seenMessageIds.delete(key);
-    }
-  }
-
-  if (seenMessageIds.has(id)) {
-    return false;
-  }
-
-  seenMessageIds.set(id, now);
-
-  if (seenMessageIds.size > 1000) {
-    const oldestKey = seenMessageIds.keys().next().value;
-
-    if (oldestKey) {
-      seenMessageIds.delete(oldestKey);
-    }
-  }
-
-  return true;
-}
-
 function scheduleReconnect() {
-  if (reconnectTimer) {
-    return;
-  }
+  if (reconnectTimer) return;
 
   console.log(
-    '🔄 WhatsApp will reconnect in 5 seconds.'
+    '🔄 بوټ به پنځه ثانیې وروسته بیا وصل شي.'
   );
 
   reconnectTimer = setTimeout(() => {
@@ -479,49 +409,49 @@ function scheduleReconnect() {
 
     startBot().catch((err) => {
       console.error(
-        '❌ Reconnect start failed:',
-        err?.stack || err?.message || err
+        '❌ بیا وصل کېدل ناکام شول:',
+        err?.message || err
       );
 
       scheduleReconnect();
     });
-
   }, 5000);
 }
 
-// ============================================================
-// 8. Start WhatsApp bot
-// ============================================================
+// ======================================================
+// 13. د WhatsApp بوټ پیل
+// ======================================================
 
 async function startBot() {
-  if (isStarting) {
-    return;
-  }
+  if (isStarting) return;
 
   isStarting = true;
 
   try {
     const {
       state,
-      saveCreds
-    } = await useMultiFileAuthState('session_auth_1');
+      saveCreds,
+    } = await useMultiFileAuthState(
+      'session_auth_1'
+    );
 
     let version;
 
     try {
-      const latest = await fetchLatestBaileysVersion();
+      const latest =
+        await fetchLatestBaileysVersion();
 
       version = latest.version;
 
       console.log(
-        `✅ Baileys WhatsApp version: ${version.join('.')}`
+        '✅ د WhatsApp نسخه:',
+        version.join('.')
       );
 
     } catch (err) {
-      console.error(
-        '⚠️ Could not fetch latest WhatsApp version; ' +
-        'using library default:',
-        err?.message || err
+      console.log(
+        '⚠️ د WhatsApp نسخه نه شوه ترلاسه کېدای؛ ' +
+        'اصلي تنظیمات به وکارول شي.'
       );
     }
 
@@ -529,17 +459,17 @@ async function startBot() {
       auth: state,
 
       logger: P({
-        level: 'silent'
+        level: 'silent',
       }),
 
       browser: [
         'Ubuntu',
         'Chrome',
-        '20.0.0'
+        '20.0.0',
       ],
 
       markOnlineOnConnect: true,
-      printQRInTerminal: false
+      printQRInTerminal: false,
     };
 
     if (version) {
@@ -553,15 +483,15 @@ async function startBot() {
     socket.ev.on('creds.update', () => {
       saveCreds().catch((err) => {
         console.error(
-          '❌ Failed to save WhatsApp credentials:',
+          '❌ د ناستې د معلوماتو خوندي کولو ستونزه:',
           err?.message || err
         );
       });
     });
 
-    // ========================================================
-    // 9. Pairing code
-    // ========================================================
+    // ================================================
+    // 14. د لومړي ځل اتصال
+    // ================================================
 
     if (!state.creds.registered) {
       if (pairingTimer) {
@@ -581,82 +511,95 @@ async function startBot() {
 
           if (!PHONE) {
             console.error(
-              '❌ Set WHATSAPP_PHONE in Render Environment.'
+              '❌ که نوی اتصال ته اړتیا وي، ' +
+              'WHATSAPP_PHONE په Render Environment کې تنظیم کړه.'
             );
 
             return;
           }
 
-          const code = await socket.requestPairingCode(PHONE);
+          const code =
+            await socket.requestPairingCode(PHONE);
 
           console.log(
-            '✅ WhatsApp pairing code generated. ' +
-            'Enter it in WhatsApp Linked Devices.'
+            '🔐 د WhatsApp اتصال کوډ جوړ شو. ' +
+            'له چا سره یې مه شریکوه.'
           );
 
-          // Pairing codes are sensitive; do not share them.
           console.log(`PAIRING CODE: ${code}`);
 
         } catch (err) {
           console.error(
-            '❌ Pairing request failed:',
+            '❌ د اتصال کوډ جوړول ناکام شول:',
             err?.message || err
           );
         }
-
       }, 5000);
     }
 
-    // ========================================================
-    // 10. Connection status
-    // ========================================================
+    // ================================================
+    // 15. د اتصال حالت
+    // ================================================
 
-    socket.ev.on('connection.update', (update) => {
-      const {
-        connection,
-        lastDisconnect
-      } = update;
+    socket.ev.on(
+      'connection.update',
+      (update) => {
+        const {
+          connection,
+          lastDisconnect,
+        } = update;
 
-      if (connection === 'open') {
-        console.log(
-          '✅ د معلوماتو نړۍ WhatsApp بوټ فعال شو!'
-        );
-      }
-
-      if (connection === 'close') {
-        if (pairingTimer) {
-          clearTimeout(pairingTimer);
-          pairingTimer = null;
-        }
-
-        if (currentSocket === socket) {
-          currentSocket = null;
-        }
-
-        const statusCode =
-          lastDisconnect?.error?.output?.statusCode;
-
-        console.error(
-          '⚠️ WhatsApp connection closed; statusCode:',
-          statusCode || 'unknown'
-        );
-
-        if (statusCode === DisconnectReason.loggedOut) {
-          console.error(
-            '❌ WhatsApp logged out. Re-pair the device ' +
-            'after checking the Render session storage.'
+        if (connection === 'open') {
+          console.log(
+            '✅ د معلوماتو نړۍ WhatsApp بوټ فعال شو!'
           );
 
-          return;
+          console.log(
+            '🛡️ یوازې ګروپونه؛ AI بند دی.'
+          );
+
+          console.log(
+            '⏱️ په ۳۰ ثانیو کې له ۳ پیغامونو وروسته خبرداری.'
+          );
         }
 
-        scheduleReconnect();
-      }
-    });
+        if (connection === 'close') {
+          if (pairingTimer) {
+            clearTimeout(pairingTimer);
+            pairingTimer = null;
+          }
 
-    // ========================================================
-    // 11. Welcome new group members
-    // ========================================================
+          if (currentSocket === socket) {
+            currentSocket = null;
+          }
+
+          const statusCode =
+            lastDisconnect?.error?.output?.statusCode;
+
+          console.error(
+            '⚠️ د WhatsApp اتصال بند شو؛ حالت:',
+            statusCode || 'نامعلوم'
+          );
+
+          if (
+            statusCode === DisconnectReason.loggedOut
+          ) {
+            console.error(
+              '❌ حساب له WhatsApp څخه وتلی؛ ' +
+              'بیا اتصال ته اړتیا ده.'
+            );
+
+            return;
+          }
+
+          scheduleReconnect();
+        }
+      }
+    );
+
+    // ================================================
+    // 16. نویو غړو ته ښه راغلاست
+    // ================================================
 
     socket.ev.on(
       'group-participants.update',
@@ -669,65 +612,74 @@ async function startBot() {
             return;
           }
 
-          for (const participantJid of event.participants) {
+          for (
+            const participant of event.participants
+          ) {
             const number =
-              String(participantJid).split('@')[0];
+              String(participant).split('@')[0];
 
-            await safeSend(socket, event.id, {
-              text:
-                `🌍 سلام @${number} جانه! ` +
-                'د معلوماتو نړۍ ګروپ ته ښه راغلاست! 🌸\n\n' +
-                GROUP_RULES,
+            await safeSend(
+              socket,
+              event.id,
+              {
+                text:
+                  `🌍 سلام @${number} جانه!\n\n` +
+                  'د معلوماتو نړۍ ګروپ ته ښه راغلاست! 🌸\n\n' +
+                  GROUP_RULES,
 
-              mentions: [
-                participantJid
-              ]
-            });
+                mentions: [participant],
+              }
+            );
           }
 
         } catch (err) {
           console.error(
-            '❌ Welcome-message handler failed:',
+            '❌ د ښه راغلاست پیغام ستونزه:',
             err?.message || err
           );
         }
       }
     );
 
-    // ========================================================
-    // 12. Incoming messages
-    // ========================================================
+    // ================================================
+    // 17. د ګروپ پیغامونه
+    // ================================================
 
     socket.ev.on(
       'messages.upsert',
       async (event) => {
-        const messages = Array.isArray(event?.messages)
-          ? event.messages
-          : [];
+        const messages =
+          Array.isArray(event?.messages)
+            ? event.messages
+            : [];
 
-        console.log(
-          `📩 WhatsApp message event: ${event?.type}; ` +
-          `count=${messages.length}`
-        );
-
-        // Process live messages, not old history synchronization.
+        // زاړه پیغامونه نه پروسس کېږي.
         if (event?.type !== 'notify') {
           return;
         }
 
         for (const msg of messages) {
           try {
-            if (!msg?.message || msg.key?.fromMe) {
+            if (
+              !msg?.message ||
+              msg.key?.fromMe
+            ) {
               continue;
             }
 
-            const from = msg.key?.remoteJid;
+            const groupJid =
+              msg.key?.remoteJid;
 
             if (
-              !from ||
-              from === 'status@broadcast' ||
-              from.endsWith('@newsletter')
+              !groupJid ||
+              groupJid === 'status@broadcast' ||
+              groupJid.endsWith('@newsletter')
             ) {
+              continue;
+            }
+
+            // شخصي چټ بشپړ بند دی.
+            if (!groupJid.endsWith('@g.us')) {
               continue;
             }
 
@@ -735,175 +687,189 @@ async function startBot() {
 
             if (
               messageId &&
-              !rememberMessage(`${from}:${messageId}`)
+              !rememberMessage(
+                `${groupJid}:${messageId}`
+              )
             ) {
-              console.log(
-                '↩️ Duplicate message ignored.'
-              );
-
               continue;
             }
 
-            const isGroup = from.endsWith('@g.us');
+            const text =
+              extractText(msg.message);
 
-            const text = extractText(msg.message);
+            if (!text) continue;
 
-            if (!text) {
-              continue;
-            }
+            const participantJid =
+              msg.key?.participant ||
+              msg.key?.participantAlt ||
+              'unknown-member';
 
             const rawName =
               msg.pushName ||
-              msg.key?.participant?.split('@')[0] ||
-              from.split('@')[0] ||
+              String(participantJid).split('@')[0] ||
               'ملګری';
 
             const name = String(rawName)
-              .replace(/[\u200B-\u200D\uFEFF]/g, '')
+              .replace(
+                /[\u200B-\u200D\uFEFF]/g,
+                ''
+              )
               .trim()
               .slice(0, 80) || 'ملګری';
 
-            const lower = text.toLowerCase().trim();
-
-            console.log(
-              `📝 Incoming message; name=${name}; ` +
-              `group=${isGroup}; text=${text.slice(0, 100)}`
-            );
-
-            // ------------------------------------------------
-            // 13. Bad words in groups
-            // ------------------------------------------------
-
-            if (isGroup && containsBadWord(text)) {
-              await safeSend(socket, from, {
-                delete: msg.key
-              });
-
-              await safeSend(socket, from, {
-                text:
-                  `⚠️ محترم ${name} جانه، ` +
-                  'په ګروپ کې سپکاوی منع دی. ' +
-                  'د پیغام د حذف کولو هڅه وشوه. ❌'
-              });
-
-              continue;
-            }
-
-            // ------------------------------------------------
-            // 14. Links in groups
-            // ------------------------------------------------
-
-            if (isGroup && LINK_PATTERN.test(text)) {
-              await safeSend(socket, from, {
-                delete: msg.key
-              });
-
-              await safeSend(socket, from, {
-                text:
-                  `⚠️ محترم ${name} جانه، ` +
-                  'په ګروپ کې د لینکونو خپرول منع دي. 🚫'
-              });
-
-              continue;
-            }
-
-            // ------------------------------------------------
-            // 15. Group rules
-            // ------------------------------------------------
+            const lower =
+              text.toLowerCase().trim();
 
             const cleanText = lower
               .replace(/[!.؟?،,]/g, '')
               .trim();
 
-            if (
-              ['قوانین', 'قانون', 'rules'].includes(cleanText)
-            ) {
-              await safeSend(socket, from, {
-                text:
-                  `📜 محترم ${name} جانه:\n\n` +
-                  GROUP_RULES
-              });
+            console.log(
+              `📩 ګروپي پیغام؛ غړی=${name}; ` +
+              `متن=${text.slice(0, 100)}`
+            );
+
+            // د غړي پیغامونه شمېرل کېږي.
+            const burst = recordGroupMessage(
+              groupJid,
+              participantJid
+            );
+
+            // ==========================================
+            // 18. د کنځلو او سپکاوي مخنیوی
+            // ==========================================
+
+            if (containsBadWord(text)) {
+              await deleteGroupMessage(
+                socket,
+                groupJid,
+                msg.key,
+                name,
+                '❌ په ګروپ کې کنځل او سپکاوی منع دي.'
+              );
 
               continue;
             }
 
-            // ------------------------------------------------
-            // 16. Greetings
-            // ------------------------------------------------
+            // ==========================================
+            // 19. د لینکونو مخنیوی
+            // ==========================================
+
+            if (LINK_PATTERN.test(text)) {
+              await deleteGroupMessage(
+                socket,
+                groupJid,
+                msg.key,
+                name,
+                '🚫 په ګروپ کې د نامجازو لینکونو خپرول منع دي.'
+              );
+
+              continue;
+            }
+
+            // ==========================================
+            // 20. درې یا ډېر پیغامونه په ۳۰ ثانیو کې
+            // ==========================================
+
+            // یوازې خبرداری ورکوي.
+            // عادي پیغام نه حذف کوي.
+
+            if (burst.shouldWarn) {
+              const sent = await safeSend(
+                socket,
+                groupJid,
+                {
+                  text:
+                    `⚠️ محترم ${name} جانه!\n\n` +
+                    `تا په تېرو ۳۰ ثانیو کې ${burst.count} پیغامونه استولي دي.\n\n` +
+                    'مهرباني وکړه پیغامونه په یوه پیغام کې راټول کړه، ' +
+                    'څو د ګروپ نظم وساتل شي.\n\n' +
+                    '📌 دا یوازې خبرداری دی؛ ستا عادي پیغام نه حذف کېږي.',
+                }
+              );
+
+              if (sent) {
+                burst.markWarned();
+              }
+            }
+
+            // ==========================================
+            // 21. د قوانینو غوښتنه
+            // ==========================================
+
+            const ruleCommands = [
+              'قوانین',
+              'قانون',
+              'د ګروپ قوانین',
+              'د ګروپ قانون',
+              'rules',
+              'group rules',
+            ];
+
+            if (ruleCommands.includes(cleanText)) {
+              await safeSend(
+                socket,
+                groupJid,
+                {
+                  text:
+                    `📜 محترم ${name} جانه!\n\n` +
+                    GROUP_RULES,
+                }
+              );
+
+              continue;
+            }
+
+            // ==========================================
+            // 22. سلام ته ځواب
+            // ==========================================
 
             const greetings = [
               'سلام',
+              'السلام علیکم',
+              'السلامعلیکم',
               'salam',
-              'hi',
               'hello',
-              'السلام',
-              'عليكم',
-              'علیکم'
+              'hi',
+              'وعلیکم السلام',
             ];
 
             if (
-              text.length < 25 &&
-              greetings.some((greeting) =>
-                lower.includes(greeting)
+              text.length <= 60 &&
+              greetings.some(
+                (greeting) =>
+                  lower.startsWith(greeting)
               )
             ) {
-              await safeSend(socket, from, {
-                text:
-                  `🌍 وعلیکم سلام محترم ${name} جانه! 🌸 ` +
-                  'خپله علمي پوښتنه مطرح کړئ.'
-              });
+              await safeSend(
+                socket,
+                groupJid,
+                {
+                  text:
+                    `🌍 وعلیکم سلام محترم ${name} جانه! 🌸\n\n` +
+                    'د معلوماتو نړۍ ګروپ ته ښه راغلاست. ' +
+                    'مهرباني وکړئ د ګروپ اصول مراعات کړئ.',
+                }
+              );
 
               continue;
             }
 
-            // ------------------------------------------------
-            // 17. Group chat moderation
-            // ------------------------------------------------
+            // ==========================================
+            // 23. نور عادي پیغامونه
+            // ==========================================
 
-            if (
-              isGroup &&
-              !isQuestionOrInfo(text)
-            ) {
-              await safeSend(socket, from, {
-                delete: msg.key
-              });
-
-              await safeSend(socket, from, {
-                text:
-                  `⚠️ محترم ${name} جانه! ` +
-                  'دا د معلوماتو ګروپ دی؛ ' +
-                  'مهرباني وکړئ علمي پوښتنې او ګټور معلومات ' +
-                  'شریک کړئ. 🚫'
-              });
-
-              continue;
-            }
-
-            // ------------------------------------------------
-            // 18. Ask Gemini
-            // ------------------------------------------------
-
-            await safeSend(socket, from, {
-              text:
-                `⏳ محترم ${name} جانه، ` +
-                'ستاسې د پوښتنې ځواب چمتو کېږي... 🧠✨'
-            });
-
-            const aiResponse = await askAI(text, name);
-
-            if (aiResponse) {
-              await safeSend(socket, from, {
-                text: aiResponse
-              });
-            }
+            // عادي خبرې نه حذف کېږي.
+            // علمي پوښتنې نه حذف کېږي.
+            // لنډ معلومات نه حذف کېږي.
+            // د بې‌ځایه خبرو د متن پر بنسټ قضاوت نه کېږي.
+            // AI یا Gemini ته هېڅ غوښتنه نه لېږل کېږي.
 
           } catch (err) {
             console.error(
-              '❌ Error processing one WhatsApp message:',
+              '❌ د ګروپ پیغام په اداره کولو کې ستونزه:',
               err?.stack || err?.message || err
             );
-
-            // Continue with the next message if this one fails.
           }
         }
       }
@@ -911,7 +877,7 @@ async function startBot() {
 
   } catch (err) {
     console.error(
-      '❌ Bot startup failed:',
+      '❌ د بوټ د پیل ستونزه:',
       err?.stack || err?.message || err
     );
 
@@ -922,13 +888,13 @@ async function startBot() {
   }
 }
 
-// ============================================================
-// 19. Start the bot
-// ============================================================
+// ======================================================
+// 24. د بوټ پیل
+// ======================================================
 
 startBot().catch((err) => {
   console.error(
-    '❌ Unhandled bot startup error:',
+    '❌ د بوټ د پیل عمومي ستونزه:',
     err?.stack || err?.message || err
   );
 
