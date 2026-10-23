@@ -9,14 +9,7 @@ app.listen(process.env.PORT || 5000, () => console.log('✅ Web server alive - B
 
 const PHONE = '93707285093';
 
-// د Render له Environment Variables څخه د GEMINI_API_KEY په اتومات ډول اخیستل
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-// د جیمینای AI امستنې
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-// بدې خبرې - د اصولو د حفظ لپاره لست
+// بدې خبرې
 const BAD_WORDS = ['کنځل','ښکنځل','خر','سګ','بیغیرت','لعنت','کوس','کون','مادر','fuck','shit','bitch','pussy','harami','احمق','چوتیا','کونی','بی ناموس','حرامی','fucking'];
 
 const GROUP_RULES = `📜 *د معلوماتو نړۍ - د ګروپ قوانین* 📜
@@ -26,28 +19,34 @@ const GROUP_RULES = `📜 *د معلوماتو نړۍ - د ګروپ قوانین
 3️⃣ *علم شریک کړئ:* هر څوک کولی شي پوښتنه وکړي 📚
 4️⃣ *سپیم منع:* بې ځایه لینک او اعلان منع 🚫
 
-🚀 *زه د معلوماتو نړۍ مصنوعي ځیرکتیا یم!* د هرې موضوع په اړه موثق، دقیق او پوره معلومات له ما غوښتلی شئ.`;
+🚀 *زه د معلوماتو نړۍ مصنوعي ځیرکتیا یم!* د هرې موضوع په اړه معلومات له ما غوښتلی شئ.`;
 
-// له AI څخه د ځواب اخیستلو پروسه
+// له Google AI څخه د ځواب ترلاسه کولو فنکشن
 async function askGeminiAI(promptText, userName) {
   try {
-    if (!GEMINI_API_KEY) {
-      return `⚠️ *محترم ${userName} جانه!* د Gemini API Key په Render کې نه ده موندل شوې. مهرباني وکړئ په Render کې GEMINI_API_KEY تنظیم کړه.`;
+    const rawKey = process.env.GEMINI_API_KEY;
+    if (!rawKey) {
+      return `⚠️ *محترم ${userName} جانه!*\nپه Render کې د GEMINI_API_KEY قیمت ندی ذخیره شوی. مهرباني وکړئ په Render > Environment کې GEMINI_API_KEY واچوئ.`;
     }
 
+    const apiKey = rawKey.trim();
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
     const systemInstruction = `ستاسو نوم "د معلوماتو نړۍ مصنوعي ځیرکتیا" دی. 
-تاسو د "د معلوماتو نړۍ" واټساپ ګروپ رسمي او خورا ځیرک مرستیال یاست. 
+تاسو د "د معلوماتو نړۍ" واټساپ ګروپ رسمي او ځیرک مرستیال یاست. 
 د پوښتونکي غړي نوم "${userName}" دی. 
-تاسو باید تل هرې پوښتنې ته دقیق، کامل، موثق، علمي او روښانه ځوابونه په پښتو ژبه ورکړئ. 
-ځوابونه د ایموجي او ښکلي لستونو په کارولو سره بډایه او منظم ترتیب کړئ.`;
+تاسو باید هرې پوښتنې ته دقیق، کامل، موثق او علمي ځوابونه په پښتو ژبه ورکړئ. 
+ځوابونه د ایموجي او ښکلو لیستونو په کارولو سره تنظیم کړئ.`;
 
     const result = await model.generateContent(`${systemInstruction}\n\nپوښتنه: ${promptText}`);
     const responseText = result.response.text();
     
     return `🤖 *محترم ${userName} جانه!* 🌟\n\n${responseText}`;
   } catch (error) {
-    console.error('AI Error:', error.message);
-    return `⚠️ *محترم ${userName} جانه!* بخښنه غواړم، د اطلاعاتو پروسس کې لنډمهاله ځنډ راغلو. مهرباني وکړئ لږ وروسته بیرته هڅه وکړئ.`;
+    console.error('Gemini API Error:', error);
+    // دلته به درته د ګوګل لخوا دقیق ارور په واټساپ کې درکړل شي ترڅو په پټه ستونزه پوه شو
+    return `⚠️ *محترم ${userName} جانه!*\nد ګوګل API لخوا دا ارور راغلو:\n\`${error.message || error}\``;
   }
 }
 
@@ -85,24 +84,6 @@ async function startBot() {
     }
   });
 
-  // نوی غړی
-  sock.ev.on('group-participants.update', async a => {
-    if (a.action === 'add') {
-      for (let p of a.participants) {
-        const num = p.split('@')[0];
-        await sock.sendMessage(a.id, { 
-          text: `🌍 *سلام @${num} جانه! د معلوماتو نړۍ ته ښه راغلاست!* 📚
-
-🤖 *زه د معلوماتو نړۍ مصنوعي ځیرکتیا یم!*
-مهرباني وکړئ د ګروپ قوانین مراعات کړئ:
-
-${GROUP_RULES}`, 
-          mentions: [p] 
-        }).catch(() => {});
-      }
-    }
-  });
-
   // پیغامونه پروسس کول
   sock.ev.on('messages.upsert', async m => {
     const msg = m.messages[0];
@@ -112,7 +93,8 @@ ${GROUP_RULES}`,
     const text = msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || '';
     if (!text) return;
     
-    const name = msg.pushName || msg.key.participant?.split('@')[0] || from.split('@')[0] || 'ملګری';
+    const rawName = msg.pushName || msg.key.participant?.split('@')[0] || from.split('@')[0] || 'ملګری';
+    const name = rawName.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
     const lower = text.toLowerCase().trim();
     const participant = msg.key.participant || from;
 
@@ -137,7 +119,8 @@ ${GROUP_RULES}`,
     }
 
     // ۳. د سلام ځواب
-    if (['سلام', 'salam', 'hi', 'hello'].includes(lower)) {
+    const salamList = ['سلام', 'salam', 'hi', 'hello', 'السلام', 'عليكم', 'علیکم'];
+    if (salamList.some(s => lower.includes(s))) {
       await sock.sendMessage(from, {
         text: `🌍 *و علیکم سلام محترم ${name} جانه!* 🙏\n\nزه **د معلوماتو نړۍ مصنوعي ځیرکتیا** یم! 🤖\nد هرې موضوع په اړه موثق او بشپړ اطلاعات درکولای شم. خپله پوښتنه مطرح کړئ!`,
         mentions: [participant]
