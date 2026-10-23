@@ -3,71 +3,27 @@ const P = require('pino');
 const express = require('express');
 
 const app = express();
-app.get('/', (req, res) => res.send('🌍 د معلوماتو نړۍ - مصنوعي ځیرکتیا فعاله ده 24/7'));
-app.listen(process.env.PORT || 5000, () => console.log('✅ Web server alive - Bot Ready'));
+app.get('/', (req, res) => res.send('🌍 د معلوماتو نړۍ - د ګروپ اډمین بوټ فعال دی 24/7'));
+app.listen(process.env.PORT || 5000, () => console.log('✅ Server Alive - Admin Bot Ready'));
 
 const PHONE = '93707285093';
 
-// بدې خبرې - د اصولو د حفظ لپاره لست
-const BAD_WORDS = ['کنځل','ښکنځل','خر','سګ','بیغیرت','لعنت','کوس','کون','مادر','fuck','shit','bitch','pussy','harami','احمق','چوتیا','کونی','بی ناموس','حرامی','fucking'];
+// ۱. د ممنوعه بدو کلمو لیست (د حذف کولو لپاره)
+const BAD_WORDS = [
+  'کنځل','ښکنځل','خر','سګ','بیغیرت','لعنت','کوس','کون','مادر',
+  'fuck','shit','bitch','pussy','harami','احمق','چوتیا','کونی',
+  'بی ناموس','حرامی','fucking','بیادبه','مردار'
+];
 
-const GROUP_RULES = `📜 *د معلوماتو نړۍ - د ګروپ قوانین* 📜
+// ۲. د ګروپ قوانین
+const GROUP_RULES = `📜 *د معلوماتو نړۍ - د ګروپ رسمي قوانین* 📜
 
-1️⃣ *ادب او احترام:* د ټولو غړو احترام وکړئ 🙏
-2️⃣ *بدې خبرې منع:* ښکنځل، سپکې خبرې مطلق منع دي ❌
-3️⃣ *علم شریک کړئ:* هر څوک کولی شي پوښتنه وکړي 📚
-4️⃣ *سپیم منع:* بې ځایه لینک او اعلان منع 🚫
+1️⃣ *ادب او احترام:* د ټولو محترمو غړو درناوی فرض دی 🙏
+2️⃣ *د لینکونو خپرول منع دي:* هر ډول سوداګریز یا د ګروپونو لینکونه سمدستي حذفیږي 🚫
+3️⃣ *سپکې او بدې خبرې منع دي:* سپکاوی او بدې کلمې سمدستي حذفیږي ❌
+4️⃣ *علمي او ګټور مطالب:* هیله ده یوازې ګټور او علمي معلومات شریک کړئ 📚
 
-🚀 *زه د معلوماتو نړۍ مصنوعي ځیرکتیا یم!* د هرې موضوع په اړه موثق او دقیق معلومات له ما غوښتلی شئ.`;
-
-// له Google Gemini REST API څخه د مستقیم ځواب ترلاسه کولو تر ټولو ډاډمنه طریقه
-async function askGeminiAI(promptText, userName) {
-  const rawKey = process.env.GEMINI_API_KEY;
-  if (!rawKey) {
-    return `⚠️ *محترم ${userName} جانه!*\nپه Render کې د GEMINI_API_KEY قیمت ندی ذخیره شوی. مهرباني وکړئ په Render > Environment کې GEMINI_API_KEY واچوئ.`;
-  }
-
-  const apiKey = rawKey.trim();
-
-  const systemInstruction = `ستاسو نوم "د معلوماتو نړۍ مصنوعي ځیرکتیا" دی. 
-تاسو د "د معلوماتو نړۍ" واټساپ ګروپ رسمي او خورا ځیرک مرستیال یاست. 
-د پوښتونکي غړي نوم "${userName}" دی. 
-تاسو باید تل هرې پوښتنې ته دقیق، کامل، موثق، علمي او روښانه ځوابونه په پښتو ژبه ورکړئ. 
-ځوابونه د ایموجي او ښکلو لستونو په کارولو سره بډایه او منظم ترتیب کړئ.`;
-
-  // د ګوګل له رسمي جیمینای تر ټولو فعالو ماډلونو څخه ترتیب وار هڅه
-  const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-
-  for (const modelName of modelsToTry) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{ text: `${systemInstruction}\n\nپوښتنه: ${promptText}` }]
-          }]
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-        const aiText = data.candidates[0].content.parts[0].text;
-        return `🤖 *محترم ${userName} جانه!* 🌟\n\n${aiText}`;
-      }
-
-      if (data.error) {
-        console.error(`Model ${modelName} error:`, data.error.message);
-      }
-    } catch (err) {
-      console.error(`Fetch error with model ${modelName}:`, err.message);
-    }
-  }
-
-  return `⚠️ *محترم ${userName} جانه!*\nبخښنه غواړم، د اطلاعاتو پروسس کې شېبه ایز ځنډ راغلو. مهرباني وکړئ لږ وروسته بیرته هڅه وکړئ.`;
-}
+💡 *یادونه:* د قوانینو د نه مراعاتولو په صورت کې بوټ ستاسو پیغامونه په اتومات ډول ډیلیټ کوي.`;
 
 async function startBot() {
   const { version } = await fetchLatestBaileysVersion();
@@ -96,90 +52,97 @@ async function startBot() {
 
   sock.ev.on('connection.update', u => {
     const { connection, lastDisconnect } = u;
-    if (connection === 'open') console.log('✅ بوټ وصل شو - د معلوماتو نړۍ مصنوعي ځیرکتیا فعاله شوه!');
+    if (connection === 'open') console.log('✅ د معلوماتو نړۍ اډمین بوټ فعال شو!');
     if (connection === 'close') {
       const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
       if (shouldReconnect) startBot();
     }
   });
 
-  // نوی غړی
+  // نوي غړي ته بې له کښته-پورته نوم ښه راغلاست او قوانین لېږل
   sock.ev.on('group-participants.update', async a => {
     if (a.action === 'add') {
       for (let p of a.participants) {
         const num = p.split('@')[0];
         await sock.sendMessage(a.id, { 
-          text: `🌍 *سلام @${num} جانه! د معلوماتو نړۍ ته ښه راغلاست!* 📚
-
-🤖 *زه د معلوماتو نړۍ مصنوعي ځیرکتیا یم!*
-مهرباني وکړئ د ګروپ قوانین مراعات کړئ:
-
-${GROUP_RULES}`, 
+          text: `🌍 *سلام محترم @${num} جانه! د معلوماتو نړۍ ګروپ ته ښه راغلاست!* 🌸\n\nمهرباني وکړئ د ګروپ د ښه نظم لپاره دا لاندې قوانین مراعات کړئ:\n\n${GROUP_RULES}`, 
           mentions: [p] 
         }).catch(() => {});
       }
     }
   });
 
-  // پیغامونه پروسس کول
+  // د پیغامونو انضباطي پروسس او اتومات کنټرول
   sock.ev.on('messages.upsert', async m => {
     const msg = m.messages[0];
     if (!msg.message || msg.key.fromMe) return;
     
     const from = msg.key.remoteJid;
+    const isGroup = from.endsWith('@g.us');
     const text = msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || '';
     if (!text) return;
     
+    // د کارونکي د پاک نوم استخراج
     const rawName = msg.pushName || msg.key.participant?.split('@')[0] || from.split('@')[0] || 'ملګری';
     const name = rawName.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
     const lower = text.toLowerCase().trim();
     const participant = msg.key.participant || from;
 
-    // ۱. د بدو کلمو مخنیوی
-    for (let b of BAD_WORDS) {
-      if (lower.includes(b)) {
+    // A. د لینکونو کشف او اتومات ډیلیټ کول (Anti-Link)
+    const hasLink = /(chat\.whatsapp\.com|https?:\/\/|www\.|t\.me|facebook\.com|tiktok\.com|youtube\.com|youtu\.be)/i.test(text);
+    if (hasLink && isGroup) {
+      try {
+        // د ناسم پیغام ډیلیټ کول
+        await sock.sendMessage(from, { delete: msg.key });
+        
+        // د غړي خبردارول
         await sock.sendMessage(from, { 
-          text: `⚠️ *محترم ${name} جانه!* مهرباني وکړئ د ګروپ قوانین او ادب مراعات کړئ! 🙏`, 
+          text: `⚠️ *محترم ${name} جانه!*\nپه ګروپ کې د لینکونو خپرول منع دي! ستاسو پیغام د ګروپ د اصولو خلاف و او حذف شو. 🚫`, 
           mentions: [participant] 
-        }, { quoted: msg });
-        return;
+        });
+      } catch (err) {
+        console.log('د پیغام حذف کولو کې ستونزه (بوټ اډمین کړئ):', err.message);
       }
+      return;
     }
 
-    // ۲. د ګروپ قوانین
-    if (['قوانین', 'قانون', 'rules'].includes(lower)) {
+    // B. د بدو کلمو او سپکاوي کشف او اتومات ډیلیټ کول (Anti-Bad Words)
+    const hasBadWord = BAD_WORDS.some(word => lower.includes(word));
+    if (hasBadWord && isGroup) {
+      try {
+        // د بد پیغام حذف کول
+        await sock.sendMessage(from, { delete: msg.key });
+        
+        // غړي ته جدي اتومات تبصره
+        await sock.sendMessage(from, { 
+          text: `⚠️ *محترم ${name} جانه!*\nمهرباني وکړئ د ګروپ اخلاقي او ادبي فضا وپالئ. ستاسو پیغام د بې ځایه او سپکو کلمو درلودلو له امله حذف شو! ❌`, 
+          mentions: [participant] 
+        });
+      } catch (err) {
+        console.log('د پیغام حذف کولو کې ستونزه (بوټ اډمین کړئ):', err.message);
+      }
+      return;
+    }
+
+    // C. د قوانینو غوښتنه
+    if (['قوانین', 'قانون', 'rules', 'قوانين'].includes(lower)) {
       await sock.sendMessage(from, { 
-        text: `📜 *محترم ${name} جانه، د ګروپ قوانین:*\n\n${GROUP_RULES}`, 
+        text: `📜 *محترم ${name} جانه، دا د ګروپ ټول قوانین دي:*\n\n${GROUP_RULES}`, 
         mentions: [participant] 
       }, { quoted: msg });
       return;
     }
 
-    // ۳. د سلام ځواب
+    // D. د اتومات درانه سلام ځواب
     const salamList = ['سلام', 'salam', 'hi', 'hello', 'السلام', 'عليكم', 'علیکم'];
     if (salamList.some(s => lower.includes(s))) {
       await sock.sendMessage(from, {
-        text: `🌍 *و علیکم سلام محترم ${name} جانه!* 🙏\n\nزه **د معلوماتو نړۍ مصنوعي ځیرکتیا** یم! 🤖\nد هرې موضوع په اړه موثق او بشپړ اطلاعات درکولای شم. خپله پوښتنه مطرح کړئ!`,
+        text: `🌍 *و علیکم سلام محترم ${name} جانه!* 🌸\n\nد **د معلوماتو نړۍ** ګروپ ته ښه راغلاست! د ګروپ د قوانینو د لیدلو لپاره *قوانین* ولیکئ.`,
         mentions: [participant]
       }, { quoted: msg });
       return;
-    }
-
-    // ۴. د مصنوعي ځیرکتیا له لارې ځواب
-    if (text.length > 1) {
-      await sock.sendMessage(from, { 
-        text: `⏳ *محترم ${name} جانه، د معلوماتو نړۍ مصنوعي ځیرکتیا ځواب چمتو کوي...* 🧠✨` 
-      }, { quoted: msg }).catch(() => {});
-      
-      const aiResponse = await askGeminiAI(text, name);
-      
-      await sock.sendMessage(from, { 
-        text: aiResponse, 
-        mentions: [participant] 
-      }, { quoted: msg });
     }
   });
 }
 
 startBot();
-
