@@ -33,7 +33,7 @@ app.get('/health', (_req, res) => {
     ok: true,
     service: 'maloomat-bot',
     mode: 'group-only',
-    ai: Boolean(process.env.GEMINI_API_KEY),
+    ai: Boolean(GEMINI_API_KEY),
     model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
   });
 });
@@ -212,7 +212,20 @@ async function getWhatsAppAuthState() {
 // 1.5 د Gemini AI او تازه معلوماتو ځوابونه
 // ======================================================
 
-const GEMINI_API_KEY = String(process.env.GEMINI_API_KEY || '').trim();
+function readGeminiApiKeyFromFile() {
+  try {
+    return fs.readFileSync(
+      path.resolve(process.cwd(), 'gemini-api-key.txt'),
+      'utf8'
+    ).trim();
+  } catch {
+    return '';
+  }
+}
+
+const GEMINI_API_KEY = String(
+  process.env.GEMINI_API_KEY || readGeminiApiKeyFromFile() || ''
+).trim();
 const GEMINI_MODEL = String(process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim();
 const aiCooldowns = new Map();
 const AI_COOLDOWN_MS = 20000;
@@ -229,7 +242,7 @@ function shouldAskAI(text) {
 
 async function getGeminiAnswer(question) {
   if (!GEMINI_API_KEY) {
-    return '⚠️ د AI خدمت لا فعال نه دی. د سرور په Startup/Environment Variables کې GEMINI_API_KEY تنظیم کړئ.';
+    return '⚠️ د AI خدمت فعال نه دی. په سرور کې gemini-api-key.txt فایل جوړ او خپل Gemini API key پکې ولیکئ، یا GEMINI_API_KEY په Environment کې تنظیم کړئ.';
   }
 
   const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' +
@@ -940,7 +953,7 @@ async function startBot() {
           console.log(
             GEMINI_API_KEY
               ? '🛡️ یوازې ګروپونه؛ Gemini AI فعال دی.'
-              : '🛡️ یوازې ګروپونه؛ AI بند دی (GEMINI_API_KEY نشته).'
+              : '🛡️ یوازې ګروپونه؛ AI بند دی (Gemini API key نشته).'
           );
 
           if (pairingTimer) {
