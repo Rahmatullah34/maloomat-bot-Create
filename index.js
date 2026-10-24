@@ -32,9 +32,10 @@ app.get('/health', (_req, res) => {
   res.status(200).json({
     ok: true,
     service: 'maloomat-bot',
-    mode: 'group-only-local-knowledge',
+    mode: 'group-only-local-knowledge+internet-search',
     ai: false,
-    webSearch: false,
+    webSearch: true,
+    webSearchProvider: 'DuckDuckGo HTML + Wikipedia API fallback',
     knowledgeEntries: OFFLINE_KNOWLEDGE.length,
   });
 });
@@ -211,7 +212,7 @@ async function getWhatsAppAuthState() {
 
 // ======================================================
 // ======================================================
-// 1.5 محلي معلوماتي سیستم — هېڅ AI API یا ویب لټون نه کاروي
+// 1.5 محلي معلوماتي سیستم + د انټرنېټ سرچینو لټون (بې له AI API)
 // ======================================================
 
 function loadOfflineKnowledge() {
@@ -388,7 +389,177 @@ function looksLikeQuestion(text) {
   const value = String(text || '').trim();
   if (value.length < 3 || value.length > 1500) return false;
   return /[؟?]/u.test(value) ||
-    /(څوک|څه|چېرته|چیرته|څنګه|ولې|څومره|تعریف|معلومات|راکړه|نصاب|درسي پلان|سمستر|کریډیټ|پېژندنه|پیژندنه|who is|what is|where|when|why|how)/iu.test(value);
+    /(څوک|څه|چېرته|چیرته|څنګه|ولې|څومره|تعریف|معلومات|راکړه|نصاب|درسي پلان|سمستر|کریډیټ|پېژندنه|پیژندنه|خبرونه|تازه|نن|اوسنی|قیمت|بیه|نرخ|انټرنېټ|انټرنټ|ولټوه|لټون|who is|what is|where|when|why|how|latest|today|current|recent|news|price|search online)/iu.test(value);
+}
+
+// د ویب لټون لنډمهاله cache د تکراري پوښتنو او غیرضروري غوښتنو مخه نیسي.
+const INTERNET_SEARCH_CACHE = new Map();
+const INTERNET_SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
+
+function decodeWebText(value) {
+  return String(value || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&#x27;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&#(x[0-9a-f]+|[0-9]+);/gi, (_m, code) => {
+      const n = /^x/i.test(code) ? parseInt(code.slice(1), 16) : parseInt(code, 10);
+      return Number.isFinite(n) && n >= 0 && n <= 0x10ffff ? String.fromCodePoint(n) : '';
+    })
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeWebResultUrl(rawUrl) {
+  try {
+    let url = new URL(rawUrl, 'https://html.duckduckgo.com');
+    if ((url.hostname === 'duckduckgo.com' || url.hostname.endsWith('.duckduckgo.com')) &&
+        (url.pathname === '/l/' || url.pathname === '/l')) {
+      const target = url.searchParams.get('uddg');
+      if (target) url = new URL(target);
+    }
+    if (!['http:', 'https:'].includes(url.protocol)) return '';
+    return url.href;
+  } catch {
+    return '';
+  }
+}
+
+function parseDuckDuckGoResults(html) {
+  const results = [];
+  const anchors = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
+  const snippets = [];
+  const snippetRe = /<(?:td|div)[^>]*class=["'][^"']*(?:result-snippet|result__snippet)[^"']*["'][^>]*>([\s\S]*?)<\/(?:td|div)>/gi;
+  let match;
+  while ((match = snippetRe.exec(html)) !== null) {
+    snippets.push(decodeWebText(match[1]));
+  }
+
+  while ((match = anchors.exec(html)) !== null && results.length < 5) {
+    const attrs = match[1];
+    const cls = (attrs.match(/\bclass=["']([^"']*)["']/i) || [])[1] || '';
+    if (!/(?:result-link|result__a)/i.test(cls)) continue;
+    const rawUrl = (attrs.match(/\bhref=["']([^"']+)["']/i) || [])[1];
+    const url = normalizeWebResultUrl(rawUrl || '');
+    const title = decodeWebText(match[2]);
+    if (!url || !title || /duckduckgo\.com/i.test(url)) continue;
+    if (results.some(item => item.url === url)) continue;
+    results.push({
+      title: title.slice(0, 180),
+      url,
+      snippet: (snippets[results.length] || '').slice(0, 700),
+      provider: 'DuckDuckGo',
+    });
+  }
+  return results;
+}
+
+async function searchDuckDuckGo(query) {
+  const endpoints = [
+    'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(query),
+    'https://lite.duckduckgo.com/lite/?q=' + encodeURIComponent(query),
+  ];
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; MaloomatBot/1.0; informational search)',
+          'Accept': 'text/html,application/xhtml+xml',
+        },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!response.ok) continue;
+      const html = await response.text();
+      const results = parseDuckDuckGoResults(html);
+      if (results.length) return results.slice(0, 4);
+    } catch (err) {
+      console.warn('⚠️ د ویب لټون یوه هڅه ناکامه شوه:', err?.message || err);
+    }
+  }
+  return [];
+}
+
+async function searchWikipedia(query) {
+  // د DuckDuckGo د ناکامۍ پر مهال د ویکیپیډیا عامه API د بدیل سرچینې په توګه کارول کېږي.
+  const endpoint = 'https://en.wikipedia.org/w/api.php?' + new URLSearchParams({
+    action: 'query',
+    generator: 'search',
+    gsrsearch: query,
+    gsrnamespace: '0',
+    gsrwhat: 'text',
+    gsrlimit: '4',
+    prop: 'extracts|info',
+    exintro: '1',
+    explaintext: '1',
+    exchars: '900',
+    inprop: 'url',
+    format: 'json',
+    origin: '*',
+  }).toString();
+
+  try {
+    const response = await fetch(endpoint, {
+      headers: { 'User-Agent': 'MaloomatBot/1.0 (informational WhatsApp bot)' },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) return [];
+    const data = await response.json();
+    const pages = Object.values(data?.query?.pages || {})
+      .filter(page => page && page.title && page.extract)
+      .slice(0, 4);
+    return pages.map(page => ({
+      title: String(page.title).slice(0, 180),
+      url: page.fullurl || ('https://en.wikipedia.org/?curid=' + page.pageid),
+      snippet: String(page.extract).slice(0, 700),
+      provider: 'Wikipedia',
+    }));
+  } catch (err) {
+    console.warn('⚠️ د ویکیپیډیا لټون ناکام شو:', err?.message || err);
+    return [];
+  }
+}
+
+async function searchInternet(query) {
+  const normalized = normalizePashto(query);
+  if (!normalized || normalized.length < 2) return [];
+  const now = Date.now();
+  const cached = INTERNET_SEARCH_CACHE.get(normalized);
+  if (cached && now - cached.time < INTERNET_SEARCH_CACHE_TTL_MS) return cached.results;
+
+  let results = await searchDuckDuckGo(query);
+  if (!results.length) results = await searchWikipedia(query);
+
+  INTERNET_SEARCH_CACHE.set(normalized, { time: now, results });
+  if (INTERNET_SEARCH_CACHE.size > 150) {
+    const oldestKey = INTERNET_SEARCH_CACHE.keys().next().value;
+    if (oldestKey) INTERNET_SEARCH_CACHE.delete(oldestKey);
+  }
+  return results;
+}
+
+function requestsInternetSearch(question) {
+  return /(انټرنېټ|انټرنټ|ویب کې|ویبپاڼ|سرچینې|انلاین|ولټوه|لټون وکړه|تازه معلومات|وروستي خبرونه|search online|search the web|internet search|web search|look up online)/iu.test(question);
+}
+
+function isTimeSensitiveQuestion(question) {
+  return /(نن|نننۍ|نن ورځ|اوس|اوسنی|اوسنۍ|تازه|وروستی|وروستۍ|خبرونه|خبر|اوسمهال|بیه|قیمت|نرخ|د هوا|هوا څنګه|today|latest|current|recent|breaking|news|price|exchange rate|weather|score|standings)/iu.test(question);
+}
+
+function formatInternetResults(question, results) {
+  const entries = results.slice(0, 4).map((item, index) => {
+    const snippet = item.snippet || 'لنډه تشریح نه ده موندل شوې؛ د بشپړ معلوماتو لپاره سرچینه پرانیزئ.';
+    return '*' + (index + 1) + '. ' + item.title + '*\n' +
+      snippet + '\n🔗 ' + item.url;
+  });
+  return '🌐 *د انټرنېټ د سرچینو لټون*\n' +
+    '🔎 پوښتنه: ' + String(question).trim().slice(0, 250) + '\n\n' +
+    entries.join('\n\n') +
+    '\n\n⚠️ دا د لټون پایلې او لنډې اقتباس شوې تشریحګانې دي؛ د سرچینې بشپړ متن او د خپرېدو نېټه په خپله لینک کې وګورئ.';
 }
 
 async function answerWithKnowledge(socket, groupJid, participantJid, question, participantName) {
@@ -401,17 +572,37 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
   }
 
   const localAnswer = answerFromOfflineKnowledge(question);
+  const shouldSearchInternet = requestsInternetSearch(question) ||
+    isTimeSensitiveQuestion(question) || !localAnswer;
+
+  if (!looksLikeQuestion(question) && !localAnswer && !requestsInternetSearch(question)) return false;
+
+  if (shouldSearchInternet) {
+    const webResults = await searchInternet(question);
+    if (webResults.length) {
+      let message = formatInternetResults(question, webResults);
+      if (localAnswer && isTimeSensitiveQuestion(question)) {
+        message += '\n\n📚 *د بوټ له ثبت شوو معلوماتو څخه:*\n' + localAnswer;
+      }
+      await safeSend(socket, groupJid, { text: message });
+      return true;
+    }
+  }
+
   if (localAnswer) {
-    await safeSend(socket, groupJid, { text: localAnswer });
+    const message = isTimeSensitiveQuestion(question)
+      ? localAnswer + '\n\n⚠️ د انټرنېټ لټون دا ځل پایلې راونه وېستلې؛ د تازه معلوماتو لپاره د سرچینې نېټه جلا وګورئ.'
+      : localAnswer;
+    await safeSend(socket, groupJid, { text: message });
     return true;
   }
 
-  if (!looksLikeQuestion(question)) return false;
+  if (!looksLikeQuestion(question) && !requestsInternetSearch(question)) return false;
 
   await safeSend(socket, groupJid, {
-    text: '📚 د دې پوښتنې لپاره په محلي معلوماتو کې لا کره ځواب نه لرم.\n\n' +
-      '✅ زه AI او ویب لټون نه کاروم، نو ناتایید شوي معلومات نه جوړوم. ' +
-      'پوښتنه لږ مشخصه ولیکئ، یا د معلوماتو مدیر ته یې واستوئ څو د پوهې فایل ته کره ځواب ورزیات کړي.'
+    text: '📚 په محلي معلوماتي زېرمه کې د دې پوښتنې کره ځواب ونه موندل شو، او د انټرنېټ لټون هم پایلې ترلاسه نه کړې.\n\n' +
+      '🌐 بیا هڅه وکړئ، پوښتنه لږ مشخصه ولیکئ، یا د سرچینې لینک د ګروپ له غړو سره شریک کړئ. ' +
+      'د انټرنېټ د لټون پایلې تل د سرچینې د اعتبار او نېټې له کتلو وروسته وکاروئ.'
   });
   return true;
 }
