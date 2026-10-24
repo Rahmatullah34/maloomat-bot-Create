@@ -210,13 +210,23 @@ async function getWhatsAppAuthState() {
 // 2. د WhatsApp تنظیمات
 // ======================================================
 
-// د WhatsApp شمېره باید د هېواد له کوډ سره وي.
-// د شمېره په پیل کې + مه لیکه.
-// بېلګه: 937XXXXXXXX
-// دا یوازې بېلګه ده؛ خپله اصلي شمېره په Render کې ولیکه.
+// د WhatsApp شمېره د هېواد له کوډ سره ولیکه؛ د پیل + مه کاروه.
+// که WHATSAPP_PHONE په Startup کې نه وي، بوټ یې له whatsapp-phone.txt فایل څخه اخلي.
+// د whatsapp-phone.txt فایل یوازې په سرور کې جوړ کړه؛ GitHub ته یې مه پورته کوه.
+
+function readPhoneFromFile() {
+  try {
+    return fs.readFileSync(
+      path.resolve(process.cwd(), 'whatsapp-phone.txt'),
+      'utf8'
+    ).trim();
+  } catch {
+    return '';
+  }
+}
 
 const PHONE = String(
-  process.env.WHATSAPP_PHONE || ''
+  process.env.WHATSAPP_PHONE || readPhoneFromFile() || ''
 ).replace(/\D/g, '');
 
 // د پخوانۍ ناستې فولډر.
@@ -778,8 +788,8 @@ async function startBot() {
 
           if (!PHONE) {
             console.error(
-              '❌ د نوي اتصال لپاره باید ' +
-              'WHATSAPP_PHONE په Render Environment کې تنظیم وي.'
+              '❌ د نوي اتصال لپاره WHATSAPP_PHONE تنظیم کړه یا ' +
+              'په سرور کې whatsapp-phone.txt فایل جوړ کړه.'
             );
 
             return;
