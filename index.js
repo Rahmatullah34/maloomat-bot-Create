@@ -450,6 +450,13 @@ function answerFromOfflineKnowledge(question) {
 }
 
 async function answerWithAI(socket, groupJid, participantJid, question) {
+  // لومړی له محلي معلوماتو ځواب پیدا کړه؛ که وموندل شي، AI/API نه کارول کېږي.
+  const offlineAnswer = answerFromOfflineKnowledge(question);
+  if (offlineAnswer) {
+    await safeSend(socket, groupJid, { text: offlineAnswer });
+    return true;
+  }
+
   if (!shouldAskAI(question)) return false;
 
   const now = Date.now();
