@@ -34,7 +34,7 @@ app.get('/health', (_req, res) => {
     service: 'maloomat-bot',
     mode: 'group-only',
     ai: Boolean(GEMINI_API_KEY),
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    model: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
   });
 });
 
@@ -226,7 +226,7 @@ function readGeminiApiKeyFromFile() {
 const GEMINI_API_KEY = String(
   process.env.GEMINI_API_KEY || readGeminiApiKeyFromFile() || ''
 ).trim();
-const GEMINI_MODEL = String(process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim();
+const GEMINI_MODEL = String(process.env.GEMINI_MODEL || 'gemini-3.8-flash').trim();
 const aiCooldowns = new Map();
 const AI_COOLDOWN_MS = 20000;
 
