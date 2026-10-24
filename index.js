@@ -17,7 +17,7 @@ const P = require('pino');
 const express = require('express');
 
 // ======================================================
-// 1. د Render سرور
+// 1. د بوټ HTTP روغتیا او حالت
 // ======================================================
 
 const app = express();
@@ -60,7 +60,7 @@ app.listen(
   Number(process.env.PORT) || 5000,
   '0.0.0.0',
   () => {
-    console.log('✅ د Render سرور فعال شو.');
+    console.log('✅ د بوټ د روغتیا HTTP خدمت فعال شو.');
   }
 );
 
@@ -240,6 +240,25 @@ const SOLAR_SYSTEM_CORRECTION = {
 };
 const solarSystemEntry = OFFLINE_KNOWLEDGE.find(item => item.title === SOLAR_SYSTEM_CORRECTION.title);
 if (solarSystemEntry) Object.assign(solarSystemEntry, SOLAR_SYSTEM_CORRECTION);
+else OFFLINE_KNOWLEDGE.push(SOLAR_SYSTEM_CORRECTION);
+
+// د DNA په اړه مفصل او کره علمي ځواب.
+const DNA_CORRECTION = {
+  title: 'ډي‌اکسي رایبو نیوکلیک اسید (DNA)',
+  keywords: [
+    'DNA', 'ډي اکسي رایبو نیوکلیک اسید', 'ډي‌اکسي رایبو نیوکلیک اسید',
+    'deoxyribonucleic acid', 'د وراثت ماده', 'جنیټیک معلومات',
+    'جینونه څه دي', 'DNA څه شی دی', 'د انسان DNA', 'د ډي ان اې جوړښت'
+  ],
+  answer: 'DNA د Deoxyribonucleic Acid لنډ نوم دی. دا مالیکول د ډېرو ژوندیو موجوداتو د حجرو جنیټیک یا وراثتي معلومات ساتي. د دې معلوماتو ځینې برخې جینونه بلل کېږي؛ جینونه د حجرو سره د پروټینونو او نورو فعالو مالیکولونو په جوړولو کې لارښوونه کوي. DNA د نیوکلیوټایډونو له تکراري واحدونو جوړ دی، او هر نیوکلیوټایډ د ډي‌اکسي‌رایبوز قند، فاسفېټ ډلې او له څلورو نایتروجني بنسټونو څخه یوه لري: اډېنین (A)، تایمین (T)، ګوانین (G) او سایټوسین (C). په معمول DNA کې A له T او G له C سره جوړه جوړوي. د DNA دوه ځنځیرونه د دوه‌ګوني مارپیچ (double helix) بڼه لري. په انسانانو کې د DNA ډېره برخه د حجرو په نیوکلیوس کې د کروموزومونو په بڼه وي؛ لږه اندازه یې په مایتوکونډریاوو کې هم شته. انسان د DNA یوه برخه له مور او بله برخه له پلار څخه په میراث اخلي، خو د هر انسان DNA د ډېرو کوچنیو توپیرونو له امله ځانګړی ترکیب لري. DNA ازموینې د کورنۍ اړیکو، ځینو ارثي حالتونو او عدلي څېړنو په برخه کې کارېدای شي، خو د ازموینې پایلې باید د مناسب متخصص او د ازموینې د محدودیتونو په پام کې نیولو سره تفسیر شي. یادونه: DNA پخپله ژوندی موجود نه دی؛ دا د حجرو دننه د معلوماتو د ساتلو مالیکول دی.',
+  source: 'NHGRI: https://www.genome.gov/about-genomics/fact-sheets/Deoxyribonucleic-Acid-Fact-Sheet'
+};
+const dnaEntry = OFFLINE_KNOWLEDGE.find(item =>
+  normalizePashto(item.title) === normalizePashto(DNA_CORRECTION.title) ||
+  (Array.isArray(item.keywords) && item.keywords.some(k => /deoxyribonucleic acid|DNA/i.test(String(k))))
+);
+if (dnaEntry) Object.assign(dnaEntry, DNA_CORRECTION);
+else OFFLINE_KNOWLEDGE.push(DNA_CORRECTION);
 const SEEN_GROUP_NAMES = new Map();
 
 function normalizePashto(value) {
@@ -437,7 +456,7 @@ const RESET_MARKER = path.resolve(
 // 3. د نوي اتصال لپاره د پخوانۍ ناستې پاکول
 // ======================================================
 
-// په Render کې Environment ته دا متغیر ورزیات کړه:
+// که د WhatsApp ناسته بیا نښلول غواړې، د چاپېریال متغیر تنظیم کړه:
 //
 // RESET_WHATSAPP_SESSION=true
 //
