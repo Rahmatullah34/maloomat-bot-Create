@@ -32,11 +32,16 @@ app.get('/health', (_req, res) => {
   res.status(200).json({
     ok: true,
     service: 'maloomat-bot',
-    mode: 'group-only-local-knowledge+multi-source-internet',
-    aiSummarization: Boolean(process.env.OPENROUTER_API_KEY),
-    webSearch: true,
-    webSearchProviders: ['DuckDuckGo', 'Wikipedia EN', 'Wikipedia PS', 'GDELT news'],
-    knowledgeEntries: OFFLINE_KNOWLEDGE.length,
+    mode: 'group-moderation-only',
+    aiSummarization: false,
+    webSearch: false,
+    webSearchProviders: [],
+    moderation: {
+      badWords: true,
+      links: true,
+      flood: true,
+      repeatedMessages: true,
+    },
   });
 });
 
@@ -1151,8 +1156,8 @@ function rememberMessage(id) {
 
 const messageBursts = new Map();
 
-const BURST_WINDOW_MS = 30 * 1000;
-const BURST_LIMIT = 3;
+const BURST_WINDOW_MS = 10 * 1000;
+const BURST_LIMIT = 6;
 const BURST_WARNING_COOLDOWN_MS = 30 * 1000;
 
 function recordGroupMessage(
@@ -1206,6 +1211,51 @@ function recordGroupMessage(
 }
 
 // ======================================================
+// 10.1 د ورته تکراري پیغامونو مخنیوی
+// ======================================================
+
+const repeatedMessages = new Map();
+const REPEAT_WINDOW_MS = 60 * 1000;
+const REPEAT_LIMIT = 3;
+
+function recordRepeatedMessage(groupJid, participantJid, text) {
+  const normalized = String(text || '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[\\s\\p{P}\\p{S}]+/gu, ' ')
+    .trim();
+
+  // ډېر لنډ پیغامونه، لکه سلام او هو، د تکراري سپم په توګه نه شمېرل کېږي.
+  if (normalized.length < 8) {
+    return { shouldDelete: false, shouldWarn: false, count: 0 };
+  }
+
+  const now = Date.now();
+  const key = `${groupJid}:${participantJid}:${normalized.slice(0, 300)}`;
+  let entry = repeatedMessages.get(key);
+
+  if (!entry) entry = { timestamps: [], lastWarnAt: 0, lastSeenAt: now };
+  entry.timestamps = entry.timestamps.filter(time => now - time < REPEAT_WINDOW_MS);
+  entry.timestamps.push(now);
+  entry.lastSeenAt = now;
+  repeatedMessages.set(key, entry);
+
+  for (const [oldKey, oldEntry] of repeatedMessages) {
+    if (now - oldEntry.lastSeenAt > 10 * 60 * 1000) repeatedMessages.delete(oldKey);
+  }
+  if (repeatedMessages.size > 2000) {
+    const oldestKey = repeatedMessages.keys().next().value;
+    if (oldestKey) repeatedMessages.delete(oldestKey);
+  }
+
+  const shouldDelete = entry.timestamps.length >= REPEAT_LIMIT;
+  const shouldWarn = shouldDelete && now - entry.lastWarnAt >= BURST_WARNING_COOLDOWN_MS;
+  if (shouldWarn) entry.lastWarnAt = now;
+
+  return { shouldDelete, shouldWarn, count: entry.timestamps.length };
+}
+
+// ======================================================
 // 11. د پیغام لېږلو خوندي طریقه
 // ======================================================
 
@@ -1243,7 +1293,8 @@ async function deleteGroupMessage(
   jid,
   messageKey,
   participantName,
-  reason
+  reason,
+  sendWarning = true
 ) {
   let deleted = false;
 
@@ -1268,17 +1319,19 @@ async function deleteGroupMessage(
     );
   }
 
-  const statusText = deleted
-    ? 'د پیغام د حذف غوښتنه واستول شوه.'
-    : 'د پیغام حذف تایید نه شو؛ د بوټ د مدیر اجازه او د اتصال حالت وګوره.';
+  if (sendWarning) {
+    const statusText = deleted
+      ? 'د پیغام د حذف غوښتنه واستول شوه.'
+      : 'د پیغام حذف تایید نه شو؛ د بوټ د مدیر اجازه او د اتصال حالت وګوره.';
 
-  await safeSend(socket, jid, {
-    text:
-      `⚠️ محترم ${participantName} جانه!\n\n` +
-      `${reason}\n` +
-      `${statusText}\n` +
-      'مهرباني وکړئ د ګروپ قوانین مراعات کړئ. 🤝',
-  });
+    await safeSend(socket, jid, {
+      text:
+        `⚠️ محترم ${participantName} جانه!\n\n` +
+        `${reason}\n` +
+        `${statusText}\n` +
+        'مهرباني وکړئ د ګروپ قوانین مراعات کړئ. 🤝',
+    });
+  }
 }
 
 // ======================================================
@@ -1463,9 +1516,7 @@ async function startBot() {
           );
 
           console.log(
-            '📚 یوازې ګروپونه؛ د انټرنېټ لټون فعال دی؛ د AI لنډیز: ' +
-            (process.env.OPENROUTER_API_KEY ? 'فعال' : 'غیرفعال') +
-            '؛ د محلي معلوماتو شمېر: ' + OFFLINE_KNOWLEDGE.length
+            '🛡️ یوازې د ګروپ کنټرول فعال دی: کنځل، لینکونه، چټک او تکراري سپم؛ معلوماتي ځوابونه بند دي.'
           );
 
           if (pairingTimer) {
@@ -1642,6 +1693,24 @@ async function startBot() {
             );
 
             // ==========================================
+            // 18.1 د ډېر چټک پیغامونو مخنیوی
+            // ==========================================
+
+            const burst = recordGroupMessage(groupJid, participantJid);
+            if (burst.count >= BURST_LIMIT) {
+              if (burst.shouldWarn) burst.markWarned();
+              await deleteGroupMessage(
+                socket,
+                groupJid,
+                msg.key,
+                name,
+                '🚫 په لږ وخت کې ډېر پیغامونه لېږل سپم ګڼل کېږي. لږ تم شه او پیغامونه سره راټول کړه.',
+                burst.shouldWarn
+              );
+              continue;
+            }
+
+            // ==========================================
             // 19. د کنځلو او سپکاوي مخنیوی
             // ==========================================
 
@@ -1736,28 +1805,24 @@ async function startBot() {
             }
 
             // ==========================================
-            // 24. د محلي معلوماتو ځواب
             // ==========================================
+            // 24. د تکراري سپم مخنیوی
 
-            rememberGroupMember(groupJid, participantJid, name);
-
-            const handledByKnowledge = await answerWithKnowledge(
-              socket,
-              groupJid,
-              participantJid,
-              text,
-              name
-            );
-
-            if (handledByKnowledge) {
+            const repeated = recordRepeatedMessage(groupJid, participantJid, text);
+            if (repeated.shouldDelete) {
+              await deleteGroupMessage(
+                socket,
+                groupJid,
+                msg.key,
+                name,
+                '🚫 د یوه پیغام پرله‌پسې تکرار سپم ګڼل کېږي. مهرباني وکړئ هماغه پیغام بیا بیا مه لېږئ.',
+                repeated.shouldWarn
+              );
               continue;
             }
 
-            // ==========================================
-            // 25. نور عادي پیغامونه
-            // ==========================================
-
-            // عادي خبرې نه حذف کېږي.
+            // د کارن د غوښتنې له مخې معلوماتي ځوابونه اوس موقتي بند دي.
+            // بوټ قوانین، ښه راغلاست او د ګروپ نظم ساتي؛ عادي خبرې نه حذف کېږي.
 
           } catch (err) {
             console.error(
