@@ -380,8 +380,8 @@ function answerFromOfflineKnowledge(question) {
   if (!best || bestScore < 4) return null;
 
   return '📚 *' + best.title + '*\n\n' + best.answer +
-    (best.source ? '\n\n📖 رسمي/اړونده سرچینه: ' + best.source : '') +
-    '\n\nℹ️ دا ځواب د بوټ له محلي معلوماتو څخه دی؛ AI او ویب لټون نه دي کارول شوي.';
+    (best.source ? '\n\n📖 سرچینه: ' + best.source : '') +
+    '\n\nℹ️ دا ځواب د بوټ له ثبت شوو معلوماتو څخه دی. د تازه بدلېدونکو خبرونو او شمېرو لپاره د سرچینې نېټه وګورئ.';
 }
 
 function looksLikeQuestion(text) {
