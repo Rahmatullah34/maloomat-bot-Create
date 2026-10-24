@@ -32,16 +32,17 @@ app.get('/health', (_req, res) => {
   res.status(200).json({
     ok: true,
     service: 'maloomat-bot',
-    mode: 'group-moderation-only',
-    aiSummarization: false,
-    webSearch: false,
-    webSearchProviders: [],
+    mode: 'group-only-local-knowledge+multi-source-internet',
+    aiSummarization: Boolean(process.env.OPENROUTER_API_KEY),
+    webSearch: true,
+    webSearchProviders: ['DuckDuckGo', 'Wikipedia EN', 'Wikipedia PS', 'GDELT news'],
     moderation: {
       badWords: true,
       links: true,
       flood: true,
       repeatedMessages: true,
     },
+    knowledgeEntries: OFFLINE_KNOWLEDGE.length,
   });
 });
 
@@ -1516,7 +1517,9 @@ async function startBot() {
           );
 
           console.log(
-            '🛡️ یوازې د ګروپ کنټرول فعال دی: کنځل، لینکونه، چټک او تکراري سپم؛ معلوماتي ځوابونه بند دي.'
+            '🛡️ د ګروپ کنټرول فعال دی: کنځل، لینکونه، چټک او تکراري سپم؛ انټرنېټي لټون فعال؛ د AI لنډیز: ' +
+            (process.env.OPENROUTER_API_KEY ? 'فعال' : 'غیرفعال') +
+            '؛ د محلي معلوماتو شمېر: ' + OFFLINE_KNOWLEDGE.length
           );
 
           if (pairingTimer) {
@@ -1821,8 +1824,22 @@ async function startBot() {
               continue;
             }
 
-            // د کارن د غوښتنې له مخې معلوماتي ځوابونه اوس موقتي بند دي.
-            // بوټ قوانین، ښه راغلاست او د ګروپ نظم ساتي؛ عادي خبرې نه حذف کېږي.
+            // معلوماتي او انټرنېټي ځوابونه فعال ساتل شوي؛ د ګروپ د کنټرول کتنې ترې مخکې اجرا کېږي.
+            rememberGroupMember(groupJid, participantJid, name);
+
+            const handledByKnowledge = await answerWithKnowledge(
+              socket,
+              groupJid,
+              participantJid,
+              text,
+              name
+            );
+
+            if (handledByKnowledge) {
+              continue;
+            }
+
+            // عادي خبرې نه حذف کېږي.
 
           } catch (err) {
             console.error(
