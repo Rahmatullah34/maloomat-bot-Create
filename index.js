@@ -1258,14 +1258,17 @@ async function startBot() {
             // 24. د محلي معلوماتو ځواب
             // ==========================================
 
-            rememberGroupMember(groupJid, participantJid, name);\n\n            const handledByKnowledge = await answerWithKnowledge(
+            rememberGroupMember(groupJid, participantJid, name);
+
+            const handledByKnowledge = await answerWithKnowledge(
               socket,
               groupJid,
               participantJid,
-              text
+              text,
+              name
             );
 
-            if (handledByAI) {
+            if (handledByKnowledge) {
               continue;
             }
 
