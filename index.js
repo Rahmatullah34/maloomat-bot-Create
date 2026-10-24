@@ -8,6 +8,9 @@ const {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
+  BufferJSON,
+  initAuthCreds,
+  proto,
 } = require('@whiskeysockets/baileys');
 
 const P = require('pino');
@@ -32,6 +35,23 @@ app.get('/health', (_req, res) => {
     mode: 'group-only',
     ai: Boolean(process.env.GEMINI_API_KEY),
   });
+});
+
+app.get('/keepalive', async (_req, res) => {
+  try {
+    if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+      await supabaseRest('whatsapp_auth?select=id&limit=1');
+    }
+
+    res.status(200).json({
+      ok: true,
+      service: 'maloomat-bot',
+      storage: SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY ? 'supabase' : 'local',
+    });
+  } catch (err) {
+    console.error('❌ د ذخیرې د روغتیا کتنه ناکامه شوه:', err?.message || err);
+    res.status(503).json({ ok: false, storage: 'supabase-unavailable' });
+  }
 });
 
 app.listen(
@@ -103,6 +123,151 @@ async function getAIAnswer(question) {
     .trim();
 
   return answer ? answer.slice(0, 3500) : null;
+}
+
+// ======================================================
+// 1.2 د WhatsApp ناستې دوامداره ذخیره (Supabase وړیا ډیټابېس)
+// ======================================================
+
+// دا دوه Environment Variables د Supabase د پروژې له معلوماتو اخستل کېږي.
+// که دواړه تنظیم نه وي، بوټ پخوانۍ ځايي ذخیره کاروي.
+// که یوازې یو تنظیم وي، بوټ په تېروتنه درېږي څو ناسته په غلط ځای کې خوندي نه شي.
+const SUPABASE_URL = String(process.env.SUPABASE_URL || '').trim().replace(/\\/+$/, '');
+const SUPABASE_SERVICE_ROLE_KEY = String(
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+).trim();
+
+async function supabaseRest(resourcePath, options = {}) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Supabase environment variables are not configured.');
+  }
+
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${resourcePath}`, {
+    ...options,
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+    signal: AbortSignal.timeout(15000),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(`Supabase HTTP ${response.status}: ${detail.slice(0, 200)}`);
+  }
+
+  return response;
+}
+
+function serializeAuthValue(value) {
+  return JSON.parse(JSON.stringify(value, BufferJSON.replacer));
+}
+
+function deserializeAuthValue(value) {
+  return JSON.parse(JSON.stringify(value), BufferJSON.reviver);
+}
+
+async function useSupabaseAuthState() {
+  async function readAuthData(id) {
+    const query = 'whatsapp_auth?id=eq.' + encodeURIComponent(id) + '&select=data&limit=1';
+    const response = await supabaseRest(query);
+    const rows = await response.json();
+
+    if (!Array.isArray(rows) || !rows.length || rows[0].data == null) {
+      return null;
+    }
+
+    return deserializeAuthValue(rows[0].data);
+  }
+
+  async function writeAuthRows(rows) {
+    if (!rows.length) return;
+
+    const payload = rows.map(({ id, data }) => ({
+      id,
+      data: serializeAuthValue(data),
+      updated_at: new Date().toISOString(),
+    }));
+
+    await supabaseRest('whatsapp_auth?on_conflict=id', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async function deleteAuthData(id) {
+    await supabaseRest('whatsapp_auth?id=eq.' + encodeURIComponent(id), {
+      method: 'DELETE',
+      headers: { Prefer: 'return=minimal' },
+    });
+  }
+
+  const creds = (await readAuthData('creds')) || initAuthCreds();
+
+  const keys = {
+    get: async (type, ids) => {
+      const result = {};
+      await Promise.all(ids.map(async (id) => {
+        const value = await readAuthData('key:' + type + ':' + id);
+        if (value !== null) result[id] = value;
+      }));
+
+      if (type === 'app-state-sync-key') {
+        for (const id of Object.keys(result)) {
+          result[id] = proto.Message.AppStateSyncKeyData.fromObject(result[id]);
+        }
+      }
+
+      return result;
+    },
+
+    set: async (data) => {
+      const rowsToWrite = [];
+      const idsToDelete = [];
+
+      for (const [type, entries] of Object.entries(data || {})) {
+        for (const [id, value] of Object.entries(entries || {})) {
+          const storageId = 'key:' + type + ':' + id;
+          if (value == null) {
+            idsToDelete.push(storageId);
+          } else {
+            rowsToWrite.push({ id: storageId, data: value });
+          }
+        }
+      }
+
+      await writeAuthRows(rowsToWrite);
+      await Promise.all(idsToDelete.map((id) => deleteAuthData(id)));
+    },
+  };
+
+  console.log('☁️ د WhatsApp د ناستې معلومات په Supabase کې ساتل کېږي.');
+
+  return {
+    state: { creds, keys },
+    saveCreds: () => writeAuthRows([{ id: 'creds', data: creds }]),
+  };
+}
+
+async function getWhatsAppAuthState() {
+  const hasUrl = Boolean(SUPABASE_URL);
+  const hasKey = Boolean(SUPABASE_SERVICE_ROLE_KEY);
+
+  if (hasUrl !== hasKey) {
+    throw new Error('د Supabase دواړه متغیرونه SUPABASE_URL او SUPABASE_SERVICE_ROLE_KEY باید تنظیم وي.');
+  }
+
+  if (hasUrl && hasKey) {
+    return useSupabaseAuthState();
+  }
+
+  // د پخوانۍ ځايي ذخیرې د پاکولو اختیار یوازې په fallback حالت کې کارول کېږي.
+  prepareAuthSessionForOneTimeReset();
+  console.warn('⚠️ Supabase نه دی تنظیم شوی؛ د WhatsApp ناسته په موقتي local filesystem کې ده.');
+  return useMultiFileAuthState(AUTH_DIR);
 }
 
 // ======================================================
@@ -596,16 +761,10 @@ async function startBot() {
   isStarting = true;
 
   try {
-    // که د نوي اتصال لپاره RESET متغیر فعال وي،
-    // د پخوانۍ ناستې د پاکولو یو ځلنی میکانېزم اجرا کېږي.
-    prepareAuthSessionForOneTimeReset();
-
     const {
       state,
       saveCreds,
-    } = await useMultiFileAuthState(
-      AUTH_DIR
-    );
+    } = await getWhatsAppAuthState();
 
     let version;
 
