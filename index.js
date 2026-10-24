@@ -34,6 +34,7 @@ app.get('/health', (_req, res) => {
     service: 'maloomat-bot',
     mode: 'group-only',
     ai: Boolean(OPENROUTER_API_KEY),
+    webSearch: Boolean(TAVILY_API_KEY),
     model: process.env.OPENROUTER_MODEL || 'openrouter/free',
   });
 });
@@ -223,6 +224,21 @@ function readOpenRouterApiKeyFromFile() {
   }
 }
 
+function readTavilyApiKeyFromFile() {
+  try {
+    return fs.readFileSync(
+      path.resolve(process.cwd(), 'tavily-api-key.txt'),
+      'utf8'
+    ).trim();
+  } catch {
+    return '';
+  }
+}
+
+const TAVILY_API_KEY = String(
+  process.env.TAVILY_API_KEY || readTavilyApiKeyFromFile() || ''
+).trim();
+
 const OPENROUTER_API_KEY = String(
   process.env.OPENROUTER_API_KEY || readOpenRouterApiKeyFromFile() || ''
 ).trim();
@@ -242,18 +258,85 @@ function shouldAskAI(text) {
     /(څه وخت|څنګه|ولې|څوک|چېرته|چیرته|څومره|معلومات راکړه|تازه معلومات|وروستۍ لوبه|کرکټ|خبرونه|پایله|نتیجه|what|when|where|who|why|how|latest|news|score|cricket|update)/iu.test(value);
 }
 
+async function searchWebForQuestion(question) {
+  if (!TAVILY_API_KEY) return [];
+
+  try {
+    const isNewsQuery = /(خبر|تازه|اوسنی|وروستی|نن|خبرونه|news|latest|today|current|update)/iu.test(question);
+    const response = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + TAVILY_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        query: String(question || '').trim().slice(0, 380),
+        search_depth: 'basic',
+        topic: isNewsQuery ? 'news' : 'general',
+        max_results: 5,
+        include_answer: true,
+        include_raw_content: false
+      }),
+      signal: AbortSignal.timeout(20000)
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const detail = payload?.detail || payload?.error || ('HTTP ' + response.status);
+      throw new Error(String(detail).slice(0, 200));
+    }
+
+    const results = Array.isArray(payload?.results) ? payload.results : [];
+    return results
+      .filter((item) => {
+        try {
+          const url = new URL(item?.url);
+          return (url.protocol === 'https:' || url.protocol === 'http:') &&
+            typeof item?.content === 'string' && item.content.trim();
+        } catch {
+          return false;
+        }
+      })
+      .slice(0, 5)
+      .map((item) => ({
+        title: String(item.title || 'سرچینه').slice(0, 180),
+        url: String(item.url),
+        content: String(item.content || '').slice(0, 1100),
+        published_date: item.published_date ? String(item.published_date).slice(0, 40) : ''
+      }));
+  } catch (err) {
+    console.warn('⚠️ د Tavily ویب لټون ناکام شو؛ AI به له موجودو معلوماتو ځواب جوړ کړي:', err?.message || err);
+    return [];
+  }
+}
+
 async function getOpenRouterAnswer(question) {
   if (!OPENROUTER_API_KEY) {
     return '⚠️ د AI خدمت کیلي نه ده تنظیم شوې. په سرور کې openrouter-api-key.txt فایل جوړ او د OpenRouter API key پکې ولیکئ.';
   }
 
+  // Use live web search when a Tavily key is configured.
+  const webResults = await searchWebForQuestion(question);
+  const sourcesContext = webResults.length
+    ? webResults.map((item, index) => [
+        '[' + (index + 1) + '] ' + item.title,
+        'URL: ' + item.url,
+        item.published_date ? 'نېټه: ' + item.published_date : '',
+        'موندل شوی متن: ' + item.content
+      ].filter(Boolean).join('\n')).join('\n\n')
+    : 'د دې پوښتنې لپاره د ویب سرچینې ونه موندل شوې یا Tavily نه دی تنظیم شوی. د سرچینې یا لینک ادعا مه جوړوه؛ که معلومات تازه تایید ته اړتیا لري، په ښکاره یې ووایه.';
+
   const prompt = [
-    'ته د «د معلوماتو نړۍ» د WhatsApp ګروپ مرستیال یې.',
-    'د کارونکي په ژبه ځواب ورکړه؛ که ژبه پښتو وي، روانه او روښانه پښتو وکاروه.',
-    'حقایق مه جوړوه. که د تازه معلوماتو د تایید توان نه لرې، دا خبره په څرګنده ووایه.',
-    'ځواب لنډ، ګټور او د WhatsApp لپاره مناسب وساته.',
-    'د کارونکي پوښتنه: ' + question
-  ].join('\n');
+    'ته د «د معلوماتو نړۍ» د WhatsApp ګروپ مرستیال یې؛ د خبرو اترو او معلوماتي پوښتنو لپاره د مرستندوی په شان ګټور کار وکړه.',
+    'د کارونکي په ژبه ځواب ورکړه؛ که ژبه پښتو وي، روانه، طبیعي او روښانه پښتو وکاروه.',
+    'د ورکړل شویو ویب سرچینو له متن سره د تازه او تاییدېدونکو حقایقو ځوابونه برابر کړه.',
+    'که د سرچینو متن د پوښتنې ځواب نه تاییدوي، معلومات مه جوړوه او ناڅرګندتیا روښانه کړه.',
+    'که ویب سرچینې موجودې وي، د اړوندو ادعاوو ترڅنګ [1]، [2] غوندې نښې وکاروه. د سرچینو URL مه بدلوه او جعلي سرچینې مه جوړوه.',
+    'که سرچینې کافي نه وي، د عمومي پوهې ځواب ورکولای شې؛ خو تازه یا ناتایید شوي معلومات د یقیني حقیقت په توګه مه وړاندې کوه.',
+    'ځواب لنډ، منظم او د WhatsApp لپاره مناسب وساته؛ که پوښتنه ژوره وي، په څو لنډو فقرو کې وضاحت ورکړه.',
+    'د کارونکي پوښتنه: ' + question,
+    'د ویب لټون پایلې:\n' + sourcesContext
+  ].join('\n\n');
 
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -266,9 +349,7 @@ async function getOpenRouterAnswer(question) {
     body: JSON.stringify({
       model: OPENROUTER_MODEL,
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.4,
-      // Free router may select reasoning models; keep reasoning brief
-      // and leave enough output budget for the actual answer.
+      temperature: 0.3,
       reasoning: { effort: 'low' },
       max_tokens: 1400
     }),
@@ -282,11 +363,11 @@ async function getOpenRouterAnswer(question) {
   }
 
   const choice = payload?.choices?.[0];
-  const content = choice?.message?.content;
-  const answer = typeof content === 'string'
-    ? content.trim()
-    : Array.isArray(content)
-      ? content.map((part) => typeof part?.text === 'string' ? part.text : '').join('').trim()
+  const rawContent = choice?.message?.content;
+  const answer = typeof rawContent === 'string'
+    ? rawContent.trim()
+    : Array.isArray(rawContent)
+      ? rawContent.map((part) => typeof part?.text === 'string' ? part.text : '').join('').trim()
       : '';
 
   if (!answer) {
@@ -300,9 +381,16 @@ async function getOpenRouterAnswer(question) {
     throw new Error('OpenRouter returned no visible text (model=' + details.model +
       ', finish_reason=' + details.finish_reason + ').');
   }
-  return answer.slice(0, 3500);
-}
 
+  const answerText = answer.slice(0, 3000);
+  if (!webResults.length) return answerText;
+
+  const sourceList = webResults.map((item, index) =>
+    '[' + (index + 1) + '] ' + item.title + '\n' + item.url
+  ).join('\n\n');
+
+  return (answerText + '\n\n🔗 *سرچینې:*\n' + sourceList).slice(0, 3500);
+}
 async function answerWithAI(socket, groupJid, participantJid, question) {
   if (!shouldAskAI(question)) return false;
 
