@@ -34,7 +34,7 @@ app.get('/health', (_req, res) => {
     service: 'maloomat-bot',
     mode: 'group-only',
     ai: Boolean(OPENROUTER_API_KEY),
-    model: process.env.OPENROUTER_MODEL || 'deepseek/deepseek-v4-flash-0731:free',
+    model: process.env.OPENROUTER_MODEL || 'openrouter/free',
   });
 });
 
@@ -227,7 +227,7 @@ const OPENROUTER_API_KEY = String(
   process.env.OPENROUTER_API_KEY || readOpenRouterApiKeyFromFile() || ''
 ).trim();
 const OPENROUTER_MODEL = String(
-  process.env.OPENROUTER_MODEL || 'deepseek/deepseek-v4-flash-0731:free'
+  process.env.OPENROUTER_MODEL || 'openrouter/free'
 ).trim();
 const aiCooldowns = new Map();
 const AI_COOLDOWN_MS = 20000;
