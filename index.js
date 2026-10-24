@@ -33,6 +33,8 @@ app.get('/health', (_req, res) => {
     ok: true,
     service: 'maloomat-bot',
     mode: 'group-only',
+    ai: Boolean(process.env.GEMINI_API_KEY),
+    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
   });
 });
 
@@ -204,6 +206,97 @@ async function getWhatsAppAuthState() {
   prepareAuthSessionForOneTimeReset();
   console.warn('⚠️ Supabase نه دی تنظیم شوی؛ د WhatsApp ناسته په موقتي local filesystem کې ده.');
   return useMultiFileAuthState(AUTH_DIR);
+}
+
+// ======================================================
+// 1.5 د Gemini AI او تازه معلوماتو ځوابونه
+// ======================================================
+
+const GEMINI_API_KEY = String(process.env.GEMINI_API_KEY || '').trim();
+const GEMINI_MODEL = String(process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim();
+const aiCooldowns = new Map();
+const AI_COOLDOWN_MS = 20000;
+
+function shouldAskAI(text) {
+  const value = String(text || '').trim();
+  if (value.length < 3 || value.length > 1500) return false;
+
+  // پوښتنې، د بوټ خطاب، او د تازه خبرونو غوښتنې AI ته لېږل کېږي.
+  return /[؟?]/u.test(value) ||
+    /(^|\\s)(بوټه|بوټ|bot|assistant)(\\s|$)/iu.test(value) ||
+    /(څه وخت|څنګه|ولې|څوک|چېرته|چیرته|څومره|معلومات راکړه|تازه معلومات|وروستۍ لوبه|کرکټ|خبرونه|پایله|نتیجه|what|when|where|who|why|how|latest|news|score|cricket|update)/iu.test(value);
+}
+
+async function getGeminiAnswer(question) {
+  if (!GEMINI_API_KEY) {
+    return '⚠️ د AI خدمت لا فعال نه دی. د سرور په Startup/Environment Variables کې GEMINI_API_KEY تنظیم کړئ.';
+  }
+
+  const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' +
+    encodeURIComponent(GEMINI_MODEL) + ':generateContent?key=' +
+    encodeURIComponent(GEMINI_API_KEY);
+
+  const prompt = [
+    'ته د «د معلوماتو نړۍ» د WhatsApp ګروپ مرستیال یې.',
+    'د کارونکي په ژبه ځواب ورکړه؛ که ژبه پښتو وي، روانه او روښانه پښتو وکاروه.',
+    'د کرکټ، ورزش، خبرونو او اوسنیو پېښو په اړه د تازه معلوماتو غوښتنه وي، د Google Search وسیله وکاروه.',
+    'حقایق مه جوړوه. که سرچینې تازه پایله تایید نه کړي، په څرګنده ووایه چې تایید شوې پایله ونه موندل شوه.',
+    'ځواب لنډ، ګټور او د WhatsApp لپاره مناسب وساته. که مناسب وي، نېټه او سرچینې هم یادې کړه.',
+    'د کارونکي پوښتنه: ' + question
+  ].join('\\n');
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      tools: [{ google_search: {} }],
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: 700,
+      },
+    }),
+    signal: AbortSignal.timeout(25000),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const apiMessage = payload?.error?.message || ('HTTP ' + response.status);
+    throw new Error('Gemini API: ' + apiMessage.slice(0, 250));
+  }
+
+  const answer = (payload?.candidates?.[0]?.content?.parts || [])
+    .map((part) => part.text || '')
+    .join('\\n')
+    .trim();
+
+  if (!answer) throw new Error('Gemini returned an empty answer.');
+  return answer.slice(0, 3500);
+}
+
+async function answerWithAI(socket, groupJid, participantJid, question) {
+  if (!shouldAskAI(question)) return false;
+
+  const now = Date.now();
+  const cooldownKey = groupJid + ':' + participantJid;
+  const last = aiCooldowns.get(cooldownKey) || 0;
+  if (now - last < AI_COOLDOWN_MS) return true;
+  aiCooldowns.set(cooldownKey, now);
+
+  for (const [key, time] of aiCooldowns) {
+    if (now - time > 10 * 60 * 1000) aiCooldowns.delete(key);
+  }
+
+  try {
+    const answer = await getGeminiAnswer(question);
+    await safeSend(socket, groupJid, { text: answer });
+  } catch (err) {
+    console.error('❌ د AI ځواب ناکام شو:', err?.message || err);
+    await safeSend(socket, groupJid, {
+      text: 'بښنه غواړم، اوس د معلوماتو ترلاسه کولو کې ستونزه ده. لږ وروسته بیا پوښتنه وکړئ.'
+    });
+  }
+  return true;
 }
 
 // ======================================================
@@ -845,7 +938,9 @@ async function startBot() {
           );
 
           console.log(
-            '🛡️ یوازې ګروپونه؛ AI بند دی.'
+            GEMINI_API_KEY
+              ? '🛡️ یوازې ګروپونه؛ Gemini AI فعال دی.'
+              : '🛡️ یوازې ګروپونه؛ AI بند دی (GEMINI_API_KEY نشته).'
           );
 
           if (pairingTimer) {
@@ -1112,6 +1207,21 @@ async function startBot() {
                 }
               );
 
+              continue;
+            }
+
+            // ==========================================
+            // 24. د پوښتنو لپاره AI ځواب
+            // ==========================================
+
+            const handledByAI = await answerWithAI(
+              socket,
+              groupJid,
+              participantJid,
+              text
+            );
+
+            if (handledByAI) {
               continue;
             }
 
