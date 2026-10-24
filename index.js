@@ -75,7 +75,7 @@ function isQuestion(text) {
   if (value.length < 5 || value.length > 1000) return false;
 
   return /[؟?]/u.test(value) ||
-    /^(څوک|څه|ولې|څنګه|کوم|کله|چېرته|چیرته|ایا|معلومات|پوښتنه|what|who|why|how|when|where|which|can you|tell me|explain|کیا|کیوں|کیسے|کب|کہاں)\b?/iu.test(value);
+    /^(څوک|څه|ولې|څنګه|کوم|کله|چېرته|چیرته|ایا|معلومات|پوښتنه|what|who|why|how|when|where|which|can you|tell me|explain|کیا|کیوں|کیسے|کب|کہاں)(?:\s|$)/iu.test(value);
 }
 
 async function getAIAnswer(question) {
@@ -132,7 +132,7 @@ async function getAIAnswer(question) {
 // دا دوه Environment Variables د Supabase د پروژې له معلوماتو اخستل کېږي.
 // که دواړه تنظیم نه وي، بوټ پخوانۍ ځايي ذخیره کاروي.
 // که یوازې یو تنظیم وي، بوټ په تېروتنه درېږي څو ناسته په غلط ځای کې خوندي نه شي.
-const SUPABASE_URL = String(process.env.SUPABASE_URL || '').trim().replace(/\\/+$/, '');
+const SUPABASE_URL = String(process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '');
 const SUPABASE_SERVICE_ROLE_KEY = String(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 ).trim();
