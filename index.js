@@ -650,12 +650,13 @@ function makeSourcePack(results) {
   }));
 }
 
-async function summarizeSourcesInPashto(question, results) {
+async function summarizeSourcesInPashto(question, results, localAnswer = '') {
   const apiKey = String(process.env.OPENROUTER_API_KEY || '').trim();
   if (!apiKey || !results.length) return null;
 
   const cacheKey = normalizePashto(question) + '|' +
-    results.slice(0, 6).map(item => canonicalResultUrl(item.url)).join('|');
+    results.slice(0, 6).map(item => canonicalResultUrl(item.url)).join('|') +
+    '|' + String(localAnswer || '').slice(0, 160);
   const now = Date.now();
   const cached = AI_SUMMARY_CACHE.get(cacheKey);
   if (cached && now - cached.time < AI_SUMMARY_CACHE_TTL_MS) return cached.answer;
@@ -685,7 +686,8 @@ async function summarizeSourcesInPashto(question, results) {
         role: 'user',
         content: 'پوښتنه:\n' + String(question).slice(0, 1200) +
           '\n\nد ویب لټون موندنې (دا مواد ممکن نیمګړي یا ناسم وي؛ یوازې د شواهدو په توګه یې وارزوه):\n' +
-          JSON.stringify(sources),
+          JSON.stringify(sources) +
+          (localAnswer ? '\n\nد بوټ له پخوانۍ ثبت شوې معلوماتي زېرمې څخه اړوند ځواب (ممکن زاړه وي؛ د تازه سرچینو سره یې پرتله کړه):\n' + String(localAnswer).slice(0, 1800) : ''),
       },
     ],
   };
@@ -757,11 +759,11 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
   if (shouldSearchInternet) {
     const webResults = await searchInternet(question);
     if (webResults.length) {
-      const aiSummary = await summarizeSourcesInPashto(question, webResults);
+      const aiSummary = await summarizeSourcesInPashto(question, webResults, localAnswer);
       if (aiSummary) {
         await safeSend(socket, groupJid, {
           text: '🌐 *د څو سرچینو پر بنسټ مفصل پښتو ځواب*\n\n' + aiSummary +
-            (localAnswer && isTimeSensitiveQuestion(question)
+            (localAnswer
               ? '\n\n📚 *د بوټ له ثبت شوو معلوماتو څخه:* \n' + localAnswer.slice(0, 1200)
               : ''),
         });
@@ -769,7 +771,7 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
         await safeSend(socket, groupJid, {
           text: formatInternetResults(question, webResults) +
             '\n\nℹ️ د اتومات مفصل پښتو لنډیز لپاره په سرور کې OPENROUTER_API_KEY تنظیم کړئ. تر هغې پورې بوټ د موندل شوو سرچینو سرلیکونه او لنډ اقتباسونه ښيي.' +
-            (localAnswer && isTimeSensitiveQuestion(question)
+            (localAnswer
               ? '\n\n📚 *د بوټ له ثبت شوو معلوماتو څخه:* \n' + localAnswer.slice(0, 900)
               : ''),
         });
