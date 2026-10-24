@@ -32,10 +32,10 @@ app.get('/health', (_req, res) => {
   res.status(200).json({
     ok: true,
     service: 'maloomat-bot',
-    mode: 'group-only',
-    ai: Boolean(OPENROUTER_API_KEY),
-    webSearch: Boolean(TAVILY_API_KEY),
-    model: process.env.OPENROUTER_MODEL || 'openrouter/free',
+    mode: 'group-only-offline-knowledge',
+    ai: false,
+    webSearch: false,
+    knowledgeEntries: OFFLINE_KNOWLEDGE.length,
   });
 });
 
@@ -1105,11 +1105,8 @@ async function startBot() {
           );
 
           console.log(
-            OPENROUTER_API_KEY
-              ? (TAVILY_API_KEY
-                  ? '🛡️ یوازې ګروپونه؛ AI او ویب لټون فعال دي (OpenRouter + Tavily).'
-                  : '🛡️ یوازې ګروپونه؛ AI فعال دی، خو Tavily ویب لټون نه دی تنظیم شوی.')
-              : '🛡️ یوازې ګروپونه؛ AI بند دی (OpenRouter API key نشته).'
+            '📚 یوازې ګروپونه؛ د AI پرته محلي معلومات فعال دي. د معلوماتو شمېر: ' +
+            OFFLINE_KNOWLEDGE.length
           );
 
           if (pairingTimer) {
