@@ -635,6 +635,16 @@ async function searchInternet(query) {
     return true;
   }).slice(0, 10);
 
+  if (unique.length) {
+    const providerCounts = unique.reduce((counts, item) => {
+      counts[item.provider || 'نورې سرچینې'] = (counts[item.provider || 'نورې سرچینې'] || 0) + 1;
+      return counts;
+    }, {});
+    console.log('🌐 د انټرنېټ لټون پایلې:', JSON.stringify(providerCounts));
+  } else {
+    console.warn('⚠️ د انټرنېټ ټولو سرچینو صفر پایلې ورکړې؛ موضوع:', topic.slice(0, 120));
+  }
+
   INTERNET_SEARCH_CACHE.set(normalized, { time: now, results: unique });
   if (INTERNET_SEARCH_CACHE.size > 150) {
     const oldestKey = INTERNET_SEARCH_CACHE.keys().next().value;
@@ -1453,8 +1463,9 @@ async function startBot() {
           );
 
           console.log(
-            '📚 یوازې ګروپونه؛ د AI پرته محلي معلومات فعال دي. د معلوماتو شمېر: ' +
-            OFFLINE_KNOWLEDGE.length
+            '📚 یوازې ګروپونه؛ د انټرنېټ لټون فعال دی؛ د AI لنډیز: ' +
+            (process.env.OPENROUTER_API_KEY ? 'فعال' : 'غیرفعال') +
+            '؛ د محلي معلوماتو شمېر: ' + OFFLINE_KNOWLEDGE.length
           );
 
           if (pairingTimer) {
