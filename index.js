@@ -1222,7 +1222,7 @@ function recordRepeatedMessage(groupJid, participantJid, text) {
   const normalized = String(text || '')
     .normalize('NFKC')
     .toLowerCase()
-    .replace(/[\\s\\p{P}\\p{S}]+/gu, ' ')
+    .replace(/[\s\p{P}\p{S}]+/gu, ' ')
     .trim();
 
   // ډېر لنډ پیغامونه، لکه سلام او هو، د تکراري سپم په توګه نه شمېرل کېږي.
