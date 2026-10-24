@@ -393,6 +393,62 @@ async function getOpenRouterAnswer(question) {
 
   return (answerText + '\n\n🔗 *سرچینې:*\n' + sourceList).slice(0, 3500);
 }
+// ======================================================
+// 1.6 د AI پرته د پښتو معلوماتو ځوابونه
+// ======================================================
+
+function loadOfflineKnowledge() {
+  try {
+    const file = path.resolve(process.cwd(), 'knowledge-base-ps.json');
+    const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    console.warn('⚠️ د معلوماتو فایل ونه لوستل شو:', err?.message || err);
+    return [];
+  }
+}
+
+const OFFLINE_KNOWLEDGE = loadOfflineKnowledge();
+
+function answerFromOfflineKnowledge(question) {
+  const normalize = (value) => String(value || '')
+    .toLowerCase()
+    .normalize('NFKC')
+    .replace(/[؟?!،,.:؛()\[\]{}"'«»]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const q = normalize(question);
+  if (q.length < 3 || !OFFLINE_KNOWLEDGE.length) return null;
+
+  let best = null;
+  let bestScore = 0;
+
+  for (const item of OFFLINE_KNOWLEDGE) {
+    const terms = [item.title, ...(item.keywords || [])]
+      .filter(Boolean)
+      .map(normalize)
+      .filter((term) => term.length >= 2);
+
+    let score = 0;
+    for (const term of terms) {
+      if (q.includes(term)) score += term.includes(' ') ? 4 : 2;
+    }
+
+    // د ډېرو عامو/کمزورو کلمو پر بنسټ ځواب مه ټاکه.
+    if (score > bestScore) {
+      bestScore = score;
+      best = item;
+    }
+  }
+
+  if (!best || bestScore < 4) return null;
+
+  return '📚 *' + best.title + '*\n\n' + best.answer +
+    (best.source ? '\n\n📖 سرچینه: ' + best.source : '') +
+    '\n\nℹ️ دا د بوټ له مخکې خوندي شوو معلوماتو څخه ځواب دی؛ AI نه دی کارول شوی.';
+}
+
 async function answerWithAI(socket, groupJid, participantJid, question) {
   if (!shouldAskAI(question)) return false;
 
