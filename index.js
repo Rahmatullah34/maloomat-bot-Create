@@ -267,7 +267,10 @@ async function getOpenRouterAnswer(question) {
       model: OPENROUTER_MODEL,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.4,
-      max_tokens: 700
+      // Free router may select reasoning models; keep reasoning brief
+      // and leave enough output budget for the actual answer.
+      reasoning: { effort: 'low' },
+      max_tokens: 1400
     }),
     signal: AbortSignal.timeout(30000),
   });
@@ -278,11 +281,26 @@ async function getOpenRouterAnswer(question) {
     throw new Error('OpenRouter API: ' + apiMessage.slice(0, 250));
   }
 
-  const answer = payload?.choices?.[0]?.message?.content;
-  if (typeof answer !== 'string' || !answer.trim()) {
-    throw new Error('OpenRouter returned an empty answer.');
+  const choice = payload?.choices?.[0];
+  const content = choice?.message?.content;
+  const answer = typeof content === 'string'
+    ? content.trim()
+    : Array.isArray(content)
+      ? content.map((part) => typeof part?.text === 'string' ? part.text : '').join('').trim()
+      : '';
+
+  if (!answer) {
+    const details = {
+      model: payload?.model || 'unknown',
+      finish_reason: choice?.finish_reason || 'unknown',
+      completion_tokens: payload?.usage?.completion_tokens ?? null,
+      reasoning_tokens: payload?.usage?.completion_tokens_details?.reasoning_tokens ?? null,
+    };
+    console.error('⚠️ OpenRouter تش ځواب ورکړ؛ معلومات:', JSON.stringify(details));
+    throw new Error('OpenRouter returned no visible text (model=' + details.model +
+      ', finish_reason=' + details.finish_reason + ').');
   }
-  return answer.trim().slice(0, 3500);
+  return answer.slice(0, 3500);
 }
 
 async function answerWithAI(socket, groupJid, participantJid, question) {
