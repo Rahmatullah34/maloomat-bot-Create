@@ -587,6 +587,15 @@ function canonicalResultUrl(rawUrl) {
   }
 }
 
+function extractSearchTopic(question) {
+  let topic = String(question || '').trim();
+  // د کارونکي د غوښتنې لارښوونې لرې کړه، څو لټون د موضوع پر نوم وشي،
+  // نه د ټولې اوږدې جملې پر بنسټ.
+  topic = topic.split(/(?:په اړه|په هکله|په باب|معلومات راټول|معلومات راکړه|مفصل تشریح|تشریح کړه|لینکونه هم|سرچینې هم|ولټوه|لټون وکړه|search online|search the web|give me detailed|collect information)/iu)[0];
+  topic = topic.replace(/[،,:;.!؟?]+$/u, '').trim();
+  return topic.length >= 2 ? topic.slice(0, 180) : String(question || '').trim().slice(0, 180);
+}
+
 async function searchInternet(query) {
   const normalized = normalizePashto(query);
   if (!normalized || normalized.length < 2) return [];
@@ -595,14 +604,21 @@ async function searchInternet(query) {
   const cached = INTERNET_SEARCH_CACHE.get(normalized);
   if (cached && now - cached.time < INTERNET_SEARCH_CACHE_TTL_MS) return cached.results;
 
-  // سرچینې په موازي ډول لټول کېږي؛ د یوه API ناکامي نورې سرچینې نه بندوي.
-  const searches = [
-    searchDuckDuckGo(query),
-    searchWikipedia(query, 'ps'),
-    searchWikipedia(query, 'en'),
-  ];
-  if (isNewsQuestion(query) || isTimeSensitiveQuestion(query)) {
-    searches.push(searchGdeltNews(query));
+  const topic = extractSearchTopic(query);
+  const searchQueries = [...new Set([topic, String(query).trim()].filter(Boolean))];
+
+  // لومړی د پوښتنې اصلي موضوع لټوو؛ اوږده جمله یوازې د اضافي هڅې لپاره کاروو.
+  // سرچینې په موازي ډول لټول کېږي او د یوې سرچینې ناکامي نورې نه بندوي.
+  const searches = [];
+  for (const searchQuery of searchQueries) {
+    searches.push(
+      searchDuckDuckGo(searchQuery),
+      searchWikipedia(searchQuery, 'ps'),
+      searchWikipedia(searchQuery, 'en')
+    );
+    if (isNewsQuestion(query) || isTimeSensitiveQuestion(query)) {
+      searches.push(searchGdeltNews(searchQuery));
+    }
   }
 
   const settled = await Promise.allSettled(searches);
