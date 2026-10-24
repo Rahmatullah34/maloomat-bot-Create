@@ -283,6 +283,23 @@ function answerFromOfflineKnowledge(question) {
   const q = normalizePashto(question);
   if (q.length < 2 || !OFFLINE_KNOWLEDGE.length) return null;
 
+  const stopWords = new Set([
+    'د', 'په', 'له', 'او', 'یا', 'چې', 'دا', 'هغه', 'دی', 'ده', 'دي',
+    'څه', 'څوک', 'څنګه', 'ولې', 'کوم', 'کومه', 'کومې', 'کومو', 'کوي',
+    'و', 'وه', 'یې', 'هم', 'راکړه', 'لري', 'شي', 'شوی', 'شوې', 'کې',
+    'ته', 'زما', 'ستا', 'ئې', 'دوی', 'دغه', 'داسې', 'یوه', 'یو'
+  ]);
+
+  const stem = (token) => String(token || '')
+    .replace(/(ونو|ګانو|و|ونه|انو|ونه|ونه|ان)$/u, '')
+    .replace(/(ی|ه|ي)$/u, '');
+
+  const tokens = (value) => normalizePashto(value)
+    .split(' ')
+    .map(stem)
+    .filter(token => token.length >= 2 && !stopWords.has(token));
+
+  const questionTokens = new Set(tokens(q));
   let best = null;
   let bestScore = 0;
 
@@ -290,16 +307,35 @@ function answerFromOfflineKnowledge(question) {
     const terms = [item.title, ...(Array.isArray(item.keywords) ? item.keywords : [])]
       .filter(Boolean)
       .map(normalizePashto)
-      .filter(term => term.length >= 2);
+      .filter(term => term.length >= 2 && !stopWords.has(term));
 
     let score = 0;
+    let overlapScore = 0;
+
     for (const term of terms) {
-      if (q === term) score += term.includes(' ') ? 30 : 15;
-      else if (q.includes(term)) score += term.includes(' ') ? 12 + Math.min(term.length / 12, 5) : 2;
-      else if (term.includes(q) && q.length >= 4) score += 1;
+      if (q === term) {
+        score += term.includes(' ') ? 30 : 15;
+        continue;
+      }
+
+      if (q.includes(term)) {
+        score += term.includes(' ') ? 12 + Math.min(term.length / 12, 5) : 2;
+      }
+
+      // د پښتو د جمع او ګرامري بڼو د توپیر لپاره د مهمو کلمو پرتله.
+      const termTokens = tokens(term);
+      if (termTokens.length >= 2) {
+        const overlap = new Set(termTokens.filter(token => questionTokens.has(token))).size;
+        if (overlap >= 2) {
+          const candidate = overlap * 3.5 + Math.min(overlap / termTokens.length, 1) * 2;
+          if (candidate > overlapScore) overlapScore = candidate;
+        }
+      }
     }
 
-    // د اوږدو او مشخصو عبارتونو ځواب ته لومړیتوب ورکړه.
+    score += overlapScore;
+
+    // د مشخصو او اوږدو عبارتونو ځواب ته لومړیتوب ورکړه.
     if (score > bestScore) {
       bestScore = score;
       best = item;
