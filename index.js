@@ -751,8 +751,10 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
 
   const localAnswer = answerFromOfflineKnowledge(question);
   // هره عادي پوښتنه هم له څو سرچینو سره پرتله کېږي؛ تازه/خبري پوښتنې ځانګړې سرچینې هم کاروي.
+  // که پوښتنه له ثبت شوې موضوع سره برابره وي، بیا هم انټرنېټ ولټوه؛
+  // یوازې د موضوع لنډ نوم (لکه «مصنوعي ځیرکتیا») هم باید د څو سرچینو ځواب راوباسي.
   const shouldSearchInternet = requestsInternetSearch(question) ||
-    looksLikeQuestion(question) || isTimeSensitiveQuestion(question) || !localAnswer;
+    looksLikeQuestion(question) || isTimeSensitiveQuestion(question) || Boolean(localAnswer);
 
   if (!looksLikeQuestion(question) && !localAnswer && !requestsInternetSearch(question)) return false;
 
