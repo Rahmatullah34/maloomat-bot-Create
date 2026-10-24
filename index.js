@@ -32,7 +32,7 @@ app.get('/health', (_req, res) => {
   res.status(200).json({
     ok: true,
     service: 'maloomat-bot',
-    mode: 'group-only-offline-knowledge',
+    mode: 'group-only-local-knowledge',
     ai: false,
     webSearch: false,
     knowledgeEntries: OFFLINE_KNOWLEDGE.length,
@@ -210,191 +210,8 @@ async function getWhatsAppAuthState() {
 }
 
 // ======================================================
-// 1.5 د Gemini AI او تازه معلوماتو ځوابونه
 // ======================================================
-
-function readOpenRouterApiKeyFromFile() {
-  try {
-    return fs.readFileSync(
-      path.resolve(process.cwd(), 'openrouter-api-key.txt'),
-      'utf8'
-    ).trim();
-  } catch {
-    return '';
-  }
-}
-
-function readTavilyApiKeyFromFile() {
-  try {
-    return fs.readFileSync(
-      path.resolve(process.cwd(), 'tavily-api-key.txt'),
-      'utf8'
-    ).trim();
-  } catch {
-    return '';
-  }
-}
-
-const TAVILY_API_KEY = String(
-  process.env.TAVILY_API_KEY || readTavilyApiKeyFromFile() || ''
-).trim();
-
-const OPENROUTER_API_KEY = String(
-  process.env.OPENROUTER_API_KEY || readOpenRouterApiKeyFromFile() || ''
-).trim();
-const OPENROUTER_MODEL = String(
-  process.env.OPENROUTER_MODEL || 'openrouter/free'
-).trim();
-const aiCooldowns = new Map();
-const AI_COOLDOWN_MS = 20000;
-
-function shouldAskAI(text) {
-  const value = String(text || '').trim();
-  if (value.length < 3 || value.length > 1500) return false;
-
-  // پوښتنې، د بوټ خطاب، او د تازه خبرونو غوښتنې AI ته لېږل کېږي.
-  return /[؟?]/u.test(value) ||
-    /(^|\\s)(بوټه|بوټ|bot|assistant)(\\s|$)/iu.test(value) ||
-    /(څه وخت|څنګه|ولې|څوک|چېرته|چیرته|څومره|معلومات راکړه|تازه معلومات|وروستۍ لوبه|کرکټ|خبرونه|پایله|نتیجه|what|when|where|who|why|how|latest|news|score|cricket|update)/iu.test(value);
-}
-
-async function searchWebForQuestion(question) {
-  if (!TAVILY_API_KEY) return [];
-
-  try {
-    const isNewsQuery = /(خبر|تازه|اوسنی|وروستی|نن|خبرونه|news|latest|today|current|update)/iu.test(question);
-    const response = await fetch('https://api.tavily.com/search', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + TAVILY_API_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        query: String(question || '').trim().slice(0, 380),
-        search_depth: 'basic',
-        topic: isNewsQuery ? 'news' : 'general',
-        max_results: 5,
-        include_answer: true,
-        include_raw_content: false
-      }),
-      signal: AbortSignal.timeout(20000)
-    });
-
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      const detail = payload?.detail || payload?.error || ('HTTP ' + response.status);
-      throw new Error(String(detail).slice(0, 200));
-    }
-
-    const results = Array.isArray(payload?.results) ? payload.results : [];
-    return results
-      .filter((item) => {
-        try {
-          const url = new URL(item?.url);
-          return (url.protocol === 'https:' || url.protocol === 'http:') &&
-            typeof item?.content === 'string' && item.content.trim();
-        } catch {
-          return false;
-        }
-      })
-      .slice(0, 5)
-      .map((item) => ({
-        title: String(item.title || 'سرچینه').slice(0, 180),
-        url: String(item.url),
-        content: String(item.content || '').slice(0, 1100),
-        published_date: item.published_date ? String(item.published_date).slice(0, 40) : ''
-      }));
-  } catch (err) {
-    console.warn('⚠️ د Tavily ویب لټون ناکام شو؛ AI به له موجودو معلوماتو ځواب جوړ کړي:', err?.message || err);
-    return [];
-  }
-}
-
-async function getOpenRouterAnswer(question) {
-  if (!OPENROUTER_API_KEY) {
-    return '⚠️ د AI خدمت کیلي نه ده تنظیم شوې. په سرور کې openrouter-api-key.txt فایل جوړ او د OpenRouter API key پکې ولیکئ.';
-  }
-
-  // Use live web search when a Tavily key is configured.
-  const webResults = await searchWebForQuestion(question);
-  const sourcesContext = webResults.length
-    ? webResults.map((item, index) => [
-        '[' + (index + 1) + '] ' + item.title,
-        'URL: ' + item.url,
-        item.published_date ? 'نېټه: ' + item.published_date : '',
-        'موندل شوی متن: ' + item.content
-      ].filter(Boolean).join('\n')).join('\n\n')
-    : 'د دې پوښتنې لپاره د ویب سرچینې ونه موندل شوې یا Tavily نه دی تنظیم شوی. د سرچینې یا لینک ادعا مه جوړوه؛ که معلومات تازه تایید ته اړتیا لري، په ښکاره یې ووایه.';
-
-  const prompt = [
-    'ته د «د معلوماتو نړۍ» د WhatsApp ګروپ مرستیال یې؛ د خبرو اترو او معلوماتي پوښتنو لپاره ګټور، مودب او دقیق کار وکړه.',
-    'د ګروپ قوانین تل مراعات کړه: د غړو درناوی، کنځلې او سپکاوی مه کوه، اعلانونه او نامجاز لینکونه مه خپروه، او د جنجال پر ځای ارام ځواب ورکړه.',
-    'یوازې د معلوماتي ځواب د مستندولو لپاره د لټون اړوند سرچینې لینکونه ورکړه؛ تبلیغاتي، نامربوط یا جوړ شوي لینکونه مه ورزیاتوه.',
-    'د کارونکي په ژبه ځواب ورکړه؛ که ژبه پښتو وي، روانه، طبیعي او روښانه پښتو وکاروه.',
-    'د ورکړل شویو ویب سرچینو له متن سره د تازه او تاییدېدونکو حقایقو ځوابونه برابر کړه.',
-    'که د سرچینو متن د پوښتنې ځواب نه تاییدوي، معلومات مه جوړوه او ناڅرګندتیا روښانه کړه.',
-    'که ویب سرچینې موجودې وي، د اړوندو ادعاوو ترڅنګ [1]، [2] غوندې نښې وکاروه. د سرچینو URL مه بدلوه او جعلي سرچینې مه جوړوه.',
-    'که سرچینې کافي نه وي، د عمومي پوهې ځواب ورکولای شې؛ خو تازه یا ناتایید شوي معلومات د یقیني حقیقت په توګه مه وړاندې کوه.',
-    'ځواب لنډ، منظم او د WhatsApp لپاره مناسب وساته؛ که پوښتنه ژوره وي، په څو لنډو فقرو کې وضاحت ورکړه.',
-    'د کارونکي پوښتنه: ' + question,
-    'د ویب لټون پایلې:\n' + sourcesContext
-  ].join('\n\n');
-
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + OPENROUTER_API_KEY,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://sillydev.co.uk',
-      'X-Title': 'Maloomat Bot'
-    },
-    body: JSON.stringify({
-      model: OPENROUTER_MODEL,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3,
-      reasoning: { effort: 'low' },
-      max_tokens: 1400
-    }),
-    signal: AbortSignal.timeout(30000),
-  });
-
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const apiMessage = payload?.error?.message || ('HTTP ' + response.status);
-    throw new Error('OpenRouter API: ' + apiMessage.slice(0, 250));
-  }
-
-  const choice = payload?.choices?.[0];
-  const rawContent = choice?.message?.content;
-  const answer = typeof rawContent === 'string'
-    ? rawContent.trim()
-    : Array.isArray(rawContent)
-      ? rawContent.map((part) => typeof part?.text === 'string' ? part.text : '').join('').trim()
-      : '';
-
-  if (!answer) {
-    const details = {
-      model: payload?.model || 'unknown',
-      finish_reason: choice?.finish_reason || 'unknown',
-      completion_tokens: payload?.usage?.completion_tokens ?? null,
-      reasoning_tokens: payload?.usage?.completion_tokens_details?.reasoning_tokens ?? null,
-    };
-    console.error('⚠️ OpenRouter تش ځواب ورکړ؛ معلومات:', JSON.stringify(details));
-    throw new Error('OpenRouter returned no visible text (model=' + details.model +
-      ', finish_reason=' + details.finish_reason + ').');
-  }
-
-  const answerText = answer.slice(0, 3000);
-  if (!webResults.length) return answerText;
-
-  const sourceList = webResults.map((item, index) =>
-    '[' + (index + 1) + '] ' + item.title + '\n' + item.url
-  ).join('\n\n');
-
-  return (answerText + '\n\n🔗 *سرچینې:*\n' + sourceList).slice(0, 3500);
-}
-// ======================================================
-// 1.6 د AI پرته د پښتو معلوماتو ځوابونه
+// 1.5 محلي معلوماتي سیستم — هېڅ AI API یا ویب لټون نه کاروي
 // ======================================================
 
 function loadOfflineKnowledge() {
@@ -409,33 +226,80 @@ function loadOfflineKnowledge() {
 }
 
 const OFFLINE_KNOWLEDGE = loadOfflineKnowledge();
+const SEEN_GROUP_NAMES = new Map();
 
-function answerFromOfflineKnowledge(question) {
-  const normalize = (value) => String(value || '')
+function normalizePashto(value) {
+  return String(value || '')
     .toLowerCase()
     .normalize('NFKC')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/[يى]/g, 'ی')
+    .replace(/ك/g, 'ک')
+    .replace(/[ۀة]/g, 'ه')
+    .replace(/[أإآ]/g, 'ا')
     .replace(/[؟?!،,.:؛()\[\]{}"'«»]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
 
-  const q = normalize(question);
-  if (q.length < 3 || !OFFLINE_KNOWLEDGE.length) return null;
+function rememberGroupMember(groupJid, participantJid, participantName) {
+  if (!groupJid || !participantJid || !participantName) return;
+  const key = String(groupJid);
+  if (!SEEN_GROUP_NAMES.has(key)) SEEN_GROUP_NAMES.set(key, new Map());
+  SEEN_GROUP_NAMES.get(key).set(String(participantJid), String(participantName).slice(0, 80));
+}
+
+function answerIdentityQuestion(groupJid, participantJid, participantName, question) {
+  const q = normalizePashto(question);
+  if (!q) return null;
+
+  if (/(زه څوک یم|زما نوم څه دی|زما نوم څوک دی|ته ما پېژنې|ته ما پیژنې|زما په اړه څه پوهېږې)/u.test(q)) {
+    const safeName = String(participantName || '').trim().slice(0, 80) || 'د WhatsApp غړی';
+    return '👤 ستا د WhatsApp ښکاره نوم «' + safeName + '» دی.\n\n' +
+      '📌 زه نوم د پیغام له WhatsApp معلوماتو پېژنم؛ دا د شخص د قانوني هویت یا ژوند د نورو معلوماتو تصدیق نه دی.';
+  }
+
+  const groupMap = SEEN_GROUP_NAMES.get(String(groupJid));
+  if (!groupMap) return null;
+  const candidates = [...groupMap.entries()]
+    .filter(([jid]) => jid !== String(participantJid))
+    .map(([jid, name]) => ({ jid, name, normalized: normalizePashto(name) }))
+    .filter(x => x.normalized.length >= 2);
+  const mentionsWho = /(څوک دی|څوک ده|څوک و|څوک وه|څوک دي|څوک دي؟|څوک ده؟|څوک دی؟|پېژنې|پیژنې|نوم یې څوک دی)/u.test(q);
+  if (!mentionsWho) return null;
+
+  const matched = candidates
+    .filter(x => x.normalized && q.includes(x.normalized))
+    .sort((a, b) => b.normalized.length - a.normalized.length)[0];
+
+  if (matched) {
+    return '👤 «' + matched.name + '» د WhatsApp په پیغامونو کې د ګروپ د یوه غړي د ښکاره نوم په توګه ثبت شوی دی.\n\n' +
+      'ℹ️ یوازې د WhatsApp نوم د شخص د قانوني هویت، دندې یا شخصي ژوند د تایید لپاره بسنه نه کوي.';
+  }
+  return null;
+}
+
+function answerFromOfflineKnowledge(question) {
+  const q = normalizePashto(question);
+  if (q.length < 2 || !OFFLINE_KNOWLEDGE.length) return null;
 
   let best = null;
   let bestScore = 0;
 
   for (const item of OFFLINE_KNOWLEDGE) {
-    const terms = [item.title, ...(item.keywords || [])]
+    const terms = [item.title, ...(Array.isArray(item.keywords) ? item.keywords : [])]
       .filter(Boolean)
-      .map(normalize)
-      .filter((term) => term.length >= 2);
+      .map(normalizePashto)
+      .filter(term => term.length >= 2);
 
     let score = 0;
     for (const term of terms) {
-      if (q.includes(term)) score += term.includes(' ') ? 4 : 2;
+      if (q === term) score += term.includes(' ') ? 30 : 15;
+      else if (q.includes(term)) score += term.includes(' ') ? 12 + Math.min(term.length / 12, 5) : 2;
+      else if (term.includes(q) && q.length >= 4) score += 1;
     }
 
-    // د ډېرو عامو/کمزورو کلمو پر بنسټ ځواب مه ټاکه.
+    // د اوږدو او مشخصو عبارتونو ځواب ته لومړیتوب ورکړه.
     if (score > bestScore) {
       bestScore = score;
       best = item;
@@ -445,28 +309,42 @@ function answerFromOfflineKnowledge(question) {
   if (!best || bestScore < 4) return null;
 
   return '📚 *' + best.title + '*\n\n' + best.answer +
-    (best.source ? '\n\n📖 سرچینه: ' + best.source : '') +
-    '\n\nℹ️ دا د بوټ له مخکې خوندي شوو معلوماتو څخه ځواب دی؛ AI نه دی کارول شوی.';
+    (best.source ? '\n\n📖 رسمي/اړونده سرچینه: ' + best.source : '') +
+    '\n\nℹ️ دا ځواب د بوټ له محلي معلوماتو څخه دی؛ AI او ویب لټون نه دي کارول شوي.';
 }
 
-async function answerWithAI(socket, groupJid, participantJid, question) {
-  // لومړی له محلي معلوماتو ځواب پیدا کړه؛ که وموندل شي، AI/API نه کارول کېږي.
-  const offlineAnswer = answerFromOfflineKnowledge(question);
-  if (offlineAnswer) {
-    await safeSend(socket, groupJid, { text: offlineAnswer });
+function looksLikeQuestion(text) {
+  const value = String(text || '').trim();
+  if (value.length < 3 || value.length > 1500) return false;
+  return /[؟?]/u.test(value) ||
+    /(څوک|څه|چېرته|چیرته|څنګه|ولې|څومره|تعریف|معلومات|راکړه|نصاب|درسي پلان|سمستر|کریډیټ|پېژندنه|پیژندنه|who is|what is|where|when|why|how)/iu.test(value);
+}
+
+async function answerWithKnowledge(socket, groupJid, participantJid, question, participantName) {
+  const identityAnswer = answerIdentityQuestion(
+    groupJid, participantJid, participantName, question
+  );
+  if (identityAnswer) {
+    await safeSend(socket, groupJid, { text: identityAnswer });
     return true;
   }
 
-  if (!shouldAskAI(question)) return false;
+  const localAnswer = answerFromOfflineKnowledge(question);
+  if (localAnswer) {
+    await safeSend(socket, groupJid, { text: localAnswer });
+    return true;
+  }
 
-  // د AI پرته حالت: یوازې له GitHub کې خوندي شوي محلي معلوماتو ځواب ورکول.
+  if (!looksLikeQuestion(question)) return false;
+
   await safeSend(socket, groupJid, {
-    text: '📚 د دې پوښتنې ځواب لا د بوټ په محلي معلوماتو کې نشته. پوښتنه په بله بڼه ولیکئ یا د معلوماتو مدیر ته یې واستوئ.'
+    text: '📚 د دې پوښتنې لپاره په محلي معلوماتو کې لا کره ځواب نه لرم.\n\n' +
+      '✅ زه AI او ویب لټون نه کاروم، نو ناتایید شوي معلومات نه جوړوم. ' +
+      'پوښتنه لږ مشخصه ولیکئ، یا د معلوماتو مدیر ته یې واستوئ څو د پوهې فایل ته کره ځواب ورزیات کړي.'
   });
   return true;
 }
 
-// ======================================================
 // 2. د WhatsApp تنظیمات
 // ======================================================
 
@@ -1377,10 +1255,10 @@ async function startBot() {
             }
 
             // ==========================================
-            // 24. د پوښتنو لپاره AI ځواب
+            // 24. د محلي معلوماتو ځواب
             // ==========================================
 
-            const handledByAI = await answerWithAI(
+            rememberGroupMember(groupJid, participantJid, name);\n\n            const handledByKnowledge = await answerWithKnowledge(
               socket,
               groupJid,
               participantJid,
