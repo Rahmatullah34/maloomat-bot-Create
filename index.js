@@ -1056,7 +1056,9 @@ async function startBot() {
 
           console.log(
             OPENROUTER_API_KEY
-              ? '🛡️ یوازې ګروپونه؛ DeepSeek AI فعال دی (OpenRouter free).'
+              ? (TAVILY_API_KEY
+                  ? '🛡️ یوازې ګروپونه؛ AI او ویب لټون فعال دي (OpenRouter + Tavily).'
+                  : '🛡️ یوازې ګروپونه؛ AI فعال دی، خو Tavily ویب لټون نه دی تنظیم شوی.')
               : '🛡️ یوازې ګروپونه؛ AI بند دی (OpenRouter API key نشته).'
           );
 
