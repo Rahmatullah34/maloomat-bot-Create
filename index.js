@@ -459,30 +459,10 @@ async function answerWithAI(socket, groupJid, participantJid, question) {
 
   if (!shouldAskAI(question)) return false;
 
-  const now = Date.now();
-  const cooldownKey = groupJid + ':' + participantJid;
-  const last = aiCooldowns.get(cooldownKey) || 0;
-  if (now - last < AI_COOLDOWN_MS) return true;
-  aiCooldowns.set(cooldownKey, now);
-
-  for (const [key, time] of aiCooldowns) {
-    if (now - time > 10 * 60 * 1000) aiCooldowns.delete(key);
-  }
-
-  try {
-    // د پلټنې او ځواب جوړولو پر مهال په ګروپ کې د پرمختګ لنډ پیغام.
-    await safeSend(socket, groupJid, {
-      text: '⏳ معلومات چمتو کېږي، مهرباني وکړئ لږ انتظار وکړئ...'
-    });
-
-    const answer = await getOpenRouterAnswer(question);
-    await safeSend(socket, groupJid, { text: answer });
-  } catch (err) {
-    console.error('❌ د AI ځواب ناکام شو:', err?.message || err);
-    await safeSend(socket, groupJid, {
-      text: 'بښنه غواړم، اوس د معلوماتو ترلاسه کولو کې ستونزه ده. لږ وروسته بیا پوښتنه وکړئ.'
-    });
-  }
+  // د AI پرته حالت: یوازې له GitHub کې خوندي شوي محلي معلوماتو ځواب ورکول.
+  await safeSend(socket, groupJid, {
+    text: '📚 د دې پوښتنې ځواب لا د بوټ په محلي معلوماتو کې نشته. پوښتنه په بله بڼه ولیکئ یا د معلوماتو مدیر ته یې واستوئ.'
+  });
   return true;
 }
 
