@@ -30,7 +30,7 @@ app.get('/health', (_req, res) => {
     ok: true,
     service: 'maloomat-bot',
     mode: 'group-only',
-    ai: false,
+    ai: Boolean(process.env.GEMINI_API_KEY),
   });
 });
 
@@ -41,6 +41,69 @@ app.listen(
     console.log('✅ د Render سرور فعال شو.');
   }
 );
+
+// ======================================================
+// 1.1 د پوښتنو او ځوابونو AI (Google Gemini)
+// ======================================================
+
+const GEMINI_API_KEY = String(process.env.GEMINI_API_KEY || '').trim();
+const GEMINI_MODEL = String(process.env.GEMINI_MODEL || 'gemini-2.0-flash').trim();
+const answerCooldowns = new Map();
+
+function isQuestion(text) {
+  const value = String(text || '').trim();
+  if (value.length < 5 || value.length > 1000) return false;
+
+  return /[؟?]/u.test(value) ||
+    /^(څوک|څه|ولې|څنګه|کوم|کله|چېرته|چیرته|ایا|معلومات|پوښتنه|what|who|why|how|when|where|which|can you|tell me|explain|کیا|کیوں|کیسے|کب|کہاں)\b?/iu.test(value);
+}
+
+async function getAIAnswer(question) {
+  if (!GEMINI_API_KEY) return null;
+
+  const endpoint =
+    'https://generativelanguage.googleapis.com/v1beta/models/' +
+    encodeURIComponent(GEMINI_MODEL) +
+    ':generateContent?key=' + encodeURIComponent(GEMINI_API_KEY);
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{
+        role: 'user',
+        parts: [{
+          text:
+            'ته د معلوماتو نړۍ ګروپ لپاره یو ګټور مرستیال یې. ' +
+            'د کاروونکي پوښتنې ته په روښانه، لنډه او درناوي ډکه پښتو ځواب ورکړه. ' +
+            'که پوښتنه په دري، اردو یا انګلیسي وي، د پوښتنې په ژبه ځواب ورکړه. ' +
+            'ناڅرګند معلومات د حقیقت په توګه مه وړاندې کوه؛ که ډاډه نه یې، دا ووایه. ' +
+            'له غیرضروري مقدمې او Markdown جدولونو ډډه وکړه.\n\n' +
+            'پوښتنه: ' + question.slice(0, 1000)
+        }]
+      }],
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: 500
+      }
+    }),
+    signal: AbortSignal.timeout(20000)
+  });
+
+  if (!response.ok) {
+    const details = await response.text().catch(() => '');
+    console.error('❌ Gemini API ستونزه:', response.status, details.slice(0, 300));
+    return null;
+  }
+
+  const data = await response.json();
+  const answer = data?.candidates?.[0]?.content?.parts
+    ?.map((part) => part.text || '')
+    .join('')
+    .trim();
+
+  return answer ? answer.slice(0, 3500) : null;
+}
 
 // ======================================================
 // 2. د WhatsApp تنظیمات
@@ -948,13 +1011,64 @@ async function startBot() {
             }
 
             // ==========================================
-            // 24. نور عادي پیغامونه
+            // 24. د پوښتنو او ځوابونو برخه (Gemini AI)
             // ==========================================
 
-            // عادي خبرې نه حذف کېږي.
-            // علمي پوښتنې نه حذف کېږي.
-            // لنډ معلومات نه حذف کېږي.
-            // AI یا Gemini ته هېڅ غوښتنه نه لېږل کېږي.
+            if (isQuestion(text)) {
+              if (!GEMINI_API_KEY) {
+                await safeSend(socket, groupJid, {
+                  text: '🤖 د پوښتنو او ځوابونو خدمت لا نه دی فعال شوی. د مدیر له خوا د Render په Environment کې GEMINI_API_KEY تنظیم ته اړتیا لري.'
+                });
+                continue;
+              }
+
+              const cooldownKey = groupJid + ':' + participantJid;
+              const now = Date.now();
+              const lastAnswerAt = answerCooldowns.get(cooldownKey) || 0;
+
+              if (now - lastAnswerAt < 15000) {
+                continue;
+              }
+
+              answerCooldowns.set(cooldownKey, now);
+
+              // د حافظې اندازه محدوده ساتل کېږي.
+              if (answerCooldowns.size > 2000) {
+                const firstKey = answerCooldowns.keys().next().value;
+                if (firstKey) answerCooldowns.delete(firstKey);
+              }
+
+              await safeSend(socket, groupJid, {
+                text: '🤔 پوښتنه مې ترلاسه کړه؛ ځواب لټوم...'
+              });
+
+              try {
+                const answer = await getAIAnswer(text);
+
+                if (answer) {
+                  await safeSend(socket, groupJid, {
+                    text: '🌍 *د معلوماتو نړۍ — ځواب*\n\n' + answer
+                  });
+                } else {
+                  await safeSend(socket, groupJid, {
+                    text: 'بښنه غواړم، اوس ځواب نه شم ترلاسه کولای. لږ وروسته بیا هڅه وکړئ.'
+                  });
+                }
+              } catch (err) {
+                console.error('❌ د AI ځواب ستونزه:', err?.message || err);
+                await safeSend(socket, groupJid, {
+                  text: 'بښنه غواړم، د ځواب په ترلاسه کولو کې لنډمهاله ستونزه راغله.'
+                });
+              }
+
+              continue;
+            }
+
+            // ==========================================
+            // 25. نور عادي پیغامونه
+            // ==========================================
+
+            // عادي خبرې نه حذف کېږي؛ یوازې پېژندل شوې پوښتنې AI ته لېږل کېږي.
 
           } catch (err) {
             console.error(
