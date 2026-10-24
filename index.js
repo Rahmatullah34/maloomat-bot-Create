@@ -41,6 +41,10 @@ app.get('/health', (_req, res) => {
       links: true,
       flood: true,
       repeatedMessages: true,
+      maxMessagesPerWindow: 3,
+      messageWindowSeconds: 30,
+      warningWindowHours: 24,
+      autoKick: false,
     },
     knowledgeEntries: OFFLINE_KNOWLEDGE.length,
   });
@@ -1157,8 +1161,9 @@ function rememberMessage(id) {
 
 const messageBursts = new Map();
 
-const BURST_WINDOW_MS = 10 * 1000;
-const BURST_LIMIT = 6;
+// په هر ۳۰ ثانیو کې تر ۳ عادي پیغامونو پورې اجازه؛ څلورم او ورپسې پیغامونه سپم ګڼل کېږي.
+const BURST_WINDOW_MS = 30 * 1000;
+const BURST_LIMIT = 3;
 const BURST_WARNING_COOLDOWN_MS = 30 * 1000;
 
 function recordGroupMessage(
@@ -1286,6 +1291,40 @@ async function safeSend(
 }
 
 // ======================================================
+// 11.5 د سرغړونو منظم اخطارونه
+// ======================================================
+
+// اخطارونه د ګروپ او غړي له مخې د ۲۴ ساعتونو لپاره په حافظه کې ساتل کېږي.
+// د بوټ Restart سره دا لنډمهاله شمېر بیا له صفره پیلېږي.
+const violationWarnings = new Map();
+const VIOLATION_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+function recordViolationWarning(groupJid, participantJid) {
+  const now = Date.now();
+  const key = String(groupJid) + ':' + String(participantJid || 'unknown');
+  const previous = violationWarnings.get(key);
+
+  const entry = previous && now - previous.firstAt < VIOLATION_WINDOW_MS
+    ? { count: previous.count + 1, firstAt: previous.firstAt, lastAt: now }
+    : { count: 1, firstAt: now, lastAt: now };
+
+  violationWarnings.set(key, entry);
+
+  for (const [oldKey, oldEntry] of violationWarnings) {
+    if (now - oldEntry.lastAt > VIOLATION_WINDOW_MS) {
+      violationWarnings.delete(oldKey);
+    }
+  }
+
+  if (violationWarnings.size > 3000) {
+    const oldestKey = violationWarnings.keys().next().value;
+    if (oldestKey) violationWarnings.delete(oldestKey);
+  }
+
+  return entry.count;
+}
+
+// ======================================================
 // 12. د منع شوي پیغام د حذف هڅه
 // ======================================================
 
@@ -1321,16 +1360,28 @@ async function deleteGroupMessage(
   }
 
   if (sendWarning) {
+    const offenderJid =
+      messageKey?.participant ||
+      messageKey?.participantAlt ||
+      participantName ||
+      'unknown';
+
+    const warningCount = recordViolationWarning(jid, offenderJid);
     const statusText = deleted
       ? 'د پیغام د حذف غوښتنه واستول شوه.'
       : 'د پیغام حذف تایید نه شو؛ د بوټ د مدیر اجازه او د اتصال حالت وګوره.';
+
+    const escalationText = warningCount >= 3
+      ? '\n\n⛔ دا په تېرو ۲۴ ساعتونو کې درېیم یا ورپسې اخطار دی. د ګروپ مدیر دې موضوع وڅېړي.'
+      : '\n\n📌 اخطار: ' + warningCount + ' له ۳ څخه. مهرباني وکړئ قوانین مراعات کړئ.';
 
     await safeSend(socket, jid, {
       text:
         `⚠️ محترم ${participantName} جانه!\n\n` +
         `${reason}\n` +
-        `${statusText}\n` +
-        'مهرباني وکړئ د ګروپ قوانین مراعات کړئ. 🤝',
+        `${statusText}` +
+        escalationText +
+        '\n🤝 د بیا تکرار په صورت کې به د ګروپ مدیر ته د اقدام سپارښتنه وشي.',
     });
   }
 }
@@ -1700,7 +1751,7 @@ async function startBot() {
             // ==========================================
 
             const burst = recordGroupMessage(groupJid, participantJid);
-            if (burst.count >= BURST_LIMIT) {
+            if (burst.count > BURST_LIMIT) {
               if (burst.shouldWarn) burst.markWarned();
               await deleteGroupMessage(
                 socket,
