@@ -33,8 +33,8 @@ app.get('/health', (_req, res) => {
     ok: true,
     service: 'maloomat-bot',
     mode: 'group-only',
-    ai: Boolean(GEMINI_API_KEY),
-    model: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
+    ai: Boolean(OPENROUTER_API_KEY),
+    model: process.env.OPENROUTER_MODEL || 'deepseek/deepseek-v4-flash-0731:free',
   });
 });
 
@@ -212,10 +212,10 @@ async function getWhatsAppAuthState() {
 // 1.5 د Gemini AI او تازه معلوماتو ځوابونه
 // ======================================================
 
-function readGeminiApiKeyFromFile() {
+function readOpenRouterApiKeyFromFile() {
   try {
     return fs.readFileSync(
-      path.resolve(process.cwd(), 'gemini-api-key.txt'),
+      path.resolve(process.cwd(), 'openrouter-api-key.txt'),
       'utf8'
     ).trim();
   } catch {
@@ -223,10 +223,12 @@ function readGeminiApiKeyFromFile() {
   }
 }
 
-const GEMINI_API_KEY = String(
-  process.env.GEMINI_API_KEY || readGeminiApiKeyFromFile() || ''
+const OPENROUTER_API_KEY = String(
+  process.env.OPENROUTER_API_KEY || readOpenRouterApiKeyFromFile() || ''
 ).trim();
-const GEMINI_MODEL = String(process.env.GEMINI_MODEL || 'gemini-3.8-flash').trim();
+const OPENROUTER_MODEL = String(
+  process.env.OPENROUTER_MODEL || 'deepseek/deepseek-v4-flash-0731:free'
+).trim();
 const aiCooldowns = new Map();
 const AI_COOLDOWN_MS = 20000;
 
@@ -240,51 +242,47 @@ function shouldAskAI(text) {
     /(څه وخت|څنګه|ولې|څوک|چېرته|چیرته|څومره|معلومات راکړه|تازه معلومات|وروستۍ لوبه|کرکټ|خبرونه|پایله|نتیجه|what|when|where|who|why|how|latest|news|score|cricket|update)/iu.test(value);
 }
 
-async function getGeminiAnswer(question) {
-  if (!GEMINI_API_KEY) {
-    return '⚠️ د AI خدمت فعال نه دی. په سرور کې gemini-api-key.txt فایل جوړ او خپل Gemini API key پکې ولیکئ، یا GEMINI_API_KEY په Environment کې تنظیم کړئ.';
+async function getOpenRouterAnswer(question) {
+  if (!OPENROUTER_API_KEY) {
+    return '⚠️ د AI خدمت کیلي نه ده تنظیم شوې. په سرور کې openrouter-api-key.txt فایل جوړ او د OpenRouter API key پکې ولیکئ.';
   }
-
-  const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' +
-    encodeURIComponent(GEMINI_MODEL) + ':generateContent?key=' +
-    encodeURIComponent(GEMINI_API_KEY);
 
   const prompt = [
     'ته د «د معلوماتو نړۍ» د WhatsApp ګروپ مرستیال یې.',
     'د کارونکي په ژبه ځواب ورکړه؛ که ژبه پښتو وي، روانه او روښانه پښتو وکاروه.',
-    'د کرکټ، ورزش، خبرونو او اوسنیو پېښو په اړه د تازه معلوماتو غوښتنه وي، د Google Search وسیله وکاروه.',
-    'حقایق مه جوړوه. که سرچینې تازه پایله تایید نه کړي، په څرګنده ووایه چې تایید شوې پایله ونه موندل شوه.',
-    'ځواب لنډ، ګټور او د WhatsApp لپاره مناسب وساته. که مناسب وي، نېټه او سرچینې هم یادې کړه.',
+    'حقایق مه جوړوه. که د تازه معلوماتو د تایید توان نه لرې، دا خبره په څرګنده ووایه.',
+    'ځواب لنډ، ګټور او د WhatsApp لپاره مناسب وساته.',
     'د کارونکي پوښتنه: ' + question
-  ].join('\\n');
+  ].join('\n');
 
-  const response = await fetch(endpoint, {
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Authorization': 'Bearer ' + OPENROUTER_API_KEY,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://sillydev.co.uk',
+      'X-Title': 'Maloomat Bot'
+    },
     body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      tools: [{ google_search: {} }],
-      generationConfig: {
-        temperature: 0.4,
-        maxOutputTokens: 700,
-      },
+      model: OPENROUTER_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.4,
+      max_tokens: 700
     }),
-    signal: AbortSignal.timeout(25000),
+    signal: AbortSignal.timeout(30000),
   });
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     const apiMessage = payload?.error?.message || ('HTTP ' + response.status);
-    throw new Error('Gemini API: ' + apiMessage.slice(0, 250));
+    throw new Error('OpenRouter API: ' + apiMessage.slice(0, 250));
   }
 
-  const answer = (payload?.candidates?.[0]?.content?.parts || [])
-    .map((part) => part.text || '')
-    .join('\\n')
-    .trim();
-
-  if (!answer) throw new Error('Gemini returned an empty answer.');
-  return answer.slice(0, 3500);
+  const answer = payload?.choices?.[0]?.message?.content;
+  if (typeof answer !== 'string' || !answer.trim()) {
+    throw new Error('OpenRouter returned an empty answer.');
+  }
+  return answer.trim().slice(0, 3500);
 }
 
 async function answerWithAI(socket, groupJid, participantJid, question) {
@@ -301,7 +299,7 @@ async function answerWithAI(socket, groupJid, participantJid, question) {
   }
 
   try {
-    const answer = await getGeminiAnswer(question);
+    const answer = await getOpenRouterAnswer(question);
     await safeSend(socket, groupJid, { text: answer });
   } catch (err) {
     console.error('❌ د AI ځواب ناکام شو:', err?.message || err);
@@ -951,9 +949,9 @@ async function startBot() {
           );
 
           console.log(
-            GEMINI_API_KEY
-              ? '🛡️ یوازې ګروپونه؛ Gemini AI فعال دی.'
-              : '🛡️ یوازې ګروپونه؛ AI بند دی (Gemini API key نشته).'
+            OPENROUTER_API_KEY
+              ? '🛡️ یوازې ګروپونه؛ DeepSeek AI فعال دی (OpenRouter free).'
+              : '🛡️ یوازې ګروپونه؛ AI بند دی (OpenRouter API key نشته).'
           );
 
           if (pairingTimer) {
