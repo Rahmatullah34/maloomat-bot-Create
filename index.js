@@ -291,7 +291,7 @@ function answerFromOfflineKnowledge(question) {
   ]);
 
   const stem = (token) => String(token || '')
-    .replace(/(ونو|ګانو|و|ونه|انو|ونه|ونه|ان)$/u, '')
+    .replace(/(ونو|ګانو|و|ونه|انو|ونه|ان)$/u, '')
     .replace(/(ی|ه|ي)$/u, '');
 
   const tokens = (value) => normalizePashto(value)
@@ -309,33 +309,35 @@ function answerFromOfflineKnowledge(question) {
       .map(normalizePashto)
       .filter(term => term.length >= 2 && !stopWords.has(term));
 
-    let score = 0;
-    let overlapScore = 0;
+    let bestPhraseScore = 0;
+    let bestOverlapScore = 0;
 
     for (const term of terms) {
+      const termTokens = tokens(term);
+
       if (q === term) {
-        score += term.includes(' ') ? 30 : 15;
+        bestPhraseScore = Math.max(bestPhraseScore, 100 + Math.min(term.length / 20, 5));
         continue;
       }
 
-      if (q.includes(term)) {
-        score += term.includes(' ') ? 12 + Math.min(term.length / 12, 5) : 2;
+      // د څو کلمو بشپړ کلیدي عبارت ته تر عمومي ورته والي لوړ لومړیتوب ورکړه.
+      if (term.includes(' ') && q.includes(term)) {
+        bestPhraseScore = Math.max(bestPhraseScore, 35 + Math.min(term.length / 15, 5));
+      } else if (!term.includes(' ') && term.length >= 3 && q.includes(term)) {
+        bestPhraseScore = Math.max(bestPhraseScore, 7);
       }
 
-      // د پښتو د جمع او ګرامري بڼو د توپیر لپاره د مهمو کلمو پرتله.
-      const termTokens = tokens(term);
       if (termTokens.length >= 2) {
         const overlap = new Set(termTokens.filter(token => questionTokens.has(token))).size;
         if (overlap >= 2) {
-          const candidate = overlap * 3.5 + Math.min(overlap / termTokens.length, 1) * 2;
-          if (candidate > overlapScore) overlapScore = candidate;
+          const coverage = overlap / termTokens.length;
+          const candidate = overlap * 3.5 + Math.min(coverage, 1) * 2;
+          bestOverlapScore = Math.max(bestOverlapScore, candidate);
         }
       }
     }
 
-    score += overlapScore;
-
-    // د مشخصو او اوږدو عبارتونو ځواب ته لومړیتوب ورکړه.
+    const score = Math.max(bestPhraseScore, bestOverlapScore);
     if (score > bestScore) {
       bestScore = score;
       best = item;
