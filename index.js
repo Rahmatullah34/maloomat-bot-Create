@@ -20,6 +20,9 @@ const express = require('express');
 // 1. د بوټ HTTP روغتیا او حالت
 // ======================================================
 
+// د عامو پوښتنو او معلوماتي ځوابونو برخه موقتي بنده ده؛ د ګروپ مدیریت فعال پاتې کېږي.
+const ENABLE_GROUP_QA = false;
+
 const app = express();
 
 app.get('/', (_req, res) => {
@@ -32,9 +35,10 @@ app.get('/health', (_req, res) => {
   res.status(200).json({
     ok: true,
     service: 'maloomat-bot',
-    mode: 'group-only-local-knowledge+multi-source-internet',
-    aiSummarization: Boolean(process.env.OPENROUTER_API_KEY),
-    webSearch: true,
+    mode: ENABLE_GROUP_QA ? 'group-moderation+qa' : 'group-moderation-only',
+    questionAnswersEnabled: ENABLE_GROUP_QA,
+    aiSummarization: ENABLE_GROUP_QA && Boolean(process.env.OPENROUTER_API_KEY),
+    webSearch: ENABLE_GROUP_QA,
     webSearchProviders: ['DuckDuckGo', 'Wikipedia EN', 'Wikipedia PS', 'GDELT news'],
     moderation: {
       badWords: true,
@@ -854,6 +858,9 @@ function formatInternetResults(question, results) {
 }
 
 async function answerWithKnowledge(socket, groupJid, participantJid, question, participantName) {
+  // د پوښتنو ځوابونه موقتي بند دي؛ د ګروپ نظم/منځپانګې کنټرولونه جلا فعال پاتې دي.
+  if (!ENABLE_GROUP_QA) return false;
+
   // بوټ یوازې واضح پوښتنو یا ښکاره انټرنېټي لټون غوښتنو ته ځواب ورکوي.
   // عادي معلوماتي پوسټونه او هغه متنونه چې یوازې یوه کلیدي کلمه لري، بې‌ځوابه پرېږدي.
   if (!looksLikeQuestion(question) && !requestsInternetSearch(question)) {
@@ -1804,8 +1811,9 @@ async function startBot() {
           );
 
           console.log(
-            '🛡️ د ګروپ کنټرول فعال دی: کنځل، لینکونه، چټک او تکراري سپم؛ انټرنېټي لټون فعال؛ د AI لنډیز: ' +
-            (process.env.OPENROUTER_API_KEY ? 'فعال' : 'غیرفعال') +
+            '🛡️ د ګروپ مدیریت فعال دی: کنځل، دیني پارونه، لینکونه، د Status/چینل فارورډونه، چټک او تکراري سپم؛ ' +
+            'د پوښتنو ځوابونه: ' + (ENABLE_GROUP_QA ? 'فعال' : 'موقتي بند') +
+            '؛ ویب لټون: ' + (ENABLE_GROUP_QA ? 'فعال' : 'بند') +
             '؛ د محلي معلوماتو شمېر: ' + OFFLINE_KNOWLEDGE.length
           );
 
@@ -2026,9 +2034,8 @@ async function startBot() {
             const statusShare =
               isWhatsAppStatusShare(msg);
 
-            if (!text && !channelForward && !statusShare) {
-              continue;
-            }
+            // بې‌متنه عکسونه، غږیز او نور پیغامونه هم د چټک سپم په شمېر کې حسابېږي؛
+            // یوازې د متن د نشتوالي له امله یې د مدیریت کتنه مه پرېږده.
 
             const participantJid =
               msg.key?.participant ||
