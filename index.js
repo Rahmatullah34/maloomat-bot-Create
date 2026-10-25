@@ -1508,7 +1508,7 @@ async function startBot() {
 
       // د WhatsApp د پخوانیو پیغامونو د تاریخ همغږي فعالوي.
       // یادونه: په وړیا سرور کې د حافظې مصرف زیاتولای شي.
-      syncFullHistory: true,
+      syncFullHistory: false,
     };
 
     if (version) {
