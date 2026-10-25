@@ -9,6 +9,8 @@
 ## نوي تنظیمات (Environment Variables)
 
 - `ALLOWED_GROUPS` — د ګروپونو JID لېست سره په کاما جلا؛ که یې وتړئ، بوټ یوازې په همدې ګروپونو کې کار کوي. که تش وي، په ټولو ګروپونو کې کار کوي (پخوانی چلند). د ګروپ JID د ګروپ د لینک څخه یا د بوټ له لاګونو موندلی شئ.
+- `ALLOWED_LINK_DOMAINS` — د اجازې لرونکو وېب پاڼو لېست (لکه `bbc.com,example.com`)؛ د دې پاڼو لینکونه نه حذفیږي. که تش وي، ټول لینکونه حذفیږي (پخوانی چلند).
+- `ALLOWED_LINK_SENDERS` — د اجازې لرونکو غړو لېست (د WhatsApp شمېرې)؛ د دوی لینکونه نه حذفیږي (لکه د ګروپ مدیران).
 - `ENABLE_HISTORY_CLEANUP` — که `false` وي، د پخواني تاریخ لینکونه نه حذفیږي. ډیفالټ: پرانیستی.
 - `RESET_WHATSAPP_SESSION`، `WHATSAPP_PHONE`، `SUPABASE_URL`، `SUPABASE_SERVICE_ROLE_KEY`، `OPENROUTER_API_KEY` — پخواني سره.
 

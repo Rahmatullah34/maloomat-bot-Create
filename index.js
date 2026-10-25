@@ -34,6 +34,7 @@ const {
   BURST_LIMIT,
   recordViolationWarning,
   shouldSendWarningNow,
+  isLinkPermitted,
 } = require('./lib/moderation');
 
 // د WhatsApp د اتصال ریښتیایي حالت؛ د /health په ځواب کې ښودل کیږي.
@@ -1731,7 +1732,7 @@ async function startBot() {
             // 20. د لینکونو مخنیوی
             // ==========================================
 
-            if (LINK_PATTERN.test(text)) {
+            if (LINK_PATTERN.test(text) && !isLinkPermitted(text, participantJid)) {
               await deleteGroupMessage(
                 socket,
                 groupJid,

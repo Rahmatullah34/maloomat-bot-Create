@@ -4,6 +4,11 @@
 // چلول: npm test
 
 process.env.ALLOWED_GROUPS = '11111111111@g.us,22222222222@g.us';
+process.env.ALLOWED_LINK_DOMAINS = 'example.com,bbc.com';
+process.env.ALLOWED_LINK_SENDERS = '77777777777@s.whatsapp.net';
+
+const fs = require('node:fs');
+const path = require('node:path');
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -22,6 +27,8 @@ const {
   recordRepeatedMessage,
   recordViolationWarning,
   shouldSendWarningNow,
+  isLinkPermitted,
+  BAD_WORDS,
 } = require('../lib/moderation');
 
 test('isGroupAllowed: یوازې ټاکل شوي ګروپونه', () => {
@@ -148,4 +155,33 @@ test('recordViolationWarning: شمېر لوړیږي', () => {
   const user = '66666666666@s.whatsapp.net';
   assert.equal(recordViolationWarning(jid, user), 1);
   assert.equal(recordViolationWarning(jid, user), 2);
+});
+
+test('BAD_WORDS: اصلي لېست بشپړ دی (regression)', () => {
+  // دا کلمې په یوې سمونې کې په غلطۍ سره له لېست پاتې شوې وې؛ نور باید هیڅکله نه ویښي.
+  for (const word of ['حرامي', 'کوس', 'خره', 'گاو', 'کثافت', 'آشغال', 'گم شو', 'گمشو']) {
+    assert.ok(BAD_WORDS.includes(word), `د لېست پاتې کلمه: ${word}`);
+  }
+  assert.ok(BAD_WORDS.length >= 77, 'د لېست اندازه باید له ۷۷ کمه نه وي');
+});
+
+test('isLinkPermitted: اجازې لرونکي لینکونه او استوونکي', () => {
+  // اجازې لرونکی ډومېن
+  assert.equal(isLinkPermitted('ګوره https://example.com/page', '99999999999@s.whatsapp.net'), true);
+  assert.equal(isLinkPermitted('ګوره https://www.bbc.com/news', '99999999999@s.whatsapp.net'), true);
+  // اجازې لرونکی استوونکی (لکه مدیر)
+  assert.equal(isLinkPermitted('https://any-site.org/x', '77777777777@s.whatsapp.net'), true);
+  // نامجاز لینک او نامجاز استوونکی
+  assert.equal(isLinkPermitted('https://spam-site.net/offer', '99999999999@s.whatsapp.net'), false);
+  // بې لینکه متن
+  assert.equal(isLinkPermitted('دا عادي جمله ده', '99999999999@s.whatsapp.net'), false);
+});
+
+test('ENABLE_GROUP_QA: د پوښتنو ځوابونه بند پاتې دي (regression)', () => {
+  const indexSrc = fs.readFileSync(
+    path.join(__dirname, '..', 'index.js'),
+    'utf8'
+  );
+  assert.match(indexSrc, /ENABLE_GROUP_QA\s*=\s*false/,
+    'د پوښتنو ځوابونو برخه باید موقتي بندې وي');
 });
