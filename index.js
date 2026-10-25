@@ -442,7 +442,7 @@ function isSensitiveSafetyRequest(question) {
   const q = normalizePashto(question);
 
   const asksPrivateDetails =
-    /(?:شخصي|خصوصي)\s*(?:پته|شمېره|شماره|نمبر|موبایل|تلیفون)|د\s*کور\s*پته|د\s*اوسېدو\s*ځای|د\s*استوګنې\s*پته|دقیق(?:ه)?\s*(?:ځای|موقعیت)|اوسنی\s*(?:ځای|موقعیت)|پټ\s*(?:ځای|موقعیت)|چېرته\s*اوسېږي|چیرته\s*اوسیږي|چېرته\s*ژوند\s*کوي|چیرته\s*ژوند\s*کوي|home\s*address|private\s*(?:phone|address|number)|exact\s*(?:location|address)|where\s+does\s+.{1,60}\s+live/iu.test(q);
+    /(?:شخص[يی]|خصوص[يی])\s*(?:پته|شمېره|شماره|نمبر|موبایل|تلیفون)|د\s*کور\s*پته|د\s*اوسېدو\s*ځای|د\s*استوګنې\s*پته|دقیق(?:ه)?\s*(?:ځای|موقعیت)|اوسنی\s*(?:ځای|موقعیت)|پټ\s*(?:ځای|موقعیت)|چېرته\s*اوسېږي|چیرته\s*اوسیږي|چېرته\s*ژوند\s*کوي|چیرته\s*ژوند\s*کوي|home\s*address|private\s*(?:phone|address|number)|exact\s*(?:location|address)|where\s+does\s+.{1,60}\s+live/iu.test(q);
 
   const asksExactPersonLocation =
     /(?:د\s+.{1,50}\s+(?:اوسنی|دقیق|پټ)\s*(?:ځای|موقعیت)|(?:اوسنی|دقیق|پټ)\s*(?:ځای|موقعیت)\s+د\s+.{1,50})/iu.test(q);
