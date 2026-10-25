@@ -1,0 +1,14 @@
+# د WhatsApp د ناستې محرم معلومات — هېڅکله پورته مه کړئ
+session_auth_1/
+whatsapp-phone.txt
+.whatsapp-session-reset-done
+
+# چاپېریال او رازونه
+.env
+.env.*
+
+# نور
+node_modules/
+*.log
+npm-debug.log*
+.DS_Store

@@ -16,6 +16,29 @@ const {
 const P = require('pino');
 const express = require('express');
 
+// د نظم ساتنې خالصې کړنې او حالت له جلا ماډول اخیستل کیږي
+// (lib/moderation.js) څو په ازموینو کې و ازمویل شي.
+const {
+  isGroupAllowed,
+  allowedGroupsCount,
+  isHistoryCleanupEnabled,
+  normalizePashto,
+  containsBadWord,
+  LINK_PATTERN,
+  isForwardedChannelMessage,
+  isWhatsAppStatusShare,
+  extractText,
+  rememberMessage,
+  recordGroupMessage,
+  recordRepeatedMessage,
+  BURST_LIMIT,
+  recordViolationWarning,
+  shouldSendWarningNow,
+} = require('./lib/moderation');
+
+// د WhatsApp د اتصال ریښتیایي حالت؛ د /health په ځواب کې ښودل کیږي.
+let whatsappConnectionState = 'unknown';
+
 // ======================================================
 // 1. د بوټ HTTP روغتیا او حالت
 // ======================================================
@@ -51,6 +74,11 @@ app.get('/health', (_req, res) => {
       autoKick: false,
     },
     knowledgeEntries: OFFLINE_KNOWLEDGE.length,
+    whatsapp: {
+      connection: whatsappConnectionState,
+    },
+    allowedGroups: allowedGroupsCount(),
+    historyCleanup: isHistoryCleanupEnabled(),
   });
 });
 
@@ -225,7 +253,6 @@ async function getWhatsAppAuthState() {
 }
 
 // ======================================================
-// ======================================================
 // 1.5 محلي معلوماتي سیستم + د انټرنېټ سرچینو لټون (بې له AI API)
 // ======================================================
 
@@ -276,19 +303,6 @@ if (dnaEntry) Object.assign(dnaEntry, DNA_CORRECTION);
 else OFFLINE_KNOWLEDGE.push(DNA_CORRECTION);
 const SEEN_GROUP_NAMES = new Map();
 
-function normalizePashto(value) {
-  return String(value || '')
-    .toLowerCase()
-    .normalize('NFKC')
-    .replace(/[\u200B-\u200D\uFEFF]/g, '')
-    .replace(/[يى]/g, 'ی')
-    .replace(/ك/g, 'ک')
-    .replace(/[ۀة]/g, 'ه')
-    .replace(/[أإآ]/g, 'ا')
-    .replace(/[؟?!،,.:؛()\[\]{}"'«»]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 function rememberGroupMember(groupJid, participantJid, participantName) {
   if (!groupJid || !participantJid || !participantName) return;
@@ -1061,95 +1075,6 @@ function prepareAuthSessionForOneTimeReset() {
 }
 
 // ======================================================
-// 4. د منع شویو کلیمو او سپکاوي لېست
-// ======================================================
-
-const BAD_WORDS = [
-  // پښتو سپکاوی
-  'احمق',
-  'بې‌عقله',
-  'بی‌عقله',
-  'بې عقله',
-  'بی عقله',
-  'بې‌شعوره',
-  'بی‌شعوره',
-  'بې شعوره',
-  'بی شعوره',
-  'بې‌ادبه',
-  'بی‌ادبه',
-  'بې ادبه',
-  'بی ادبه',
-  'بې‌غیرته',
-  'بی‌غیرته',
-  'بې غیرته',
-  'بی غیرته',
-  'بی ناموس',
-  'بې ناموس',
-  'بی‌ناموس',
-  'بې‌ناموس',
-  'حرامزاده',
-  'حرامي',
-  'حرامی',
-  'ولدالحرام',
-  'پدرسوخته',
-  'مادرجنده',
-  'مادر جنده',
-  'مادر قحبه',
-  'خواهر جنده',
-  'جنده',
-  'کونی',
-  'کوس',
-  'کسکش',
-  'کس کش',
-  'چوتیا',
-  'چوټیا',
-  'سګ دې',
-  'خره',
-  'لعنتي',
-
-  // دري او فارسي سپکاوی
-  'بی‌شرف',
-  'بیشرف',
-  'بی شرف',
-  'بی‌حیا',
-  'بی حیا',
-  'گم شو',
-  'گمشو',
-  'گاو',
-  'کثافت',
-  'آشغال',
-  'پست فطرت',
-  'پست‌فطرت',
-  'مادر به خطا',
-  'مادرخطا',
-  'حرام خور',
-  'حرام‌خور',
-  'کثیف',
-  'خبیث',
-  'لعنت بر تو',
-
-  // انګلیسي
-  'fuck',
-  'fucking',
-  'motherfucker',
-  'mother fucker',
-  'shit',
-  'bullshit',
-  'bitch',
-  'son of a bitch',
-  'asshole',
-  'dickhead',
-  'dick',
-  'pussy',
-  'bastard',
-  'slut',
-  'whore',
-  'damn you',
-  'idiot',
-  'moron',
-];
-
-// ======================================================
 // 5. د ګروپ رسمي قوانین
 // ======================================================
 
@@ -1185,294 +1110,7 @@ const GROUP_RULES = `📜 *Maloomat AI | معلومات AI — د ګروپ رس�
 
 🤝 د قوانینو د مراعاتولو او د Maloomat AI | معلومات AI د لا ښه کولو لپاره مننه!`;
 
-// ======================================================
-// 6. د سپکاوي پېژندل
-// ======================================================
 
-function containsBadWord(text) {
-  const normalized = String(text || '')
-    .toLowerCase()
-    .normalize('NFKC');
-
-  return BAD_WORDS.some((word) => {
-    const escaped = word.replace(
-      /[.*+?^${}()|[\]\\]/g,
-      '\\$&'
-    );
-
-    const flexible = escaped.replace(
-      /\s+/g,
-      '\\s+'
-    );
-
-    const pattern = new RegExp(
-      `(^|[^\\p{L}\\p{N}])${flexible}($|[^\\p{L}\\p{N}])`,
-      'iu'
-    );
-
-    return pattern.test(normalized);
-  });
-}
-
-// ======================================================
-// 7. د لینکونو پېژندل
-// ======================================================
-
-const LINK_PATTERN =
-  /(?:https?:\/\/|www\.|wa\.me\/|t\.me\/|(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}(?::\d{2,5})?(?:\/[^\s]*)?)/i
-;
-// دا الګو د عامو ډومېنونو ډېری پایونه هم نیسي؛ بیا هم هر پټ/تړلی لینک د متن په توګه نه ښکاري.
-
-// ======================================================
-// 8. د WhatsApp پیغام متن ترلاسه کول
-// ======================================================
-
-function isForwardedChannelMessage(message) {
-  // Channel-forward metadata may sit inside media contextInfo or another
-  // wrapped section of the message. Scan the whole Baileys message safely.
-  const channelMetadataKeys = new Set([
-    'forwardedNewsletterMessageInfo',
-    'forwardedNewsletterMessage',
-    'newsletterJid',
-    'newsletterServerId',
-    'newsletterMessageId',
-  ]);
-  const visited = new Set();
-  let inspected = 0;
-
-  function scan(value, depth) {
-    if (!value || typeof value !== 'object' || depth > 14 ||
-        visited.has(value) || inspected >= 800) {
-      return false;
-    }
-
-    visited.add(value);
-    inspected += 1;
-
-    for (const [key, child] of Object.entries(value)) {
-      if (channelMetadataKeys.has(key) &&
-          child !== undefined && child !== null && child !== false && child !== '') {
-        return true;
-      }
-
-      if (child && typeof child === 'object' && scan(child, depth + 1)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  return scan(message, 0);
-}
-
-function isWhatsAppStatusShare(message) {
-  // د WhatsApp د Status شریکولو پیغامونه ښايي د عادي متن پر ځای د ځانګړي
-  // Baileys message type په بڼه راشي، نو یوازې extractText پرې بسنه نه کوي.
-  const statusMessageKeys = new Set([
-    'groupStatusMentionMessage',
-    'statusMentionMessage',
-    'statusMentionMessageV2',
-    'statusMentionMessageV3',
-    'statusMentionMessageV4',
-    'statusMentionMessageInfo',
-  ]);
-  const visited = new Set();
-  let inspected = 0;
-
-  function scan(value, depth) {
-    if (!value || typeof value !== 'object' || depth > 14 ||
-        visited.has(value) || inspected >= 800) {
-      return false;
-    }
-
-    visited.add(value);
-    inspected += 1;
-
-    for (const [key, child] of Object.entries(value)) {
-      if (statusMessageKeys.has(key) &&
-          child !== undefined && child !== null && child !== false && child !== '') {
-        return true;
-      }
-      if (child && typeof child === 'object' && scan(child, depth + 1)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  return scan(message, 0);
-}
-
-function extractText(message) {
-  let content = message;
-
-  for (let i = 0; i < 6 && content; i += 1) {
-    const wrapped =
-      content.ephemeralMessage?.message ||
-      content.viewOnceMessage?.message ||
-      content.viewOnceMessageV2?.message ||
-      content.viewOnceMessageV2Extension?.message ||
-      content.documentWithCaptionMessage?.message;
-
-    if (!wrapped) {
-      break;
-    }
-
-    content = wrapped;
-  }
-
-  return String(
-    content?.conversation ||
-    content?.extendedTextMessage?.text ||
-    content?.imageMessage?.caption ||
-    content?.videoMessage?.caption ||
-    content?.documentMessage?.caption ||
-    content?.buttonsResponseMessage?.selectedDisplayText ||
-    content?.listResponseMessage?.title ||
-    content?.templateButtonReplyMessage?.selectedDisplayText ||
-    content?.interactiveResponseMessage?.body?.text ||
-    ''
-  ).trim();
-}
-
-// ======================================================
-// 9. د تکراري پیغامونو مخنیوی
-// ======================================================
-
-const seenMessages = new Map();
-
-function rememberMessage(id) {
-  const now = Date.now();
-
-  for (const [key, time] of seenMessages) {
-    if (now - time > 5 * 60 * 1000) {
-      seenMessages.delete(key);
-    }
-  }
-
-  if (seenMessages.has(id)) {
-    return false;
-  }
-
-  seenMessages.set(id, now);
-
-  if (seenMessages.size > 1000) {
-    const oldestKey =
-      seenMessages.keys().next().value;
-
-    if (oldestKey) {
-      seenMessages.delete(oldestKey);
-    }
-  }
-
-  return true;
-}
-
-// ======================================================
-// 10. په ۳۰ ثانیو کې د پیغامونو شمېر
-// ======================================================
-
-const messageBursts = new Map();
-
-// په هر ۳۰ ثانیو کې تر ۳ عادي پیغامونو پورې اجازه؛ څلورم او ورپسې پیغامونه سپم ګڼل کېږي.
-const BURST_WINDOW_MS = 30 * 1000;
-const BURST_LIMIT = 3;
-const BURST_WARNING_COOLDOWN_MS = 30 * 1000;
-
-function recordGroupMessage(
-  groupJid,
-  participantJid
-) {
-  const now = Date.now();
-
-  const key = `${groupJid}:${participantJid}`;
-
-  let entry = messageBursts.get(key);
-
-  if (!entry) {
-    entry = {
-      timestamps: [],
-      lastWarnAt: 0,
-      lastSeenAt: now,
-    };
-  }
-
-  entry.timestamps = entry.timestamps.filter(
-    (time) => now - time < BURST_WINDOW_MS
-  );
-
-  entry.timestamps.push(now);
-  entry.lastSeenAt = now;
-
-  for (const [oldKey, oldEntry] of messageBursts) {
-    if (
-      now - oldEntry.lastSeenAt >
-      10 * 60 * 1000
-    ) {
-      messageBursts.delete(oldKey);
-    }
-  }
-
-  messageBursts.set(key, entry);
-
-  return {
-    count: entry.timestamps.length,
-
-    shouldWarn:
-      entry.timestamps.length >= BURST_LIMIT &&
-      now - entry.lastWarnAt >=
-        BURST_WARNING_COOLDOWN_MS,
-
-    markWarned: () => {
-      entry.lastWarnAt = Date.now();
-    },
-  };
-}
-
-// ======================================================
-// 10.1 د ورته تکراري پیغامونو مخنیوی
-// ======================================================
-
-const repeatedMessages = new Map();
-const REPEAT_WINDOW_MS = 60 * 1000;
-const REPEAT_LIMIT = 3;
-
-function recordRepeatedMessage(groupJid, participantJid, text) {
-  const normalized = String(text || '')
-    .normalize('NFKC')
-    .toLowerCase()
-    .replace(/[\s\p{P}\p{S}]+/gu, ' ')
-    .trim();
-
-  // ډېر لنډ پیغامونه، لکه سلام او هو، د تکراري سپم په توګه نه شمېرل کېږي.
-  if (normalized.length < 8) {
-    return { shouldDelete: false, shouldWarn: false, count: 0 };
-  }
-
-  const now = Date.now();
-  const key = `${groupJid}:${participantJid}:${normalized.slice(0, 300)}`;
-  let entry = repeatedMessages.get(key);
-
-  if (!entry) entry = { timestamps: [], lastWarnAt: 0, lastSeenAt: now };
-  entry.timestamps = entry.timestamps.filter(time => now - time < REPEAT_WINDOW_MS);
-  entry.timestamps.push(now);
-  entry.lastSeenAt = now;
-  repeatedMessages.set(key, entry);
-
-  for (const [oldKey, oldEntry] of repeatedMessages) {
-    if (now - oldEntry.lastSeenAt > 10 * 60 * 1000) repeatedMessages.delete(oldKey);
-  }
-  if (repeatedMessages.size > 2000) {
-    const oldestKey = repeatedMessages.keys().next().value;
-    if (oldestKey) repeatedMessages.delete(oldestKey);
-  }
-
-  const shouldDelete = entry.timestamps.length >= REPEAT_LIMIT;
-  const shouldWarn = shouldDelete && now - entry.lastWarnAt >= BURST_WARNING_COOLDOWN_MS;
-  if (shouldWarn) entry.lastWarnAt = now;
-
-  return { shouldDelete, shouldWarn, count: entry.timestamps.length };
-}
 
 // ======================================================
 // 11. د پیغام لېږلو خوندي طریقه
@@ -1501,40 +1139,6 @@ async function safeSend(
 
     return null;
   }
-}
-
-// ======================================================
-// 11.5 د سرغړونو منظم اخطارونه
-// ======================================================
-
-// اخطارونه د ګروپ او غړي له مخې د ۲۴ ساعتونو لپاره په حافظه کې ساتل کېږي.
-// د بوټ Restart سره دا لنډمهاله شمېر بیا له صفره پیلېږي.
-const violationWarnings = new Map();
-const VIOLATION_WINDOW_MS = 24 * 60 * 60 * 1000;
-
-function recordViolationWarning(groupJid, participantJid) {
-  const now = Date.now();
-  const key = String(groupJid) + ':' + String(participantJid || 'unknown');
-  const previous = violationWarnings.get(key);
-
-  const entry = previous && now - previous.firstAt < VIOLATION_WINDOW_MS
-    ? { count: previous.count + 1, firstAt: previous.firstAt, lastAt: now }
-    : { count: 1, firstAt: now, lastAt: now };
-
-  violationWarnings.set(key, entry);
-
-  for (const [oldKey, oldEntry] of violationWarnings) {
-    if (now - oldEntry.lastAt > VIOLATION_WINDOW_MS) {
-      violationWarnings.delete(oldKey);
-    }
-  }
-
-  if (violationWarnings.size > 3000) {
-    const oldestKey = violationWarnings.keys().next().value;
-    if (oldestKey) violationWarnings.delete(oldestKey);
-  }
-
-  return entry.count;
 }
 
 // ======================================================
@@ -1578,6 +1182,12 @@ async function deleteGroupMessage(
       messageKey?.participantAlt ||
       participantName ||
       'unknown';
+
+    // شریک throttle: که دې غړي ته په وروستيو ۳۰ ثانیو کې اخطار استول شوی وي،
+    // نوی اخطار نه استوي — دې سره د بوټ اخطارونه پخپله سپم نه کیږي.
+    if (!shouldSendWarningNow(jid, offenderJid)) {
+      return;
+    }
 
     const warningCount = recordViolationWarning(jid, offenderJid);
     const statusText = deleted
@@ -1780,6 +1390,7 @@ async function startBot() {
         } = update;
 
         if (connection === 'open') {
+          whatsappConnectionState = 'connected';
           console.log(
             '✅ د Maloomat AI | معلومات AI WhatsApp بوټ فعال شو!'
           );
@@ -1798,6 +1409,8 @@ async function startBot() {
         }
 
         if (connection === 'close') {
+          whatsappConnectionState = 'disconnected';
+
           if (pairingTimer) {
             clearTimeout(pairingTimer);
             pairingTimer = null;
@@ -1841,7 +1454,8 @@ async function startBot() {
         try {
           if (
             event.action !== 'add' ||
-            !Array.isArray(event.participants)
+            !Array.isArray(event.participants) ||
+            !isGroupAllowed(event.id)
           ) {
             return;
           }
@@ -1889,6 +1503,13 @@ async function startBot() {
 
     socket.ev.on('messaging-history.set', async (event) => {
       try {
+        // د پخواني تاریخ د پاکولو کېنچ: که ENABLE_HISTORY_CLEANUP=false وي،
+        // د پخوانیو پیغامونو لینکونه نه حذفیږي.
+        if (!isHistoryCleanupEnabled()) {
+          console.log('ℹ️ د پخواني تاریخ پاکول له چاپېریال متغیره بند دی.');
+          return;
+        }
+
         const historyMessages = Array.isArray(event?.messages)
           ? event.messages
           : [];
@@ -1902,6 +1523,7 @@ async function startBot() {
 
           const groupJid = msg.key.remoteJid || '';
           if (!groupJid.endsWith('@g.us')) continue;
+          if (!isGroupAllowed(groupJid)) continue;
 
           const messageId = msg.key.id;
           if (messageId && !rememberMessage(`${groupJid}:${messageId}`)) {
@@ -1990,6 +1612,11 @@ async function startBot() {
               continue;
             }
 
+            // که د اجازې لرونکو ګروپونو لېست ټاکل شوی وي، یوازې هلته کار کوو.
+            if (!isGroupAllowed(groupJid)) {
+              continue;
+            }
+
             const messageId = msg.key?.id;
 
             if (
@@ -2038,7 +1665,7 @@ async function startBot() {
 
             console.log(
               `📩 ګروپي پیغام؛ غړی=${name}; ` +
-              `متن=${text.slice(0, 100)}`
+              `متن=${text.slice(0, 40)}`
             );
 
             // ==========================================

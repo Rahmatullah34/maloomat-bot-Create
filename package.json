@@ -7,7 +7,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node --test test/"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.24",
