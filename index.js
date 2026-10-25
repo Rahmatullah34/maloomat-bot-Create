@@ -327,11 +327,13 @@ function answerFromOfflineKnowledge(question) {
   const q = normalizePashto(question);
   if (q.length < 2 || !OFFLINE_KNOWLEDGE.length) return null;
 
+  // عامې پوښتنیزې او تړونکې کلمې د موضوع د پېژندلو پر ځای له نمرو وباسه.
   const stopWords = new Set([
-    'د', 'په', 'له', 'او', 'یا', 'چې', 'دا', 'هغه', 'دی', 'ده', 'دي',
-    'څه', 'څوک', 'څنګه', 'ولې', 'کوم', 'کومه', 'کومې', 'کومو', 'کوي',
+    'د', 'په', 'له', 'او', 'یا', 'چې', 'دا', 'هغه', 'دی', 'ده', 'دي', 'دې',
+    'څه', 'شی', 'څوک', 'څنګه', 'ولې', 'کوم', 'کومه', 'کومې', 'کومو', 'کوي',
     'و', 'وه', 'یې', 'هم', 'راکړه', 'لري', 'شي', 'شوی', 'شوې', 'کې',
-    'ته', 'زما', 'ستا', 'ئې', 'دوی', 'دغه', 'داسې', 'یوه', 'یو'
+    'ته', 'زما', 'ستا', 'ئې', 'دوی', 'دغه', 'داسې', 'یوه', 'یو', 'دئ',
+    'تعریف', 'معلومات', 'په اړه', 'کوم دي', 'څو دي'
   ]);
 
   const stem = (token) => String(token || '')
@@ -343,56 +345,88 @@ function answerFromOfflineKnowledge(question) {
     .map(stem)
     .filter(token => token.length >= 2 && !stopWords.has(token));
 
-  const questionTokens = new Set(tokens(q));
+  const questionTokens = [...new Set(tokens(q))];
+  if (!questionTokens.length) return null;
+
+  // د هرې موضوع د سرلیک او کلیدي کلمو له مخې د کم‌عمومي کلمو وزن لوړ کړه.
+  // دا د «مالیه څه ده؟» پوښتنې د «مخابراتو» یا بل نامربوط مضمون له ځواب سره د ګډېدو خطر کموي.
+  const itemTokenSets = OFFLINE_KNOWLEDGE.map(item =>
+    new Set(tokens([
+      item.title,
+      ...(Array.isArray(item.keywords) ? item.keywords : [])
+    ].filter(Boolean).join(' ')))
+  );
+  const documentFrequency = new Map();
+
+  for (const tokenSet of itemTokenSets) {
+    for (const token of tokenSet) {
+      documentFrequency.set(token, (documentFrequency.get(token) || 0) + 1);
+    }
+  }
+
+  const tokenWeight = (token) =>
+    1 + Math.log((OFFLINE_KNOWLEDGE.length + 1) /
+      ((documentFrequency.get(token) || 0) + 1));
+
   let best = null;
   let bestScore = 0;
+  let bestTitleOverlap = -1;
 
-  for (const item of OFFLINE_KNOWLEDGE) {
+  for (let index = 0; index < OFFLINE_KNOWLEDGE.length; index += 1) {
+    const item = OFFLINE_KNOWLEDGE[index];
     const terms = [item.title, ...(Array.isArray(item.keywords) ? item.keywords : [])]
       .filter(Boolean)
-      .map(normalizePashto)
-      .filter(term => term.length >= 2 && !stopWords.has(term));
+      .map(normalizePashto);
 
-    let bestPhraseScore = 0;
-    let bestOverlapScore = 0;
-
+    let phraseScore = 0;
     for (const term of terms) {
-      const termTokens = tokens(term);
-
       if (q === term) {
-        bestPhraseScore = Math.max(bestPhraseScore, 100 + Math.min(term.length / 20, 5));
-        continue;
-      }
-
-      // د څو کلمو بشپړ کلیدي عبارت ته تر عمومي ورته والي لوړ لومړیتوب ورکړه.
-      if (term.includes(' ') && q.includes(term)) {
-        bestPhraseScore = Math.max(bestPhraseScore, 35 + Math.min(term.length / 15, 5));
-      } else if (!term.includes(' ') && term.length >= 3 && q.includes(term)) {
-        bestPhraseScore = Math.max(bestPhraseScore, 7);
-      }
-
-      if (termTokens.length >= 2) {
-        const overlap = new Set(termTokens.filter(token => questionTokens.has(token))).size;
-        if (overlap >= 2) {
-          const coverage = overlap / termTokens.length;
-          const candidate = overlap * 3.5 + Math.min(coverage, 1) * 2;
-          bestOverlapScore = Math.max(bestOverlapScore, candidate);
-        }
+        phraseScore = Math.max(phraseScore, 100 + Math.min(term.length / 20, 5));
+      } else if (term.includes(' ') && term.length >= 6 && q.includes(term)) {
+        // بشپړ څو-کلمیز عبارت ته د عمومي کلمو له ورته والي لوړ لومړیتوب ورکړه.
+        phraseScore = Math.max(phraseScore, 55 + Math.min(term.length / 20, 5));
       }
     }
 
-    const score = Math.max(bestPhraseScore, bestOverlapScore);
-    if (score > bestScore) {
+    const itemTokens = itemTokenSets[index];
+    const matches = questionTokens.filter(token => itemTokens.has(token));
+    let tokenScore = 0;
+    let titleOverlap = 0;
+
+    if (matches.length) {
+      const weightedOverlap = matches.reduce((sum, token) => sum + tokenWeight(token), 0);
+      const coverage = matches.length / questionTokens.length;
+      const titleTokens = new Set(tokens(item.title || ''));
+      titleOverlap = matches.filter(token => titleTokens.has(token)).length;
+
+      tokenScore = weightedOverlap * (0.4 + 0.6 * coverage);
+      tokenScore += titleOverlap * 1.5;
+
+      if (matches.length >= 2) {
+        tokenScore += 4 + Math.min(matches.length, 3);
+      }
+
+      // که پوښتنه څو ځانګړي مفاهیم لري، یوازې د یوې عمومي کلمې له مخې ځواب مه ټاکه.
+      if (questionTokens.length >= 3 && matches.length === 1 && coverage < 0.34) {
+        tokenScore *= 0.35;
+      } else if (questionTokens.length >= 2 && matches.length === 1 && coverage < 0.5) {
+        tokenScore *= 0.65;
+      }
+    }
+
+    const score = Math.max(phraseScore, tokenScore);
+    if (score > bestScore || (score === bestScore && titleOverlap > bestTitleOverlap)) {
       bestScore = score;
+      bestTitleOverlap = titleOverlap;
       best = item;
     }
   }
 
-  if (!best || bestScore < 4) return null;
+  if (!best || bestScore < 5) return null;
 
   return '📚 *' + best.title + '*\n\n' + best.answer +
-    (best.source ? '\n\n📖 سرچینه: ' + best.source : '') +
-    '\n\nℹ️ دا ځواب د بوټ له ثبت شوو معلوماتو څخه دی. د تازه بدلېدونکو خبرونو او شمېرو لپاره د سرچینې نېټه وګورئ.';
+    (best.source ? '\n\n📖 سرچینې: ' + best.source : '') +
+    '\n\nℹ️ دا ځواب د بوټ له ثبت شوو معلوماتو څخه دی. د تازه بدلېدونکو خبرونو، بیو او شمېرو لپاره رسمي سرچینه وګورئ.';
 }
 
 function looksLikeQuestion(text) {
@@ -400,6 +434,23 @@ function looksLikeQuestion(text) {
   if (value.length < 3 || value.length > 1500) return false;
   return /[؟?]/u.test(value) ||
     /(څوک|څه|چېرته|چیرته|څنګه|ولې|څومره|تعریف|معلومات|راکړه|نصاب|درسي پلان|سمستر|کریډیټ|پېژندنه|پیژندنه|خبرونه|تازه|نن|اوسنی|قیمت|بیه|نرخ|انټرنېټ|انټرنټ|ولټوه|لټون|who is|what is|where|when|why|how|latest|today|current|recent|news|price|search online)/iu.test(value);
+}
+
+
+// د ژوند، محرمیت او سیاسي خوندیتوب لپاره د شخصي معلوماتو/تعقیب خطرناکې غوښتنې فلټر.
+function isSensitiveSafetyRequest(question) {
+  const q = normalizePashto(question);
+
+  const asksPrivateDetails =
+    /(?:شخصي|خصوصي)\\s*(?:پته|شمېره|شماره|نمبر|موبایل|تلیفون)|د\\s*کور\\s*پته|د\\s*اوسېدو\\s*ځای|د\\s*استوګنې\\s*پته|دقیق(?:ه)?\\s*(?:ځای|موقعیت)|اوسنی\\s*(?:ځای|موقعیت)|پټ\\s*(?:ځای|موقعیت)|چېرته\\s*اوسېږي|چیرته\\s*اوسیږي|چېرته\\s*ژوند\\s*کوي|چیرته\\s*ژوند\\s*کوي|home\\s*address|private\\s*(?:phone|address|number)|exact\\s*(?:location|address)|where\\s+does\\s+.{1,60}\\s+live/iu.test(q);
+
+  const asksExactPersonLocation =
+    /(?:د\\s+.{1,50}\\s+(?:اوسنی|دقیق|پټ)\\s*(?:ځای|موقعیت)|(?:اوسنی|دقیق|پټ)\\s*(?:ځای|موقعیت)\\s+د\\s+.{1,50})/iu.test(q);
+
+  const asksTrackingOrHarm =
+    /څنګه\\s+(?:تعقیب|وڅار|په\\s+نښه|ووژنم|زیان\\s+ورسوم)|د\\s*(?:تعقیب|وژلو|برید|حملې|په\\s+نښه\\s+کولو)\\s*(?:لپاره|طریقه|لار)|په\\s+نښه\\s+کولو\\s+لپاره|پټ\\s+تعقیب|how\\s+to\\s+(?:track|target|attack|kill|doxx)|(?:track|locate|follow)\\s+(?:him|her|them|someone|a\\s+person)|doxx/iu.test(q);
+
+  return asksPrivateDetails || asksExactPersonLocation || asksTrackingOrHarm;
 }
 
 // د ویب لټون لنډمهاله cache د تکراري پوښتنو او غیرضروري غوښتنو مخه نیسي.
@@ -716,6 +767,9 @@ async function summarizeSourcesInPashto(question, results, localAnswer = '') {
           'د ځواب په پای کې د سرچینو سرلیکونه او دقیق لینکونه د [سرچینه 1] https://... په بڼه ولیکه.',
           'که سرچینې کافي معلومات ونه لري، دا محدودیت په پښتو بیان کړه.',
           'هیڅکله مه وایه چې د ویب پاڼې بشپړ متن دې لوستی که یوازې لنډ اقتباس درکړل شوی وي.',
+          'سیاسي موضوعات په بې‌طرفه، واقعیت‌محوره او سرچینه‌محوره ژبه تشریح کړه؛ اوازه، نظر او تایید شوی حقیقت سره مه ګډوه.',
+          'د شخصي کور پته، شخصي شمېره یا د چا دقیق/اوسنی ځای مه افشا کوه؛ د تعقیب، په نښه کولو، ګواښ یا زیان رسولو لپاره لارښوونې مه ورکوه. پر ځای یې عمومي، خوندي او عامه معلومات وړاندې کړه.',
+          'د پوښتنې اصلي موضوع ته ځواب ورکړه او نامربوطې سرچینې یا موضوعات مه ورګډوه. که سرچینې له پوښتنې سره سمون ونه لري، دا محدودیت په ښکاره بیان کړه.',
         ].join('\n'),
       },
       {
@@ -777,6 +831,15 @@ function formatInternetResults(question, results) {
 }
 
 async function answerWithKnowledge(socket, groupJid, participantJid, question, participantName) {
+  // د هر ډول انټرنېټي لټون یا AI لنډیز تر مخه د محرمیت او زیان اړوند غوښتنې ودرول شي.
+  if (isSensitiveSafetyRequest(question)) {
+    await safeSend(socket, groupJid, {
+      text: '🛡️ د خلکو د شخصي پتې، شخصي شمېرې، دقیق ځای، تعقیب یا زیان رسولو لپاره معلومات نه شم برابرولای.\n\n' +
+        '🌐 که پوښتنه عمومي یا سیاسي وي، کولای شم بې‌طرفه، عامه او د باوري سرچینو پر بنسټ معلومات وړاندې کړم.'
+    });
+    return true;
+  }
+
   const identityAnswer = answerIdentityQuestion(
     groupJid, participantJid, participantName, question
   );
@@ -786,31 +849,52 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
   }
 
   const localAnswer = answerFromOfflineKnowledge(question);
-  // هره عادي پوښتنه هم له څو سرچینو سره پرتله کېږي؛ تازه/خبري پوښتنې ځانګړې سرچینې هم کاروي.
-  // که پوښتنه له ثبت شوې موضوع سره برابره وي، بیا هم انټرنېټ ولټوه؛
-  // یوازې د موضوع لنډ نوم (لکه «مصنوعي ځیرکتیا») هم باید د څو سرچینو ځواب راوباسي.
-  const shouldSearchInternet = requestsInternetSearch(question) ||
-    looksLikeQuestion(question) || isTimeSensitiveQuestion(question) || Boolean(localAnswer);
+  const asksAfghanistanContext = /افغانستان|افغاني|afghanistan|کابل|kabul/iu.test(question);
+  const localAnswerCoversContext = Boolean(
+    localAnswer && /افغانستان|افغاني|afghanistan|کابل|kabul/iu.test(normalizePashto(localAnswer))
+  );
+  // د افغانستان د ځانګړي حالت پوښتنه باید له عمومي ځواب سره په غلطۍ بدله نه شي.
+  const localContextMismatch = Boolean(
+    localAnswer && asksAfghanistanContext && !localAnswerCoversContext
+  );
+  const usableLocalAnswer = localContextMismatch ? '' : localAnswer;
 
-  if (!looksLikeQuestion(question) && !localAnswer && !requestsInternetSearch(question)) return false;
+  // د کره او نسبتاً ثابتې محلي موضوع لپاره مستقیم ځواب ورکړه؛ بې‌اړخه ویب پایلې مه ورسره ګډوه.
+  if (
+    usableLocalAnswer &&
+    !requestsInternetSearch(question) &&
+    !isTimeSensitiveQuestion(question)
+  ) {
+    await safeSend(socket, groupJid, { text: usableLocalAnswer });
+    return true;
+  }
+
+  const shouldSearchInternet =
+    requestsInternetSearch(question) ||
+    isTimeSensitiveQuestion(question) ||
+    localContextMismatch ||
+    !usableLocalAnswer ||
+    looksLikeQuestion(question);
+
+  if (!looksLikeQuestion(question) && !usableLocalAnswer && !requestsInternetSearch(question)) return false;
 
   if (shouldSearchInternet) {
     const webResults = await searchInternet(question);
     if (webResults.length) {
-      const aiSummary = await summarizeSourcesInPashto(question, webResults, localAnswer);
+      const aiSummary = await summarizeSourcesInPashto(question, webResults, usableLocalAnswer);
       if (aiSummary) {
         await safeSend(socket, groupJid, {
           text: '🌐 *د څو سرچینو پر بنسټ مفصل پښتو ځواب*\n\n' + aiSummary +
-            (localAnswer
-              ? '\n\n📚 *د بوټ له ثبت شوو معلوماتو څخه:* \n' + localAnswer.slice(0, 1200)
+            (usableLocalAnswer
+              ? '\n\n📚 *د بوټ له ثبت شوو معلوماتو څخه:* \n' + usableLocalAnswer.slice(0, 1200)
               : ''),
         });
       } else {
         await safeSend(socket, groupJid, {
           text: formatInternetResults(question, webResults) +
             '\n\nℹ️ د اتومات مفصل پښتو لنډیز لپاره په سرور کې OPENROUTER_API_KEY تنظیم کړئ. تر هغې پورې بوټ د موندل شوو سرچینو سرلیکونه او لنډ اقتباسونه ښيي.' +
-            (localAnswer
-              ? '\n\n📚 *د بوټ له ثبت شوو معلوماتو څخه:* \n' + localAnswer.slice(0, 900)
+            (usableLocalAnswer
+              ? '\n\n📚 *د بوټ له ثبت شوو معلوماتو څخه:* \n' + usableLocalAnswer.slice(0, 900)
               : ''),
         });
       }
@@ -818,10 +902,10 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
     }
   }
 
-  if (localAnswer) {
+  if (usableLocalAnswer) {
     const message = isTimeSensitiveQuestion(question)
-      ? localAnswer + '\n\n⚠️ دا ځل انټرنېټي سرچینو نتیجه ورنه کړه؛ د تازه معلوماتو لپاره د سرچینې نېټه جلا وګورئ.'
-      : localAnswer;
+      ? usableLocalAnswer + '\n\n⚠️ دا ځل انټرنېټي سرچینو نتیجه ورنه کړه؛ د تازه معلوماتو لپاره د سرچینې نېټه جلا وګورئ.'
+      : usableLocalAnswer;
     await safeSend(socket, groupJid, { text: message });
     return true;
   }
