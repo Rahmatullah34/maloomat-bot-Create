@@ -1694,6 +1694,69 @@ async function startBot() {
     );
 
     // ==================================================
+    // 17.5 د همغږي شوي پخواني تاریخ د لینکونو پاکول
+    // ==================================================
+
+    socket.ev.on('messaging-history.set', async (event) => {
+      try {
+        const historyMessages = Array.isArray(event?.messages)
+          ? event.messages
+          : [];
+
+        let checked = 0;
+        let attempted = 0;
+        const maxDeletesPerSync = 100;
+
+        for (const msg of historyMessages) {
+          if (!msg?.message || !msg.key || msg.key.fromMe) continue;
+
+          const groupJid = msg.key.remoteJid || '';
+          if (!groupJid.endsWith('@g.us')) continue;
+
+          const messageId = msg.key.id;
+          if (messageId && !rememberMessage(`${groupJid}:${messageId}`)) {
+            continue;
+          }
+
+          checked += 1;
+          const text = extractText(msg.message);
+          const channelForward = isForwardedChannelMessage(msg.message);
+
+          if (!LINK_PATTERN.test(text) && !channelForward) continue;
+
+          if (attempted >= maxDeletesPerSync) {
+            console.log('⚠️ د پخوانیو لینکونو پاکول په دې همغږي کې ۱۰۰ پیغامونو ته محدود شول؛ د موبایل/WhatsApp د تاریخ او حذف محدودیتونه هم شته.');
+            break;
+          }
+
+          attempted += 1;
+          await deleteGroupMessage(
+            socket,
+            groupJid,
+            msg.key,
+            'غړی',
+            channelForward
+              ? 'د پخواني چینل فارورډ شوی پوسټ'
+              : 'پخوانی لینک',
+            false
+          );
+
+          // د WhatsApp سرور ته ډېرې پرله‌پسې حذف غوښتنې نه لېږل کېږي.
+          await new Promise((resolve) => setTimeout(resolve, 800));
+        }
+
+        console.log(
+          `🧹 د پخواني تاریخ پاکول: ${checked} ګروپي پیغامونه وکتل شول؛ ${attempted} د لینک/چینل پوسټ حذف ته وسپارل شول.`
+        );
+      } catch (err) {
+        console.error(
+          '❌ د پخوانیو لینکونو د تاریخ پاکول ناکام شول:',
+          err?.message || err
+        );
+      }
+    });
+
+    // ==================================================
     // 18. د ګروپ پیغامونه
     // ==================================================
 
