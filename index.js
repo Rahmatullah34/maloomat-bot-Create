@@ -1090,6 +1090,42 @@ const LINK_PATTERN =
 // 8. د WhatsApp پیغام متن ترلاسه کول
 // ======================================================
 
+function isForwardedChannelMessage(message) {
+  let content = message;
+
+  for (let i = 0; i < 8 && content; i += 1) {
+    const context =
+      content.contextInfo ||
+      content.audioMessage?.contextInfo ||
+      content.imageMessage?.contextInfo ||
+      content.videoMessage?.contextInfo ||
+      content.documentMessage?.contextInfo ||
+      content.extendedTextMessage?.contextInfo ||
+      content.stickerMessage?.contextInfo;
+
+    // WhatsApp channel/newsletter forwards can contain media and no readable text.
+    if (
+      context?.forwardedNewsletterMessageInfo ||
+      context?.newsletterJid ||
+      context?.forwardedNewsletterMessage
+    ) {
+      return true;
+    }
+
+    const wrapped =
+      content.ephemeralMessage?.message ||
+      content.viewOnceMessage?.message ||
+      content.viewOnceMessageV2?.message ||
+      content.viewOnceMessageV2Extension?.message ||
+      content.documentWithCaptionMessage?.message;
+
+    if (!wrapped) break;
+    content = wrapped;
+  }
+
+  return false;
+}
+
 function extractText(message) {
   let content = message;
 
@@ -1711,8 +1747,10 @@ async function startBot() {
 
             const text =
               extractText(msg.message);
+            const channelForward =
+              isForwardedChannelMessage(msg.message);
 
-            if (!text) {
+            if (!text && !channelForward) {
               continue;
             }
 
@@ -1745,6 +1783,20 @@ async function startBot() {
               `📩 ګروپي پیغام؛ غړی=${name}; ` +
               `متن=${text.slice(0, 100)}`
             );
+
+            // ==========================================
+            // د WhatsApp چینلونو فارورډ شوي پوسټونه
+            // ==========================================
+            if (channelForward) {
+              await deleteGroupMessage(
+                socket,
+                groupJid,
+                msg.key,
+                name,
+                '🚫 د WhatsApp چینلونو فارورډ شوي پوسټونه په ګروپ کې منع دي.'
+              );
+              continue;
+            }
 
             // ==========================================
             // 18.1 د ډېر چټک پیغامونو مخنیوی
