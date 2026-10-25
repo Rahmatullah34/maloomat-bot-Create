@@ -1090,39 +1090,41 @@ const LINK_PATTERN =
 // ======================================================
 
 function isForwardedChannelMessage(message) {
-  let content = message;
+  // Channel-forward metadata may sit inside media contextInfo or another
+  // wrapped section of the message. Scan the whole Baileys message safely.
+  const channelMetadataKeys = new Set([
+    'forwardedNewsletterMessageInfo',
+    'forwardedNewsletterMessage',
+    'newsletterJid',
+    'newsletterServerId',
+    'newsletterMessageId',
+  ]);
+  const visited = new Set();
+  let inspected = 0;
 
-  for (let i = 0; i < 8 && content; i += 1) {
-    const context =
-      content.contextInfo ||
-      content.audioMessage?.contextInfo ||
-      content.imageMessage?.contextInfo ||
-      content.videoMessage?.contextInfo ||
-      content.documentMessage?.contextInfo ||
-      content.extendedTextMessage?.contextInfo ||
-      content.stickerMessage?.contextInfo;
-
-    // WhatsApp channel/newsletter forwards can contain media and no readable text.
-    if (
-      context?.forwardedNewsletterMessageInfo ||
-      context?.newsletterJid ||
-      context?.forwardedNewsletterMessage
-    ) {
-      return true;
+  function scan(value, depth) {
+    if (!value || typeof value !== 'object' || depth > 14 ||
+        visited.has(value) || inspected >= 800) {
+      return false;
     }
 
-    const wrapped =
-      content.ephemeralMessage?.message ||
-      content.viewOnceMessage?.message ||
-      content.viewOnceMessageV2?.message ||
-      content.viewOnceMessageV2Extension?.message ||
-      content.documentWithCaptionMessage?.message;
+    visited.add(value);
+    inspected += 1;
 
-    if (!wrapped) break;
-    content = wrapped;
+    for (const [key, child] of Object.entries(value)) {
+      if (channelMetadataKeys.has(key) &&
+          child !== undefined && child !== null && child !== false && child !== '') {
+        return true;
+      }
+
+      if (child && typeof child === 'object' && scan(child, depth + 1)) {
+        return true;
+      }
+    }
+    return false;
   }
 
-  return false;
+  return scan(message, 0);
 }
 
 function extractText(message) {
@@ -1723,7 +1725,7 @@ async function startBot() {
 
           checked += 1;
           const text = extractText(msg.message);
-          const channelForward = isForwardedChannelMessage(msg.message);
+          const channelForward = isForwardedChannelMessage(msg);
 
           if (!LINK_PATTERN.test(text) && !channelForward) continue;
 
@@ -1814,7 +1816,7 @@ async function startBot() {
             const text =
               extractText(msg.message);
             const channelForward =
-              isForwardedChannelMessage(msg.message);
+              isForwardedChannelMessage(msg);
 
             if (!text && !channelForward) {
               continue;
