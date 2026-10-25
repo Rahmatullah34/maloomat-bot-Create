@@ -442,13 +442,13 @@ function isSensitiveSafetyRequest(question) {
   const q = normalizePashto(question);
 
   const asksPrivateDetails =
-    /(?:شخصي|خصوصي)\\s*(?:پته|شمېره|شماره|نمبر|موبایل|تلیفون)|د\\s*کور\\s*پته|د\\s*اوسېدو\\s*ځای|د\\s*استوګنې\\s*پته|دقیق(?:ه)?\\s*(?:ځای|موقعیت)|اوسنی\\s*(?:ځای|موقعیت)|پټ\\s*(?:ځای|موقعیت)|چېرته\\s*اوسېږي|چیرته\\s*اوسیږي|چېرته\\s*ژوند\\s*کوي|چیرته\\s*ژوند\\s*کوي|home\\s*address|private\\s*(?:phone|address|number)|exact\\s*(?:location|address)|where\\s+does\\s+.{1,60}\\s+live/iu.test(q);
+    /(?:شخصي|خصوصي)\s*(?:پته|شمېره|شماره|نمبر|موبایل|تلیفون)|د\s*کور\s*پته|د\s*اوسېدو\s*ځای|د\s*استوګنې\s*پته|دقیق(?:ه)?\s*(?:ځای|موقعیت)|اوسنی\s*(?:ځای|موقعیت)|پټ\s*(?:ځای|موقعیت)|چېرته\s*اوسېږي|چیرته\s*اوسیږي|چېرته\s*ژوند\s*کوي|چیرته\s*ژوند\s*کوي|home\s*address|private\s*(?:phone|address|number)|exact\s*(?:location|address)|where\s+does\s+.{1,60}\s+live/iu.test(q);
 
   const asksExactPersonLocation =
-    /(?:د\\s+.{1,50}\\s+(?:اوسنی|دقیق|پټ)\\s*(?:ځای|موقعیت)|(?:اوسنی|دقیق|پټ)\\s*(?:ځای|موقعیت)\\s+د\\s+.{1,50})/iu.test(q);
+    /(?:د\s+.{1,50}\s+(?:اوسنی|دقیق|پټ)\s*(?:ځای|موقعیت)|(?:اوسنی|دقیق|پټ)\s*(?:ځای|موقعیت)\s+د\s+.{1,50})/iu.test(q);
 
   const asksTrackingOrHarm =
-    /څنګه\\s+(?:تعقیب|وڅار|په\\s+نښه|ووژنم|زیان\\s+ورسوم)|د\\s*(?:تعقیب|وژلو|برید|حملې|په\\s+نښه\\s+کولو)\\s*(?:لپاره|طریقه|لار)|په\\s+نښه\\s+کولو\\s+لپاره|پټ\\s+تعقیب|how\\s+to\\s+(?:track|target|attack|kill|doxx)|(?:track|locate|follow)\\s+(?:him|her|them|someone|a\\s+person)|doxx/iu.test(q);
+    /څنګه\s+(?:تعقیب|وڅار|په\s+نښه|ووژنم|زیان\s+ورسوم)|د\s*(?:تعقیب|وژلو|برید|حملې|په\s+نښه\s+کولو)\s*(?:لپاره|طریقه|لار)|په\s+نښه\s+کولو\s+لپاره|پټ\s+تعقیب|how\s+to\s+(?:track|target|attack|kill|doxx)|(?:track|locate|follow)\s+(?:him|her|them|someone|a\s+person)|doxx/iu.test(q);
 
   return asksPrivateDetails || asksExactPersonLocation || asksTrackingOrHarm;
 }
