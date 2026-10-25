@@ -24,7 +24,7 @@ const app = express();
 
 app.get('/', (_req, res) => {
   res.status(200).send(
-    '🌍 د معلوماتو نړۍ — WhatsApp Group Moderation Bot'
+    '🌐 Maloomat AI | معلومات AI — WhatsApp Group Moderation Bot'
   );
 });
 
@@ -734,7 +734,7 @@ async function summarizeSourcesInPashto(question, results, localAnswer = '') {
       headers: {
         Authorization: 'Bearer ' + apiKey,
         'Content-Type': 'application/json',
-        'X-Title': 'Maloomat Bot - Pashto Research',
+        'X-Title': 'Maloomat AI - Pashto Research',
       },
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(22000),
@@ -1033,7 +1033,7 @@ const BAD_WORDS = [
 // 5. د ګروپ رسمي قوانین
 // ======================================================
 
-const GROUP_RULES = `📜 *د معلوماتو نړۍ — د ګروپ رسمي او مهم قوانین* 📜
+const GROUP_RULES = `📜 *Maloomat AI | معلومات AI — د ګروپ رسمي او مهم قوانین* 📜
 
 🎯 *۱ ـ د ګروپ موخه:* دا ډله د علم، زده‌کړې، ټکنالوژۍ او ګټورو معلوماتو د شریکولو لپاره ده؛ خبرې مو له همدې موخې سره برابرې وساتئ.
 
@@ -1065,7 +1065,7 @@ const GROUP_RULES = `📜 *د معلوماتو نړۍ — د ګروپ رسمي �
 
 🌟 *زموږ شعار:* معلومات زده کړه، پوهه خپره کړه!
 
-🤝 د قوانینو د مراعاتولو او د معلوماتو نړۍ د لا ښه کولو لپاره مننه!`;
+🤝 د قوانینو د مراعاتولو او د Maloomat AI | معلومات AI د لا ښه کولو لپاره مننه!`;
 
 // ======================================================
 // 6. د سپکاوي پېژندل
@@ -1625,7 +1625,7 @@ async function startBot() {
 
         if (connection === 'open') {
           console.log(
-            '✅ د معلوماتو نړۍ WhatsApp بوټ فعال شو!'
+            '✅ د Maloomat AI | معلومات AI WhatsApp بوټ فعال شو!'
           );
 
           console.log(
@@ -1700,7 +1700,7 @@ async function startBot() {
               event.id,
               {
                 text:
-                  `🌍✨ *د معلوماتو نړۍ ته ښه راغلاست!* ✨🌍\n\n` +
+                  `🌐✨ *Maloomat AI | معلومات AI ګروپ ته ښه راغلاست!* ✨🌐\n\n` +
                   `🎉 سلام @${number} جانه! خوښ یو چې زموږ له ډلې سره یوځای شوې.\n\n` +
                   '📚 دلته به علمي معلومات، ټکنالوژي، ګټورې پوښتنې او نوې موندنې شریکوو.\n' +
                   '💡 پوښتنه لرې؟ په درناوي یې ولیکه او له نورو غړو سره خپل ګټور معلومات شریک کړه.\n' +
@@ -1995,7 +1995,7 @@ async function startBot() {
                 {
                   text:
                     `🌍 وعلیکم سلام محترم ${name} جانه! 🌸\n\n` +
-                    'د معلوماتو نړۍ ګروپ ته ښه راغلاست. ' +
+                    '🌐 Maloomat AI | معلومات AI ګروپ ته ښه راغلاست. ' +
                     'مهرباني وکړئ د ګروپ اصول مراعات کړئ.',
                 }
               );
