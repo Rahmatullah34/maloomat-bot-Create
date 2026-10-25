@@ -430,12 +430,31 @@ function answerFromOfflineKnowledge(question) {
 }
 
 function looksLikeQuestion(text) {
-  const value = String(text || '').trim();
-  if (value.length < 3 || value.length > 1500) return false;
-  return /[؟?]/u.test(value) ||
-    /(څوک|څه|چېرته|چیرته|څنګه|ولې|څومره|تعریف|معلومات|راکړه|نصاب|درسي پلان|سمستر|کریډیټ|پېژندنه|پیژندنه|خبرونه|تازه|نن|اوسنی|قیمت|بیه|نرخ|انټرنېټ|انټرنټ|ولټوه|لټون|who is|what is|where|when|why|how|latest|today|current|recent|news|price|search online)/iu.test(value);
-}
+  const raw = String(text || '').trim();
+  if (raw.length < 3 || raw.length > 700) return false;
 
+  // پوښتنه باید ښکاره نښه ولري؛ یوازې د یوې موضوع/کلیدي کلمې شتون کافي نه دی.
+  if (/[؟?]\\s*$/u.test(raw)) return true;
+
+  const value = normalizePashto(raw);
+
+  // پوښتنیز عبارتونه چې معمولاً د پوښتنې په پیل کې راځي.
+  if (/^(?:ایا|آیا|څه|څوک|څنګه|ولې|څومره|کوم|کومه|کومې|کومو|چېرته|چیرته|چا|د چا|له کومه|what|who|where|when|why|how|which|is|are|does|do)\\s/u.test(value)) {
+    return true;
+  }
+
+  // روښانه پښتو پوښتنې، حتی که د پوښتنې نښه یې نه وي لیکل شوې.
+  if (/(?:څه\\s+(?:شی\\s+)?(?:دی|ده|دي)|څوک\\s+(?:دی|ده|دي)|کوم(?:ه|ې|و)?\\s+(?:دی|ده|دي)|څومره\\s+(?:دی|ده|دي)|څنګه\\s+(?:کار\\s+کوي|جوړېږي|کارول\\ کېږي)|چېرته\\s+(?:دی|ده|دي)|چیرته\\s+(?:دی|ده|دي))/u.test(value)) {
+    return true;
+  }
+
+  // بې پوښتنښې ښکاره غوښتنې، خو یوازې په نسبتاً لنډ پیغام کې.
+  if (raw.length <= 450 && /(?:معلومات\\s+راکړه|تشریح\\s+کړه|وضاحت\\s+راکړه|تعریف\\s+کړه|د\\s+.{2,70}\\s+په\\s+اړه\\s+معلومات\\s+راکړه|explain\\s+.{2,80}|tell\\s+me\\s+about\\s+.{2,80}|define\\s+.{2,80})/iu.test(value)) {
+    return true;
+  }
+
+  return false;
+}
 
 // د ژوند، محرمیت او سیاسي خوندیتوب لپاره د شخصي معلوماتو/تعقیب خطرناکې غوښتنې فلټر.
 function isSensitiveSafetyRequest(question) {
@@ -715,7 +734,10 @@ async function searchInternet(query) {
 }
 
 function requestsInternetSearch(question) {
-  return /(انټرنېټ|انټرنټ|ویب کې|ویبپاڼ|سرچینې|انلاین|ولټوه|لټون وکړه|تازه معلومات|وروستي خبرونه|search online|search the web|internet search|web search|look up online)/iu.test(question);
+  const value = String(question || '').trim();
+  // یوازې ښکاره غوښتنې لکه «انټرنېټ کې یې ولټوه» لټون پیلوي؛
+  // د عادي پوسټ دننه د «انټرنېټ» یا «سرچینې» یوه کلمه بسنه نه کوي.
+  return /(?:انټرنېټ|انټرنټ|ویب|انلاین).{0,45}(?:ولټوه|ولټل|لټون وکړه|سرچینه پیدا کړه|سرچینې پیدا کړه|معلومات پیدا کړه)|(?:ولټوه|لټون وکړه|سرچینه پیدا کړه|سرچینې پیدا کړه).{0,45}(?:انټرنېټ|انټرنټ|ویب|انلاین)|search online|search the web|internet search|web search|look up online|please search/iu.test(value);
 }
 
 function isTimeSensitiveQuestion(question) {
@@ -831,6 +853,12 @@ function formatInternetResults(question, results) {
 }
 
 async function answerWithKnowledge(socket, groupJid, participantJid, question, participantName) {
+  // بوټ یوازې واضح پوښتنو یا ښکاره انټرنېټي لټون غوښتنو ته ځواب ورکوي.
+  // عادي معلوماتي پوسټونه او هغه متنونه چې یوازې یوه کلیدي کلمه لري، بې‌ځوابه پرېږدي.
+  if (!looksLikeQuestion(question) && !requestsInternetSearch(question)) {
+    return false;
+  }
+
   // د هر ډول انټرنېټي لټون یا AI لنډیز تر مخه د محرمیت او زیان اړوند غوښتنې ودرول شي.
   if (isSensitiveSafetyRequest(question)) {
     await safeSend(socket, groupJid, {
