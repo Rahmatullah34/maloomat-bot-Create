@@ -1166,7 +1166,7 @@ const GROUP_RULES = `📜 *Maloomat AI | معلومات AI — د ګروپ رس�
 
 🕌 *۹ ـ د دین او عقایدو درناوی (جدي قانون):* د اسلام، مذهبي مقدساتو، عقایدو او د خلکو د دیني نظرونو سپکاوی، ملنډې، توهین، پاروونکې لیکنې، د مذهبي اختلافاتو راپارول، تکفیر او د مذهبي ډلو پر ضد کرکه او دښمنۍ ته بلنه په کلکه منع ده. سرغړونکی پیغام حذف کېدای شي او تکراري سرغړونه مدیرانو ته سپارل کېږي.
 
-🎙️ *۱۰ ـ غږیز او رسنیز پیغامونه:* بې‌اړتیا غږیز پیغامونه، اوږده ویډیوګانې، نامناسب فایلونه او د WhatsApp چینلونو فارورډ شوي پوسټونه مه خپروئ؛ د اړوند موضوع لنډیز او سرچینه په لیکلې بڼه شریک کړئ.
+🎙️ *۱۰ ـ غږیز، Status او رسنیز پیغامونه:* بې‌اړتیا غږیز پیغامونه، اوږده ویډیوګانې، نامناسب فایلونه، د WhatsApp Status شریک شوي پوسټونه او د WhatsApp چینلونو فارورډ شوي پوسټونه مه خپروئ؛ د اړوند موضوع لنډیز او سرچینه په لیکلې بڼه شریک کړئ.
 
 📚 *۱۱ ـ موضوعي ګډون:* پوښتنې په روښانه ډول ولیکئ، اړوند ځواب ورکړئ او د نورو د زده‌کړې لپاره ګټور معلومات شریک کړئ. له موضوع سره بې‌اړخې خبرې کمې کړئ.
 
@@ -1274,6 +1274,44 @@ function isForwardedChannelMessage(message) {
         return true;
       }
 
+      if (child && typeof child === 'object' && scan(child, depth + 1)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  return scan(message, 0);
+}
+
+function isWhatsAppStatusShare(message) {
+  // د WhatsApp د Status شریکولو پیغامونه ښايي د عادي متن پر ځای د ځانګړي
+  // Baileys message type په بڼه راشي، نو یوازې extractText پرې بسنه نه کوي.
+  const statusMessageKeys = new Set([
+    'groupStatusMentionMessage',
+    'statusMentionMessage',
+    'statusMentionMessageV2',
+    'statusMentionMessageV3',
+    'statusMentionMessageV4',
+    'statusMentionMessageInfo',
+  ]);
+  const visited = new Set();
+  let inspected = 0;
+
+  function scan(value, depth) {
+    if (!value || typeof value !== 'object' || depth > 14 ||
+        visited.has(value) || inspected >= 800) {
+      return false;
+    }
+
+    visited.add(value);
+    inspected += 1;
+
+    for (const [key, child] of Object.entries(value)) {
+      if (statusMessageKeys.has(key) &&
+          child !== undefined && child !== null && child !== false && child !== '') {
+        return true;
+      }
       if (child && typeof child === 'object' && scan(child, depth + 1)) {
         return true;
       }
@@ -1891,8 +1929,9 @@ async function startBot() {
           checked += 1;
           const text = extractText(msg.message);
           const channelForward = isForwardedChannelMessage(msg);
+          const statusShare = isWhatsAppStatusShare(msg);
 
-          if (!LINK_PATTERN.test(text) && !channelForward) continue;
+          if (!LINK_PATTERN.test(text) && !channelForward && !statusShare) continue;
 
           if (attempted >= maxDeletesPerSync) {
             console.log('⚠️ د پخوانیو لینکونو پاکول په دې همغږي کې ۱۰۰ پیغامونو ته محدود شول؛ د موبایل/WhatsApp د تاریخ او حذف محدودیتونه هم شته.');
@@ -1905,9 +1944,11 @@ async function startBot() {
             groupJid,
             msg.key,
             'غړی',
-            channelForward
-              ? 'د پخواني چینل فارورډ شوی پوسټ'
-              : 'پخوانی لینک',
+            statusShare
+              ? 'پخوانی شریک شوی WhatsApp Status'
+              : channelForward
+                ? 'د پخواني چینل فارورډ شوی پوسټ'
+                : 'پخوانی لینک',
             false
           );
 
@@ -1982,8 +2023,10 @@ async function startBot() {
               extractText(msg.message);
             const channelForward =
               isForwardedChannelMessage(msg);
+            const statusShare =
+              isWhatsAppStatusShare(msg);
 
-            if (!text && !channelForward) {
+            if (!text && !channelForward && !statusShare) {
               continue;
             }
 
@@ -2020,6 +2063,17 @@ async function startBot() {
             // ==========================================
             // د WhatsApp چینلونو فارورډ شوي پوسټونه
             // ==========================================
+            if (statusShare) {
+              await deleteGroupMessage(
+                socket,
+                groupJid,
+                msg.key,
+                name,
+                '🚫 د WhatsApp Status شریک شوي پوسټونه په ګروپ کې منع دي؛ مهرباني وکړئ معلومات په عادي لیکلي پیغام کې شریک کړئ.'
+              );
+              continue;
+            }
+
             if (channelForward) {
               await deleteGroupMessage(
                 socket,
