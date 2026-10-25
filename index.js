@@ -1081,10 +1081,9 @@ function containsBadWord(text) {
 // ======================================================
 
 const LINK_PATTERN =
-  /(?:https?:\/\/|www\.|chat\.whatsapp\.com|wa\.me\/|t\.me\/|facebook\.com|fb\.com|instagram\.com|tiktok\.com|youtube\.com|youtu\.be|snapchat\.com|x\.com|twitter\.com|(?:[a-z0-9-]+\.)+(?:com|net|org|io|co|info|app|site|me|ly|dev|ai|xyz|online|shop|tech|af|us|uk)\b)/i;
+  /(?:https?:\/\/|www\.|wa\.me\/|t\.me\/|(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}(?::\d{2,5})?(?:\/[^\s]*)?)/i
 
-// یادونه: دا پېژندنه د متن په مرسته کېږي؛
- // ټول ممکن لینکونه او ټولې کنځلې نه شي پېژندلای.
+// دا الګو د عامو ډومېنونو ډېری پایونه هم نیسي؛ بیا هم هر پټ/تړلی لینک د متن په توګه نه ښکاري.
 
 // ======================================================
 // 8. د WhatsApp پیغام متن ترلاسه کول
