@@ -1506,6 +1506,10 @@ async function startBot() {
 
       markOnlineOnConnect: true,
       printQRInTerminal: false,
+
+      // د WhatsApp د پخوانیو پیغامونو د تاریخ همغږي فعالوي.
+      // یادونه: په وړیا سرور کې د حافظې مصرف زیاتولای شي.
+      syncFullHistory: true,
     };
 
     if (version) {
