@@ -1225,11 +1225,9 @@ async function isLinkPermittedForSender(socket, groupJid, text, senderIdentifier
     return true;
   }
 
-  // د عادي نامجاز غړي لپاره د ګروپ مېټاډاټا غوښتنه مه کوه.
-  if (!senders.some((sender) => sender.toLowerCase().endsWith('@lid'))) {
-    return false;
-  }
-
+  // که د شمېرې له لارې اجازه ونه پېژندل شوه، د ګروپ اصلي رول هم وګوره.
+  // دا کتنه د @lid او @s.whatsapp.net دواړو لپاره مهمه ده؛ د WhatsApp
+  // ځینې نسخې د اډمین لپاره یوازې یو ډول پېژندپاڼه را استوي.
   try {
     const metadata = await socket.groupMetadata(groupJid);
     return isGroupAdminSender(metadata?.participants, senders);
