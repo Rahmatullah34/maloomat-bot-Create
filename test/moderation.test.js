@@ -28,6 +28,7 @@ const {
   recordViolationWarning,
   shouldSendWarningNow,
   isLinkPermitted,
+  isGroupAdminSender,
   BAD_WORDS,
 } = require('../lib/moderation');
 
@@ -178,6 +179,16 @@ test('isLinkPermitted: اجازې لرونکي لینکونه او استوون�
   assert.equal(isLinkPermitted('https://spam-site.net/offer', '99999999999@s.whatsapp.net'), false);
   // بې لینکه متن
   assert.equal(isLinkPermitted('دا عادي جمله ده', '99999999999@s.whatsapp.net'), false);
+});
+
+test('isGroupAdminSender: د LID پېژندپاڼې له لارې اډمین پېژني', () => {
+  const participants = [
+    { id: '987654321@lid', admin: 'superadmin' },
+    { id: '123456789@lid', admin: null },
+  ];
+  assert.equal(isGroupAdminSender(participants, ['987654321@lid']), true);
+  assert.equal(isGroupAdminSender(participants, ['123456789@lid']), false);
+  assert.equal(isGroupAdminSender(participants, ['unknown@lid']), false);
 });
 
 test('ENABLE_GROUP_QA: د پوښتنو ځوابونه بند پاتې دي (regression)', () => {

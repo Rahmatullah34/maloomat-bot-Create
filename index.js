@@ -35,6 +35,7 @@ const {
   recordViolationWarning,
   shouldSendWarningNow,
   isLinkPermitted,
+  isGroupAdminSender,
 } = require('./lib/moderation');
 
 // د WhatsApp د اتصال ریښتیایي حالت؛ د /health په ځواب کې ښودل کیږي.
@@ -1210,6 +1211,34 @@ async function deleteGroupMessage(
   }
 }
 
+// د لینک اجازه: لومړی د اډمین شمېرې/اجازه لرونکي ډومېن وګوره.
+// که WhatsApp استوونکی په @lid پېژندپاڼه راولېږي او بدیل نمبر موجود نه وي،
+// د ګروپ د غړو له لېسته یې د اډمین رول هم وڅېړه.
+async function isLinkPermittedForSender(socket, groupJid, text, senderIdentifiers) {
+  const senders = [...new Set(
+    (Array.isArray(senderIdentifiers) ? senderIdentifiers : [])
+      .map((value) => String(value || '').trim())
+      .filter(Boolean)
+  )];
+
+  if (senders.some((sender) => isLinkPermitted(text, sender))) {
+    return true;
+  }
+
+  // د عادي نامجاز غړي لپاره د ګروپ مېټاډاټا غوښتنه مه کوه.
+  if (!senders.some((sender) => sender.toLowerCase().endsWith('@lid'))) {
+    return false;
+  }
+
+  try {
+    const metadata = await socket.groupMetadata(groupJid);
+    return isGroupAdminSender(metadata?.participants, senders);
+  } catch (err) {
+    console.error('⚠️ د لینک د اډمین اجازې کتنه ناکامه شوه:', err?.message || err);
+    return false;
+  }
+}
+
 // ======================================================
 // 13. د اتصال او بیا وصل کېدو مدیریت
 // ======================================================
@@ -1542,8 +1571,12 @@ async function startBot() {
             LINK_PATTERN.test(text) &&
             !channelForward &&
             !statusShare &&
-            (isLinkPermitted(text, historyParticipantJid) ||
-              isLinkPermitted(text, msg.key?.participantAlt));
+            await isLinkPermittedForSender(
+              socket,
+              groupJid,
+              text,
+              [historyParticipantJid, msg.key?.participantAlt]
+            );
 
           // د اجازې لرونکي استوونکي لینکونه د تاریخ په پاکولو کې هم مه حذفوه.
           if (permittedHistoryLink) continue;
@@ -1745,8 +1778,12 @@ async function startBot() {
 
             if (
               LINK_PATTERN.test(text) &&
-              !isLinkPermitted(text, participantJid) &&
-              !isLinkPermitted(text, msg.key?.participantAlt)
+              !(await isLinkPermittedForSender(
+                socket,
+                groupJid,
+                text,
+                [participantJid, msg.key?.participantAlt]
+              ))
             ) {
               await deleteGroupMessage(
                 socket,
