@@ -1536,6 +1536,17 @@ async function startBot() {
           const channelForward = isForwardedChannelMessage(msg);
           const statusShare = isWhatsAppStatusShare(msg);
 
+          const historyParticipantJid =
+            msg.key?.participant || msg.key?.participantAlt || '';
+          const permittedHistoryLink =
+            LINK_PATTERN.test(text) &&
+            !channelForward &&
+            !statusShare &&
+            (isLinkPermitted(text, historyParticipantJid) ||
+              isLinkPermitted(text, msg.key?.participantAlt));
+
+          // د اجازې لرونکي استوونکي لینکونه د تاریخ په پاکولو کې هم مه حذفوه.
+          if (permittedHistoryLink) continue;
           if (!LINK_PATTERN.test(text) && !channelForward && !statusShare) continue;
 
           if (attempted >= maxDeletesPerSync) {
@@ -1732,7 +1743,11 @@ async function startBot() {
             // 20. د لینکونو مخنیوی
             // ==========================================
 
-            if (LINK_PATTERN.test(text) && !isLinkPermitted(text, participantJid)) {
+            if (
+              LINK_PATTERN.test(text) &&
+              !isLinkPermitted(text, participantJid) &&
+              !isLinkPermitted(text, msg.key?.participantAlt)
+            ) {
               await deleteGroupMessage(
                 socket,
                 groupJid,

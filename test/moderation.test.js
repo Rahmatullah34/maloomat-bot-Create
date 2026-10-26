@@ -171,6 +171,9 @@ test('isLinkPermitted: اجازې لرونکي لینکونه او استوون�
   assert.equal(isLinkPermitted('ګوره https://www.bbc.com/news', '99999999999@s.whatsapp.net'), true);
   // اجازې لرونکی استوونکی (لکه مدیر)
   assert.equal(isLinkPermitted('https://any-site.org/x', '77777777777@s.whatsapp.net'), true);
+  // د بوټ د اډمین شمېرې محلي او نړیوال WhatsApp شکلونه دواړه اجازه لري.
+  assert.equal(isLinkPermitted('https://any-site.org/x', '0707285093@s.whatsapp.net'), true);
+  assert.equal(isLinkPermitted('https://any-site.org/x', '93707285093@s.whatsapp.net'), true);
   // نامجاز لینک او نامجاز استوونکی
   assert.equal(isLinkPermitted('https://spam-site.net/offer', '99999999999@s.whatsapp.net'), false);
   // بې لینکه متن
