@@ -330,6 +330,34 @@ const dnaEntry = OFFLINE_KNOWLEDGE.find(item =>
 );
 if (dnaEntry) Object.assign(dnaEntry, DNA_CORRECTION);
 else OFFLINE_KNOWLEDGE.push(DNA_CORRECTION);
+const PROPHET_ARMOR_CORRECTION = {
+  title: 'د رسول الله ﷺ زغره او د جوړوونکي د نوم مسئله',
+  keywords: [
+    'د رسول الله زغره چا جوړه کړې وه',
+    'د نبي کریم زغره چا جوړه کړه',
+    'کله چې نبي کریم جهاد ته تلو زغره یې چا جوړه کړې وه',
+    'د پیغمبر زغره جوړوونکی څوک و',
+    'د نبوي زغرې جوړوونکی',
+    'د زغره جوړوونکي نوم',
+    'د محمد رسول الله زغره چا جوړه کړې',
+    'رسول الله armor made by',
+    'Prophet Muhammad armor who made it',
+    'armor of the Prophet',
+    'Sahih Bukhari 2916 armor',
+    'من صنع درع النبي',
+    'درع النبي من صنعه'
+  ],
+  answer: 'د هغو معتبرو حدیثونو له مخې چې د رسول الله ﷺ زغره یادوي، د زغرې د جوړوونکي مشخص نوم نه دی بیان شوی؛ نو د یوه ځانګړي کس نوم په یقین سره نه شو ټاکلای. په صحیح البخاري ۲۹۱۶ کې له حضرت عایشې رضي الله عنها څخه روایت دی چې رسول الله ﷺ وفات شو، په داسې حال کې چې اوسپنیزه زغره یې د یوه یهودي سره د ۳۰ صاع وربشو په بدل کې ګرو وه. په صحیح البخاري ۲۵۰۹ او ۲۵۱۳ کې هم راغلي چې رسول الله ﷺ خوراک په پور واخیست او خپله زغره یې د پور د ضمانت په توګه کېښوده. دا روایتونه د زغرې د ګرو کېښودلو خبره کوي، خو دا نه وايي چې زغره کوم آهنګر یا کوم کس جوړه کړې وه. له همدې امله د جوړوونکي نوم ته اړتیا ده چې له جلا او باوري تاریخي سرچینې سره ثابت شي؛ یوازې د ګرو اخیستونکي نوم د زغرې د جوړوونکي دلیل نه دی.',
+  source: 'صحیح البخاري ۲۹۱۶: https://sunnah.com/bukhari:2916\nصحیح البخاري ۲۵۰۹: https://sunnah.com/bukhari:2509\nصحیح البخاري ۲۵۱۳: https://sunnah.com/bukhari:2513'
+};
+const prophetArmorEntry = OFFLINE_KNOWLEDGE.find(item =>
+  normalizePashto(item.title) === normalizePashto(PROPHET_ARMOR_CORRECTION.title) ||
+  (Array.isArray(item.keywords) && item.keywords.some(k =>
+    /د رسول الله زغره چا جوړه کړې|Sahih Bukhari 2916 armor/i.test(String(k))
+  ))
+);
+if (prophetArmorEntry) Object.assign(prophetArmorEntry, PROPHET_ARMOR_CORRECTION);
+else OFFLINE_KNOWLEDGE.push(PROPHET_ARMOR_CORRECTION);
 const SEEN_GROUP_NAMES = new Map();
 
 
@@ -473,7 +501,9 @@ function answerFromOfflineKnowledge(question) {
 
   return '📚 *' + best.title + '*\n\n' + best.answer +
     (best.source ? '\n\n📖 سرچینې: ' + best.source : '') +
-    '\n\nℹ️ دا ځواب د بوټ له ثبت شوو معلوماتو څخه دی. د تازه بدلېدونکو خبرونو، بیو او شمېرو لپاره رسمي سرچینه وګورئ.';
+    (isTimeSensitiveQuestion(question)
+      ? '\n\nℹ️ دا ځواب د بوټ له ثبت شوو معلوماتو څخه دی؛ د تازه بدلېدونکو خبرونو، بیو او شمېرو لپاره رسمي سرچینه وګورئ.'
+      : '');
 }
 
 
@@ -1107,9 +1137,12 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
 
   if (!looksLikeQuestion(question) && !requestsInternetSearch(question)) return false;
 
+  const aiKeyConfigured = Boolean(readOpenRouterApiKey());
+  const fallbackText = aiKeyConfigured
+    ? '📚 د دې پوښتنې لپاره محلي یا د لټون باوري سرچینه پیدا نه شوه، او د AI خدمت هم دا ځل د ځواب په جوړولو بریالی نه شو. د سرور لاګونو کې د OpenRouter د تېروتنې پیغام وګورئ.'
+    : '📚 د دې پوښتنې لپاره محلي یا د لټون باوري سرچینه پیدا نه شوه، او د AI کیلي هم تنظیم شوې نه ده. د پروژې مدیر دې په SillyDev کې د OPENROUTER_API_KEY شتون او د /health په راپور کې aiSummarization وګوري.';
   await safeSend(socket, groupJid, {
-    text: '📚 په محلي معلوماتي زېرمه کې د دې پوښتنې کره ځواب ونه موندل شو، او انټرنېټي سرچینو هم پایلې ترلاسه نه کړې.\n\n' +
-      '🌐 بیا هڅه وکړئ، پوښتنه لږ مشخصه ولیکئ، یا د سرچینې لینک د ګروپ له غړو سره شریک کړئ. د سرچینو اعتبار او نېټه تل وګورئ.'
+    text: fallbackText + '\n\n⚠️ تر تایید شوې سرچینې پرته د ناسم ځواب له جوړولو ډډه کوم. پوښتنه بیا هڅه کړئ یا یوه باوري سرچینه ورسره شریک کړئ.'
   });
   return true;
 }
