@@ -1556,6 +1556,9 @@ async function startBot() {
       'group-participants.update',
       async (event) => {
         try {
+          // د اډمین د لوړولو/ټیټولو یا د غړو د بدلون وروسته زوړ رول مه کاروه.
+          if (event?.id) GROUP_METADATA_CACHE.delete(String(event.id));
+
           if (
             event.action !== 'add' ||
             !Array.isArray(event.participants) ||
