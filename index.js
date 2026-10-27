@@ -13,6 +13,7 @@ const {
 const P = require('pino');
 const express = require('express');
 const { rankRelevantSearchResults } = require('./lib/search-relevance');
+const { isCryptoEducationQuestion } = require('./lib/crypto-question');
 
 // د نظم ساتنې خالصې کړنې او حالت له جلا ماډول اخیستل کیږي
 // (lib/moderation.js) څو په ازموینو کې و ازمویل شي.
@@ -264,6 +265,15 @@ function answerIdentityQuestion(groupJid, participantJid, participantName, quest
 
 function answerFromOfflineKnowledge(question) {
   const q = normalizePashto(question);
+  // د کریپټو د تعریف پوښتنې د کلمو له عمومي نمرو مخکې په مستقیم ډول پېژنو،
+  // څو د لیکدود توپیر یا اوږده غوښتنه د باوري محلي ځواب مخه ونه نیسي.
+  if (isCryptoEducationQuestion(question)) {
+    return '📚 *' + CRYPTO_CURRENCY_CORRECTION.title + '*\\n\\n' +
+      CRYPTO_CURRENCY_CORRECTION.answer +
+      (CRYPTO_CURRENCY_CORRECTION.source
+        ? '\\n\\n📖 سرچینې: ' + CRYPTO_CURRENCY_CORRECTION.source
+        : '');
+  }
   if (q.length < 2 || !OFFLINE_KNOWLEDGE.length) return null;
 
   // د زغرې ځانګړې تاریخي داخله یوازې د زغرې اړوند پوښتنو ته وکاروه؛
