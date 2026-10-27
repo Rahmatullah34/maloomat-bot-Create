@@ -28,6 +28,9 @@ const {
   recordViolationWarning,
   shouldSendWarningNow,
   isLinkPermitted,
+  findGroupParticipant,
+  isGroupAdminParticipant,
+  getCanonicalParticipantIdentifier,
   isGroupAdminSender,
   BAD_WORDS,
 } = require('../lib/moderation');
@@ -181,36 +184,53 @@ test('isLinkPermitted: اجازې لرونکي لینکونه او استوون�
   assert.equal(isLinkPermitted('دا عادي جمله ده', '99999999999@s.whatsapp.net'), false);
 });
 
-test('isGroupAdminSender: د LID، PN او phoneNumber بدیلونه پېژني', () => {
+test('isGroupAdminSender: د LID، PN، phoneNumber او admin flags بدیلونه پېژني', () => {
   const participants = [
     {
       id: '987654321@lid',
-      phoneNumber: '+93 707 285 093',
+      phoneNumber: '93707285093@s.whatsapp.net',
       admin: 'superadmin',
     },
-    { id: '93700000001@s.whatsapp.net', admin: 'admin' },
+    { id: '93700000001@s.whatsapp.net', isAdmin: true },
+    { id: '93700000002@s.whatsapp.net', isSuperAdmin: true },
     { id: '123456789@lid', admin: null },
   ];
 
-  // مستقیم LID او د همدې اډمین د افغانستان محلي/نړیوال نمبر دواړه باید ومنل شي.
   assert.equal(isGroupAdminSender(participants, ['987654321@lid']), true);
   assert.equal(isGroupAdminSender(participants, ['0707285093@s.whatsapp.net']), true);
   assert.equal(isGroupAdminSender(participants, ['93707285093:4@s.whatsapp.net']), true);
-  // د PN device suffix هم باید برابر شي.
   assert.equal(isGroupAdminSender(participants, ['93700000001:12@s.whatsapp.net']), true);
-
-  // عادي غړی او ناپېژندل شوې پېژندپاڼه اډمین نه ګڼل کېږي.
+  assert.equal(isGroupAdminSender(participants, ['93700000002@s.whatsapp.net']), true);
   assert.equal(isGroupAdminSender(participants, ['123456789@lid']), false);
   assert.equal(isGroupAdminSender(participants, ['unknown@lid']), false);
   assert.equal(isGroupAdminSender(participants, []), false);
 });
 
+test('د PN/LID بدیلونه د سپم شمېر او اخطار لپاره یو ثابت کلید ورکوي', () => {
+  const participants = [{
+    id: '987654321@lid',
+    phoneNumber: '93707285093@s.whatsapp.net',
+    admin: 'admin',
+  }];
+
+  const keyFromLid = getCanonicalParticipantIdentifier(participants, ['987654321@lid']);
+  const keyFromPhone = getCanonicalParticipantIdentifier(participants, ['93707285093@s.whatsapp.net']);
+  const keyFromBoth = getCanonicalParticipantIdentifier(participants, [
+    '987654321@lid',
+    '93707285093@s.whatsapp.net',
+  ]);
+
+  assert.equal(keyFromLid, keyFromPhone);
+  assert.equal(keyFromPhone, keyFromBoth);
+  assert.equal(findGroupParticipant(participants, ['987654321@lid'])?.admin, 'admin');
+  assert.equal(isGroupAdminParticipant(findGroupParticipant(participants, ['987654321@lid'])), true);
+});
 test('تایید شوی اډمین د چټک او تکراري سپم له اخطار/حذف څخه معاف دی', () => {
   const indexSrc = fs.readFileSync(
     path.join(__dirname, '..', 'index.js'),
     'utf8'
   );
-  assert.match(indexSrc, /async function isGroupAdminMessage\s*\(/,
+  assert.match(indexSrc, /async function resolveGroupSender\s*\(/,
     'اډمین باید د WhatsApp د ګروپ metadata له مخې وپېژندل شي');
   assert.match(indexSrc, /if\s*\(!isSenderGroupAdmin\)\s*\{\s*const burst = recordGroupMessage/,
     'د چټک سپم حد باید یوازې پر عادي غړو تطبیق شي');
