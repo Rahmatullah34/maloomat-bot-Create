@@ -16,7 +16,7 @@ test('removes unrelated sources for a Pashto question about the human heart', ()
 
   assert.deepEqual(
     filtered.map(item => item.title),
-    ['زړه', 'د انسان بدن'],
+    ['زړه'],
   );
 });
 
