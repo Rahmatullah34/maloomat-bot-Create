@@ -117,14 +117,18 @@ test('isWhatsAppStatusShare: اصلي Status نیسي، نقل شوې برخه �
   );
 });
 
-test('looksLikeQuestion: پوښتنه، تشریح غوښتنه او عادي وینا سره جلا کوي', () => {
+test('looksLikeQuestion: د پای پوښتنیزه نښه لازمي ده', () => {
   assert.equal(looksLikeQuestion('دا څه دی؟'), true);
-  assert.equal(looksLikeQuestion('د انسان د زړه دنده څه ده'), true);
+  assert.equal(looksLikeQuestion('د انسان د زړه دنده څه ده؟'), true);
   assert.equal(looksLikeQuestion('کله چې نبي کریم ﷺ جهاد ته تلو، زغره یې چا جوړه کړې وه؟'), true);
-  assert.equal(looksLikeQuestion('کله چې نبي کریم ﷺ جهاد ته تلو، زغره یې چا جوړه کړې وه'), true,
-    'د پوښتنې په پای کې د ؟ نښې نشتوالی باید روښانه پوښتنه پټه نه کړي');
-  assert.equal(looksLikeQuestion('د زغرې په اړه معلومات راکړه'), true);
-  assert.equal(looksLikeQuestion('how does it work'), true);
+  assert.equal(looksLikeQuestion('د زغرې په اړه معلومات راکړه؟'), true);
+  assert.equal(looksLikeQuestion('how does it work?'), true);
+  assert.equal(looksLikeQuestion('دا څه دی?'), true);
+  assert.equal(looksLikeQuestion('د انسان د زړه دنده څه ده'), false);
+  assert.equal(looksLikeQuestion('کله چې نبي کریم ﷺ جهاد ته تلو، زغره یې چا جوړه کړې وه'), false);
+  assert.equal(looksLikeQuestion('د زغرې په اړه معلومات راکړه'), false);
+  assert.equal(looksLikeQuestion('how does it work'), false);
+  assert.equal(looksLikeQuestion('دا پوښتنه؟ خو دلته نور متن شته'), false);
   assert.equal(looksLikeQuestion('سلام علیکم'), false);
   assert.equal(looksLikeQuestion('نن هوا ښه ده'), false);
   assert.equal(looksLikeQuestion('خلک وایي چې سبا باران دی'), false);
