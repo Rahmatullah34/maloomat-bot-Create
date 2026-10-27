@@ -898,7 +898,7 @@ function formatInternetResults(question, results) {
 }
 
 async function answerWithKnowledge(socket, groupJid, participantJid, question, participantName) {
-  // د پوښتنو ځوابونه موقتي بند دي؛ د ګروپ نظم/منځپانګې کنټرولونه جلا فعال پاتې دي.
+  // د پوښتنو ځوابونه فعال دي؛ د ګروپ نظم/منځپانګې کنټرولونه جلا ساتل شوي دي.
   if (!ENABLE_GROUP_QA) return false;
 
   // بوټ یوازې واضح پوښتنو یا ښکاره انټرنېټي لټون غوښتنو ته ځواب ورکوي.
