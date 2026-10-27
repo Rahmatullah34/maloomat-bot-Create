@@ -191,11 +191,17 @@ test('isGroupAdminSender: د LID پېژندپاڼې له لارې اډمین پ�
   assert.equal(isGroupAdminSender(participants, ['unknown@lid']), false);
 });
 
-test('ENABLE_GROUP_QA: د پوښتنو ځوابونه بند پاتې دي (regression)', () => {
+test('د پوښتنو ځوابونه، انټرنېټي لټون او AI لنډیز موقتي بند دي', () => {
   const indexSrc = fs.readFileSync(
     path.join(__dirname, '..', 'index.js'),
     'utf8'
   );
   assert.match(indexSrc, /ENABLE_GROUP_QA\s*=\s*false/,
-    'د پوښتنو ځوابونو برخه باید موقتي بندې وي');
+    'د پوښتنو او ځوابونو برخه باید بنده وي');
+  assert.match(indexSrc, /ENABLE_INTERNET_SEARCH\s*=\s*false/,
+    'انټرنېټي لټون باید بنده وي');
+  assert.match(indexSrc, /ENABLE_AI_SUMMARIZATION\s*=\s*false/,
+    'د AI لنډیز باید بنده وي');
+  assert.match(indexSrc, /webSearch:\s*ENABLE_GROUP_QA\s*&&\s*ENABLE_INTERNET_SEARCH/,
+    'د روغتیا راپور باید د انټرنېټ لټون غیرفعال وښيي');
 });
