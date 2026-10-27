@@ -459,30 +459,68 @@ function answerFromOfflineKnowledge(question) {
 
 function looksLikeQuestion(text) {
   const raw = String(text || '').trim();
-  if (raw.length < 3 || raw.length > 700) return false;
+  if (raw.length < 2 || raw.length > 700) return false;
 
-  // یوازې د متن په پای کې د پوښتنې نښه یا روښانه پوښتنیز عبارت ځواب فعالوي.
-  // د عادي پوسټ دننه د یوې کلمې لکه «تازه»، «معلومات» یا «انټرنېټ» شتون بسنه نه کوي.
-  if (/[؟?]\s*$/u.test(raw)) return true;
+  // WhatsApp may append a quote mark after the question mark.
+  if (/[؟?]/u.test(raw.slice(-10))) return true;
+
+  // Basic arithmetic questions should be routed to the local calculator.
+  if (/[0-9۰-۹٠-٩]+\s*(?:\+|جمع|منها|تفریق|ضرب|×|\*|تقسیم|÷|\/)\s*[0-9۰-۹٠-٩]+/iu.test(raw)) {
+    return true;
+  }
 
   const value = normalizePashto(raw);
 
-  // پوښتنیز کلمې د جملې په پیل کې.
-  if (/^(?:ایا|آیا|څه|څوک|څنګه|ولې|څومره|کوم|کومه|کومې|کومو|چېرته|چیرته|چا|د چا|له کومه|what|who|where|when|why|how|which|is|are|does|do)(?:\s|$)/iu.test(value)) {
+  if (/^(?:ایا|آیا|څه|څوک|څنګه|ولې|څومره|څو|کوم|کومه|کومې|کومو|چېرته|چیرته|چا|د چا|له کومه|what|who|where|when|why|how|which|is|are|does|do)(?:\s|$)/iu.test(value)) {
     return true;
   }
 
-  // روښانه پښتو پوښتنې، حتی که د پوښتنې نښه نه وي لیکل شوې.
-  if (/(?:څه\s+(?:شی\s+)?(?:دی|ده|دي)|څوک\s+(?:دی|ده|دي)|کوم(?:ه|ې|و)?\s+(?:دی|ده|دي)|څومره\s+(?:دی|ده|دي)|څنګه\s+(?:کار\s+کوي|جوړېږي|کارول\s+کېږي)|چېرته\s+(?:دی|ده|دي)|چیرته\s+(?:دی|ده|دي))/u.test(value)) {
+  // Common Pashto question forms, including phrases typed without spaces.
+  if (/(?:څه\s*(?:شی\s*)?(?:دی|ده|دي)|څوک\s*(?:دی|ده|دي)|کوم(?:ه|ې|و)?\s*(?:دی|ده|دي)|څومره|څو).{0,100}(?:لري|دی|ده|دي|کېږي|شو|شمېر|بناو)|(?:څنګه\s*(?:کار\s*کوي|جوړېږي|کارول\s*کېږي)|چېرته\s*(?:دی|ده|دي)|چیرته\s*(?:دی|ده|دي))/u.test(value)) {
     return true;
   }
 
-  // بې پوښتنښې ښکاره غوښتنې؛ یوازې په لنډ پیغام کې.
   if (raw.length <= 450 && /(?:معلومات\s+راکړه|تشریح\s+کړه|وضاحت\s+راکړه|تعریف\s+کړه|د\s+.{2,70}\s+په\s+اړه\s+معلومات\s+راکړه|explain\s+.{2,80}|tell\s+me\s+about\s+.{2,80}|define\s+.{2,80})/iu.test(value)) {
     return true;
   }
 
   return false;
+}
+
+function answerSimpleMathQuestion(question) {
+  const digitMap = {
+    '۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9',
+    '٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'
+  };
+  const raw = String(question || '').replace(/[۰-۹٠-٩]/g, digit => digitMap[digit]);
+  const match = raw.match(/(\d+(?:[.,]\d+)?)\s*(\+|جمع|plus|add|-|−|منها|تفریق|minus|×|\*|ضرب|times|÷|\/|تقسیم|divide)\s*(\d+(?:[.,]\d+)?)/iu);
+  if (!match) return null;
+
+  const left = Number(match[1].replace(',', '.'));
+  const right = Number(match[3].replace(',', '.'));
+  if (!Number.isFinite(left) || !Number.isFinite(right)) return null;
+
+  const operator = match[2].toLowerCase();
+  let result;
+  if (['+', 'جمع', 'plus', 'add'].includes(operator)) result = left + right;
+  else if (['-', '−', 'منها', 'تفریق', 'minus'].includes(operator)) result = left - right;
+  else if (['×', '*', 'ضرب', 'times'].includes(operator)) result = left * right;
+  else {
+    if (right === 0) return '🧮 صفر باندې وېشل نه شي کېدای.';
+    result = left / right;
+  }
+
+  if (!Number.isFinite(result)) return null;
+  const formatted = String(Number(result.toFixed(8))).replace(/\d/g, digit => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
+  return '🧮 د حساب ځواب: ' + formatted;
+}
+
+function answerCommonPashtoQuestion(question) {
+  const value = normalizePashto(String(question || ''));
+  if (/اسلام.*(?:بناو|رکن)|(?:بناو|رکن).*اسلام/u.test(value)) {
+    return '📚 اسلام پنځه بناوې لري:\\n۱) کلمهٔ شهادت\\n۲) لمونځ\\n۳) زکات\\n۴) د رمضان روژه\\n۵) د وس لرونکي مسلمان حج.';
+  }
+  return null;
 }
 
 // د ژوند، محرمیت او سیاسي خوندیتوب لپاره د شخصي معلوماتو/تعقیب خطرناکې غوښتنې فلټر.
@@ -915,6 +953,18 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
       text: '🛡️ د خلکو د شخصي پتې، شخصي شمېرې، دقیق ځای، تعقیب یا زیان رسولو لپاره معلومات نه شم برابرولای.\n\n' +
         '🌐 که پوښتنه عمومي یا سیاسي وي، کولای شم بې‌طرفه، عامه او د باوري سرچینو پر بنسټ معلومات وړاندې کړم.'
     });
+    return true;
+  }
+
+  const mathAnswer = answerSimpleMathQuestion(question);
+  if (mathAnswer) {
+    await safeSend(socket, groupJid, { text: mathAnswer });
+    return true;
+  }
+
+  const commonAnswer = answerCommonPashtoQuestion(question);
+  if (commonAnswer) {
+    await safeSend(socket, groupJid, { text: commonAnswer });
     return true;
   }
 
