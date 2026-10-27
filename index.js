@@ -268,10 +268,10 @@ function answerFromOfflineKnowledge(question) {
   // د کریپټو د تعریف پوښتنې د کلمو له عمومي نمرو مخکې په مستقیم ډول پېژنو،
   // څو د لیکدود توپیر یا اوږده غوښتنه د باوري محلي ځواب مخه ونه نیسي.
   if (isCryptoEducationQuestion(question)) {
-    return '📚 *' + CRYPTO_CURRENCY_CORRECTION.title + '*\\n\\n' +
+    return '📚 *' + CRYPTO_CURRENCY_CORRECTION.title + '*\n\n' +
       CRYPTO_CURRENCY_CORRECTION.answer +
       (CRYPTO_CURRENCY_CORRECTION.source
-        ? '\\n\\n📖 سرچینې: ' + CRYPTO_CURRENCY_CORRECTION.source
+        ? '\n\n📖 سرچینې: ' + CRYPTO_CURRENCY_CORRECTION.source
         : '');
   }
   if (q.length < 2 || !OFFLINE_KNOWLEDGE.length) return null;
