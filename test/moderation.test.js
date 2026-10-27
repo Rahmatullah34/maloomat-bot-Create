@@ -238,17 +238,19 @@ test('تایید شوی اډمین د چټک او تکراري سپم له اخ�
     'د تکراري سپم حذف باید یوازې پر عادي غړو تطبیق شي');
 });
 
-test('د پوښتنو ځوابونه، انټرنېټي لټون او AI لنډیز موقتي بند دي', () => {
+test('د پوښتنو ځوابونه، انټرنېټي لټون او AI لنډیز فعال دي', () => {
   const indexSrc = fs.readFileSync(
     path.join(__dirname, '..', 'index.js'),
     'utf8'
   );
-  assert.match(indexSrc, /ENABLE_GROUP_QA\s*=\s*false/,
-    'د پوښتنو او ځوابونو برخه باید بنده وي');
-  assert.match(indexSrc, /ENABLE_INTERNET_SEARCH\s*=\s*false/,
-    'انټرنېټي لټون باید بنده وي');
-  assert.match(indexSrc, /ENABLE_AI_SUMMARIZATION\s*=\s*false/,
-    'د AI لنډیز باید بنده وي');
+  assert.match(indexSrc, /ENABLE_GROUP_QA\s*=\s*true/,
+    'د ګروپ پوښتنو او ځوابونو برخه باید فعاله وي');
+  assert.match(indexSrc, /ENABLE_PRIVATE_QA\s*=\s*true/,
+    'د شخصي پیغامونو پوښتنې او ځوابونه باید فعال وي');
+  assert.match(indexSrc, /ENABLE_INTERNET_SEARCH\s*=\s*true/,
+    'انټرنېټي لټون باید فعال وي');
+  assert.match(indexSrc, /ENABLE_AI_SUMMARIZATION\s*=\s*true/,
+    'د AI لنډیز باید فعال وي');
   assert.match(indexSrc, /webSearch:\s*ENABLE_GROUP_QA\s*&&\s*ENABLE_INTERNET_SEARCH/,
-    'د روغتیا راپور باید د انټرنېټ لټون غیرفعال وښيي');
+    'د روغتیا راپور باید د فعالو لټون تنظیماتو مطابق حالت وښيي');
 });
