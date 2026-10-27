@@ -402,6 +402,13 @@ function answerFromOfflineKnowledge(question) {
   const q = normalizePashto(question);
   if (q.length < 2 || !OFFLINE_KNOWLEDGE.length) return null;
 
+  // د زغرې ځانګړې تاریخي داخله یوازې د زغرې اړوند پوښتنو ته وکاروه؛
+  // د رسول الله ﷺ په اړه عمومي پوښتنې باید په تېروتنه دې ځواب ته ونه رسېږي.
+  const knowledgeItems = OFFLINE_KNOWLEDGE.filter(item =>
+    normalizePashto(item.title) !== normalizePashto(PROPHET_ARMOR_CORRECTION.title) ||
+    /(?:زغره|زغرې|درع|armor|armour)/iu.test(q)
+  );
+
   // عامې پوښتنیزې او تړونکې کلمې د موضوع د پېژندلو پر ځای له نمرو وباسه.
   const stopWords = new Set([
     'د', 'په', 'له', 'او', 'یا', 'چې', 'دا', 'هغه', 'دی', 'ده', 'دي', 'دې',
@@ -425,7 +432,7 @@ function answerFromOfflineKnowledge(question) {
 
   // د هرې موضوع د سرلیک او کلیدي کلمو له مخې د کم‌عمومي کلمو وزن لوړ کړه.
   // دا د «مالیه څه ده؟» پوښتنې د «مخابراتو» یا بل نامربوط مضمون له ځواب سره د ګډېدو خطر کموي.
-  const itemTokenSets = OFFLINE_KNOWLEDGE.map(item =>
+  const itemTokenSets = knowledgeItems.map(item =>
     new Set(tokens([
       item.title,
       ...(Array.isArray(item.keywords) ? item.keywords : [])
@@ -440,15 +447,15 @@ function answerFromOfflineKnowledge(question) {
   }
 
   const tokenWeight = (token) =>
-    1 + Math.log((OFFLINE_KNOWLEDGE.length + 1) /
+    1 + Math.log((knowledgeItems.length + 1) /
       ((documentFrequency.get(token) || 0) + 1));
 
   let best = null;
   let bestScore = 0;
   let bestTitleOverlap = -1;
 
-  for (let index = 0; index < OFFLINE_KNOWLEDGE.length; index += 1) {
-    const item = OFFLINE_KNOWLEDGE[index];
+  for (let index = 0; index < knowledgeItems.length; index += 1) {
+    const item = knowledgeItems[index];
     const terms = [item.title, ...(Array.isArray(item.keywords) ? item.keywords : [])]
       .filter(Boolean)
       .map(normalizePashto);
