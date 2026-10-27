@@ -181,14 +181,41 @@ test('isLinkPermitted: اجازې لرونکي لینکونه او استوون�
   assert.equal(isLinkPermitted('دا عادي جمله ده', '99999999999@s.whatsapp.net'), false);
 });
 
-test('isGroupAdminSender: د LID پېژندپاڼې له لارې اډمین پېژني', () => {
+test('isGroupAdminSender: د LID، PN او phoneNumber بدیلونه پېژني', () => {
   const participants = [
-    { id: '987654321@lid', admin: 'superadmin' },
+    {
+      id: '987654321@lid',
+      phoneNumber: '+93 707 285 093',
+      admin: 'superadmin',
+    },
+    { id: '93700000001@s.whatsapp.net', admin: 'admin' },
     { id: '123456789@lid', admin: null },
   ];
+
+  // مستقیم LID او د همدې اډمین د افغانستان محلي/نړیوال نمبر دواړه باید ومنل شي.
   assert.equal(isGroupAdminSender(participants, ['987654321@lid']), true);
+  assert.equal(isGroupAdminSender(participants, ['0707285093@s.whatsapp.net']), true);
+  assert.equal(isGroupAdminSender(participants, ['93707285093:4@s.whatsapp.net']), true);
+  // د PN device suffix هم باید برابر شي.
+  assert.equal(isGroupAdminSender(participants, ['93700000001:12@s.whatsapp.net']), true);
+
+  // عادي غړی او ناپېژندل شوې پېژندپاڼه اډمین نه ګڼل کېږي.
   assert.equal(isGroupAdminSender(participants, ['123456789@lid']), false);
   assert.equal(isGroupAdminSender(participants, ['unknown@lid']), false);
+  assert.equal(isGroupAdminSender(participants, []), false);
+});
+
+test('تایید شوی اډمین د چټک او تکراري سپم له اخطار/حذف څخه معاف دی', () => {
+  const indexSrc = fs.readFileSync(
+    path.join(__dirname, '..', 'index.js'),
+    'utf8'
+  );
+  assert.match(indexSrc, /async function isGroupAdminMessage\s*\(/,
+    'اډمین باید د WhatsApp د ګروپ metadata له مخې وپېژندل شي');
+  assert.match(indexSrc, /if\s*\(!isSenderGroupAdmin\)\s*\{\s*const burst = recordGroupMessage/,
+    'د چټک سپم حد باید یوازې پر عادي غړو تطبیق شي');
+  assert.match(indexSrc, /if\s*\(!isSenderGroupAdmin\)\s*\{\s*const repeated = recordRepeatedMessage/,
+    'د تکراري سپم حذف باید یوازې پر عادي غړو تطبیق شي');
 });
 
 test('د پوښتنو ځوابونه، انټرنېټي لټون او AI لنډیز موقتي بند دي', () => {
