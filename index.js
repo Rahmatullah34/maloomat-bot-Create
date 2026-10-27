@@ -1215,9 +1215,71 @@ async function deleteGroupMessage(
   }
 }
 
-// د لینک اجازه: لومړی د اډمین شمېرې/اجازه لرونکي ډومېن وګوره.
-// که WhatsApp استوونکی په @lid پېژندپاڼه راولېږي او بدیل نمبر موجود نه وي،
-// د ګروپ د غړو له لېسته یې د اډمین رول هم وڅېړه.
+// د ګروپ مېټاډاټا لنډمهاله cache: په هر پیغام کې د WhatsApp API مه رابوله.
+// د اډمین رول په عادي حالت کې ۶۰ ثانیې cache کېږي؛ ناکامي ۱۰ ثانیې cache کېږي
+// څو د metadata ستونزې پر مهال پر هر پیغام نوې غوښتنه ونه شي.
+const GROUP_METADATA_CACHE_TTL_MS = 60 * 1000;
+const GROUP_METADATA_FAILURE_CACHE_TTL_MS = 10 * 1000;
+const GROUP_METADATA_CACHE = new Map();
+const GROUP_METADATA_INFLIGHT = new Map();
+
+async function getGroupMetadataCached(socket, groupJid) {
+  const key = String(groupJid || '');
+  const now = Date.now();
+  const cached = GROUP_METADATA_CACHE.get(key);
+  if (cached && cached.expiresAt > now) return cached.metadata;
+
+  if (GROUP_METADATA_INFLIGHT.has(key)) {
+    return GROUP_METADATA_INFLIGHT.get(key);
+  }
+
+  const request = (async () => {
+    try {
+      const metadata = await socket.groupMetadata(key);
+      const usableMetadata = metadata && Array.isArray(metadata.participants)
+        ? metadata
+        : null;
+      GROUP_METADATA_CACHE.set(key, {
+        metadata: usableMetadata,
+        expiresAt: Date.now() + (
+          usableMetadata ? GROUP_METADATA_CACHE_TTL_MS : GROUP_METADATA_FAILURE_CACHE_TTL_MS
+        ),
+      });
+      while (GROUP_METADATA_CACHE.size > 500) {
+        const oldestKey = GROUP_METADATA_CACHE.keys().next().value;
+        if (!oldestKey) break;
+        GROUP_METADATA_CACHE.delete(oldestKey);
+      }
+      return usableMetadata;
+    } catch (err) {
+      GROUP_METADATA_CACHE.set(key, {
+        metadata: null,
+        expiresAt: Date.now() + GROUP_METADATA_FAILURE_CACHE_TTL_MS,
+      });
+      throw err;
+    } finally {
+      GROUP_METADATA_INFLIGHT.delete(key);
+    }
+  })();
+
+  GROUP_METADATA_INFLIGHT.set(key, request);
+  return request;
+}
+
+// د سپم کتنې لپاره د ګروپ اصلي اډمین رول وګوره؛ د pushName یا ښکاره نوم پر بنسټ
+// هېڅوک اډمین نه ګڼل کېږي. که WhatsApp metadata نه شي تاییدولای، درواغجن معافیت مه ورکوه.
+async function isGroupAdminMessage(socket, groupJid, senderIdentifiers) {
+  try {
+    const metadata = await getGroupMetadataCached(socket, groupJid);
+    return isGroupAdminSender(metadata?.participants, senderIdentifiers);
+  } catch (err) {
+    console.warn('⚠️ د ګروپ د اډمین رول کتنه ناکامه شوه:', err?.message || err);
+    return false;
+  }
+}
+
+// د لینک اجازه: لومړی د شمېرې/اجازه لرونکي ډومېن لېست وګوره، بیا د ګروپ رول.
+// د اډمینانو د لینکونو او سپم معافیت لپاره هماغه cache شوی metadata شریکېږي.
 async function isLinkPermittedForSender(socket, groupJid, text, senderIdentifiers) {
   const senders = [...new Set(
     (Array.isArray(senderIdentifiers) ? senderIdentifiers : [])
@@ -1229,11 +1291,8 @@ async function isLinkPermittedForSender(socket, groupJid, text, senderIdentifier
     return true;
   }
 
-  // که د شمېرې له لارې اجازه ونه پېژندل شوه، د ګروپ اصلي رول هم وګوره.
-  // دا کتنه د @lid او @s.whatsapp.net دواړو لپاره مهمه ده؛ د WhatsApp
-  // ځینې نسخې د اډمین لپاره یوازې یو ډول پېژندپاڼه را استوي.
   try {
-    const metadata = await socket.groupMetadata(groupJid);
+    const metadata = await getGroupMetadataCached(socket, groupJid);
     return isGroupAdminSender(metadata?.participants, senders);
   } catch (err) {
     console.error('⚠️ د لینک د اډمین اجازې کتنه ناکامه شوه:', err?.message || err);
@@ -1740,22 +1799,33 @@ async function startBot() {
               continue;
             }
 
-            // ==========================================
-            // 18.1 د ډېر چټک پیغامونو مخنیوی
-            // ==========================================
+            // اډمین د سپم د اخطار له حد مخکې د WhatsApp د ګروپ رول له مخې پېژنو.
+            // د PN/LID دواړه پېژندپاڼې ورکوو، ځکه د پیغام اصلي JID توپیر کولی شي.
+            const isSenderGroupAdmin = await isGroupAdminMessage(
+              socket,
+              groupJid,
+              [participantJid, msg.key?.participant, msg.key?.participantAlt]
+            );
 
-            const burst = recordGroupMessage(groupJid, participantJid);
-            if (burst.count > BURST_LIMIT) {
-              if (burst.shouldWarn) burst.markWarned();
-              await deleteGroupMessage(
-                socket,
-                groupJid,
-                msg.key,
-                name,
-                '🚫 په لږ وخت کې ډېر پیغامونه لېږل سپم ګڼل کېږي. لږ تم شه او پیغامونه سره راټول کړه.',
-                burst.shouldWarn
-              );
-              continue;
+            // ==========================================
+            // 18.1 د عادي غړو د ډېر چټک پیغامونو مخنیوی
+            // ==========================================
+            // اډمین د چټکو پیغامونو د شمېر له امله نه حذف کېږي او نه اخطار اخلي.
+            // د اډمین لپاره د کنځلو، نامجاز لینک او منع شوي فارورډ کنټرولونه جلا فعال دي.
+            if (!isSenderGroupAdmin) {
+              const burst = recordGroupMessage(groupJid, participantJid);
+              if (burst.count > BURST_LIMIT) {
+                if (burst.shouldWarn) burst.markWarned();
+                await deleteGroupMessage(
+                  socket,
+                  groupJid,
+                  msg.key,
+                  name,
+                  '🚫 په لږ وخت کې ډېر پیغامونه لېږل سپم ګڼل کېږي. لږ تم شه او پیغامونه سره راټول کړه.',
+                  burst.shouldWarn
+                );
+                continue;
+              }
             }
 
             // ==========================================
@@ -1861,23 +1931,24 @@ async function startBot() {
             }
 
             // ==========================================
-            // ==========================================
-            // 24. د تکراري سپم مخنیوی
-
-            const repeated = recordRepeatedMessage(groupJid, participantJid, text);
-            if (repeated.shouldDelete) {
-              await deleteGroupMessage(
-                socket,
-                groupJid,
-                msg.key,
-                name,
-                '🚫 د یوه پیغام پرله‌پسې تکرار سپم ګڼل کېږي. مهرباني وکړئ هماغه پیغام بیا بیا مه لېږئ.',
-                repeated.shouldWarn
-              );
-              continue;
+            // 24. د عادي غړو د تکراري سپم مخنیوی
+            // اډمین د تکرار له شمېر څخه معاف دی؛ نور د کنځلو او لینک اصول پرې هم تطبیقېږي.
+            if (!isSenderGroupAdmin) {
+              const repeated = recordRepeatedMessage(groupJid, participantJid, text);
+              if (repeated.shouldDelete) {
+                await deleteGroupMessage(
+                  socket,
+                  groupJid,
+                  msg.key,
+                  name,
+                  '🚫 د یوه پیغام پرله‌پسې تکرار سپم ګڼل کېږي. مهرباني وکړئ هماغه پیغام بیا بیا مه لېږئ.',
+                  repeated.shouldWarn
+                );
+                continue;
+              }
             }
 
-            // معلوماتي او انټرنېټي ځوابونه فعال ساتل شوي؛ د ګروپ د کنټرول کتنې ترې مخکې اجرا کېږي.
+            // د پوښتنو/ځوابونو او انټرنېټ لټون برخه موقتي بنده ده؛ د ګروپ کنټرولونه فعال پاتې کېږي.
             rememberGroupMember(groupJid, participantJid, name);
 
             const handledByKnowledge = await answerWithKnowledge(
