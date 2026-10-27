@@ -518,7 +518,7 @@ function answerSimpleMathQuestion(question) {
 function answerCommonPashtoQuestion(question) {
   const value = normalizePashto(String(question || ''));
   if (/اسلام.*(?:بناو|رکن)|(?:بناو|رکن).*اسلام/u.test(value)) {
-    return '📚 اسلام پنځه بناوې لري:\\n۱) کلمهٔ شهادت\\n۲) لمونځ\\n۳) زکات\\n۴) د رمضان روژه\\n۵) د وس لرونکي مسلمان حج.';
+    return '📚 اسلام پنځه بناوې لري:\n۱) کلمهٔ شهادت\n۲) لمونځ\n۳) زکات\n۴) د رمضان روژه\n۵) د وس لرونکي مسلمان حج.';
   }
   return null;
 }
