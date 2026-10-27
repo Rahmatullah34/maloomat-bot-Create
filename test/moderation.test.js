@@ -121,6 +121,8 @@ test('looksLikeQuestion: پوښتنه، تشریح غوښتنه او عادي و
   assert.equal(looksLikeQuestion('دا څه دی؟'), true);
   assert.equal(looksLikeQuestion('د انسان د زړه دنده څه ده'), true);
   assert.equal(looksLikeQuestion('کله چې نبي کریم ﷺ جهاد ته تلو، زغره یې چا جوړه کړې وه؟'), true);
+  assert.equal(looksLikeQuestion('کله چې نبي کریم ﷺ جهاد ته تلو، زغره یې چا جوړه کړې وه'), true,
+    'د پوښتنې په پای کې د ؟ نښې نشتوالی باید روښانه پوښتنه پټه نه کړي');
   assert.equal(looksLikeQuestion('د زغرې په اړه معلومات راکړه'), true);
   assert.equal(looksLikeQuestion('how does it work'), true);
   assert.equal(looksLikeQuestion('سلام علیکم'), false);
