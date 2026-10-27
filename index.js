@@ -51,6 +51,7 @@ let whatsappConnectionState = 'unknown';
 // د پوښتنو ځوابونه، د څو سرچینو انټرنېټي لټون او AI لنډیز فعال دي.
  // دا بدلونونه د lib/moderation.js د ګروپ مدیریت منطق نه بدلوي.
 const ENABLE_GROUP_QA = true;
+const ENABLE_PRIVATE_QA = true;
 const ENABLE_INTERNET_SEARCH = true;
 const ENABLE_AI_SUMMARIZATION = true;
 
@@ -68,6 +69,7 @@ app.get('/health', (_req, res) => {
     service: 'maloomat-bot',
     mode: ENABLE_GROUP_QA ? 'group-moderation+qa' : 'group-moderation-only',
     questionAnswersEnabled: ENABLE_GROUP_QA,
+    privateQuestionAnswersEnabled: ENABLE_PRIVATE_QA && ENABLE_GROUP_QA,
     aiSummarization: ENABLE_GROUP_QA && ENABLE_AI_SUMMARIZATION && Boolean(readOpenRouterApiKey()),
     webSearch: ENABLE_GROUP_QA && ENABLE_INTERNET_SEARCH,
     webSearchProviders: ['DuckDuckGo', 'Wikipedia EN', 'Wikipedia PS', 'GDELT news'],
@@ -1519,7 +1521,8 @@ async function startBot() {
           console.log(
             '🛡️ د ګروپ مدیریت فعال دی: کنځل، دیني پارونه، لینکونه، د Status/چینل فارورډونه، چټک او تکراري سپم؛ ' +
             'د پوښتنو ځوابونه: ' + (ENABLE_GROUP_QA ? 'فعال' : 'موقتي بند') +
-            '؛ ویب لټون: ' + (ENABLE_GROUP_QA ? 'فعال' : 'بند') +
+            '؛ ویب لټون: ' + (ENABLE_GROUP_QA && ENABLE_INTERNET_SEARCH ? 'فعال' : 'بند') +
+            '؛ شخصي چټ: ' + (ENABLE_PRIVATE_QA && ENABLE_GROUP_QA ? 'فعال' : 'بند') +
             '؛ د محلي معلوماتو شمېر: ' + OFFLINE_KNOWLEDGE.length
           );
 
@@ -1746,8 +1749,83 @@ async function startBot() {
               continue;
             }
 
-            // شخصي چټ بشپړ بند دی.
+            // شخصي چټ جلا اداره کېږي؛ د ګروپ د مدیریت قواعد نه پرې تطبیقېږي.
             if (!groupJid.endsWith('@g.us')) {
+              // یوازې عادي شخصي WhatsApp چټونه ومنه؛ Status، چینل او نور ډولونه بند دي.
+              if (
+                !ENABLE_PRIVATE_QA ||
+                !/@(?:s\.whatsapp\.net|lid)$/.test(groupJid)
+              ) {
+                continue;
+              }
+
+              const privateMessageId = msg.key?.id;
+              if (
+                privateMessageId &&
+                !rememberMessage(groupJid + ':' + privateMessageId)
+              ) {
+                continue;
+              }
+
+              const privateText = extractText(msg.message);
+              if (!privateText.trim()) {
+                continue;
+              }
+
+              const privateParticipantJid =
+                msg.key?.participant ||
+                msg.key?.participantAlt ||
+                groupJid;
+
+              const privateRawName =
+                msg.pushName ||
+                String(privateParticipantJid).split('@')[0] ||
+                'ملګری';
+
+              const privateName = String(privateRawName)
+                .replace(/[\u200B-\u200D\uFEFF]/g, '')
+                .trim()
+                .slice(0, 80) || 'ملګری';
+
+              const privateLower = privateText.toLowerCase().trim();
+
+              console.log(
+                '📩 شخصي پیغام؛ کس=' + privateName + '; ' +
+                'متن=' + privateText.slice(0, 40)
+              );
+
+              const privateGreetings = [
+                'سلام',
+                'السلام علیکم',
+                'السلامعلیکم',
+                'salam',
+                'hello',
+                'hi',
+                'وعلیکم السلام',
+              ];
+
+              if (
+                privateText.length <= 60 &&
+                privateGreetings.some((greeting) =>
+                  privateLower.startsWith(greeting)
+                )
+              ) {
+                await safeSend(socket, groupJid, {
+                  text:
+                    '🌍 وعلیکم سلام محترم ' + privateName + ' جانه! 🌸\n\n' +
+                    'زه Maloomat AI | معلومات AI یم. خپله پوښتنه په پښتو، دري یا انګلیسي کې ولیکئ؛ ' +
+                    'د معلوماتي پوښتنو ځوابونه او د اړتیا پر مهال انټرنېټي لټون کوم.',
+                });
+                continue;
+              }
+
+              await answerWithKnowledge(
+                socket,
+                groupJid,
+                privateParticipantJid,
+                privateText,
+                privateName
+              );
               continue;
             }
 
