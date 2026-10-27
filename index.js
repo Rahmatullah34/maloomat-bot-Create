@@ -45,8 +45,10 @@ let whatsappConnectionState = 'unknown';
 // 1. د بوټ HTTP روغتیا او حالت
 // ======================================================
 
-// د عامو پوښتنو او معلوماتي ځوابونو برخه موقتي بنده ده؛ د ګروپ مدیریت فعال پاتې کېږي.
+// د پوښتنو ځوابونه، انټرنېټي لټون او AI لنډیز موقتي بند دي؛ د ګروپ مدیریت فعال پاتې کېږي.
 const ENABLE_GROUP_QA = false;
+const ENABLE_INTERNET_SEARCH = false;
+const ENABLE_AI_SUMMARIZATION = false;
 
 const app = express();
 
@@ -62,8 +64,8 @@ app.get('/health', (_req, res) => {
     service: 'maloomat-bot',
     mode: ENABLE_GROUP_QA ? 'group-moderation+qa' : 'group-moderation-only',
     questionAnswersEnabled: ENABLE_GROUP_QA,
-    aiSummarization: ENABLE_GROUP_QA && Boolean(process.env.OPENROUTER_API_KEY),
-    webSearch: ENABLE_GROUP_QA,
+    aiSummarization: ENABLE_GROUP_QA && ENABLE_AI_SUMMARIZATION && Boolean(process.env.OPENROUTER_API_KEY),
+    webSearch: ENABLE_GROUP_QA && ENABLE_INTERNET_SEARCH,
     webSearchProviders: ['DuckDuckGo', 'Wikipedia EN', 'Wikipedia PS', 'GDELT news'],
     moderation: {
       badWords: true,
@@ -781,6 +783,8 @@ function makeSourcePack(results) {
 }
 
 async function summarizeSourcesInPashto(question, results, localAnswer = '') {
+  // د AI لنډیز تر جلا اجازې پرته هېڅکله API ته غوښتنه نه لېږي.
+  if (!ENABLE_AI_SUMMARIZATION || !ENABLE_GROUP_QA) return null;
   const apiKey = String(process.env.OPENROUTER_API_KEY || '').trim();
   if (!apiKey || !results.length) return null;
 
@@ -930,7 +934,7 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
 
   if (!looksLikeQuestion(question) && !usableLocalAnswer && !requestsInternetSearch(question)) return false;
 
-  if (shouldSearchInternet) {
+  if (shouldSearchInternet && ENABLE_INTERNET_SEARCH) {
     const webResults = await searchInternet(question);
     if (webResults.length) {
       const aiSummary = await summarizeSourcesInPashto(question, webResults, usableLocalAnswer);
