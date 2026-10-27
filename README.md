@@ -16,6 +16,7 @@
 - `WARNING_MUTE_DURATION_MINUTES` — د محدودیت موده په دقیقو کې؛ ډیفالټ: `120` (دوه ساعته)، اعظمي `1440` دقیقې.
 - `RESET_WHATSAPP_SESSION`، `WHATSAPP_PHONE`، `SUPABASE_URL`، `SUPABASE_SERVICE_ROLE_KEY`، `OPENROUTER_API_KEY` — پخواني سره.
 - `OPENROUTER_MODEL` — اختیاري؛ ډیفالټ: `openai/gpt-6-luna`.
+- `AI_MAX_OUTPUT_TOKENS` — د AI د ځواب اعظمي اوږدوالی؛ ډیفالټ `1400` دی؛ له `500` تر `2000` پورې ارزښت منل کېږي. لوړ حد د اوږد ځواب امکان زیاتوي، خو دقت نه تضمینوي.
 
 ## ازموینې
 
