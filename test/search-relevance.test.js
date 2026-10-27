@@ -50,3 +50,30 @@ test('rejects broad titles when the question has only one specific subject term'
 
   assert.deepEqual(filtered.map(item => item.title), []);
 });
+
+test('crypto question prefers direct crypto titles over adjacent digital-money and exchange pages', () => {
+  const results = [
+    {
+      title: 'د کريپټو کرنسۍ (ډیجیټلي پیسې) تنظیم',
+      url: 'https://ps.wikipedia.org/wiki/crypto-regulation',
+      snippet: 'د کریپټو کرنسۍ او ډیجیټلي پیسو د تنظیم په اړه.',
+    },
+    {
+      title: 'ډېجېټل پیسې',
+      url: 'https://ps.wikipedia.org/wiki/digital-money',
+      snippet: 'ډیجیټلي پیسې، کریپټو کرنسي او د پیسو نوې بڼې.',
+    },
+    {
+      title: 'کوین بیز',
+      url: 'https://ps.wikipedia.org/wiki/coinbase',
+      snippet: 'د کریپټو کرنسۍ د پېر او پلور یو تبادله‌ځای.',
+    },
+  ];
+
+  const filtered = rankRelevantSearchResults('کریپټو کرنسي څه ده؟ تفصیلي ځواب راکړه؟', results);
+
+  assert.deepEqual(
+    filtered.map(item => item.title),
+    ['د کريپټو کرنسۍ (ډیجیټلي پیسې) تنظیم'],
+  );
+});
