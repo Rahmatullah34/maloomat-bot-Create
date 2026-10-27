@@ -68,7 +68,7 @@ app.get('/health', (_req, res) => {
     service: 'maloomat-bot',
     mode: ENABLE_GROUP_QA ? 'group-moderation+qa' : 'group-moderation-only',
     questionAnswersEnabled: ENABLE_GROUP_QA,
-    aiSummarization: ENABLE_GROUP_QA && ENABLE_AI_SUMMARIZATION && Boolean(process.env.OPENROUTER_API_KEY),
+    aiSummarization: ENABLE_GROUP_QA && ENABLE_AI_SUMMARIZATION && Boolean(readOpenRouterApiKey()),
     webSearch: ENABLE_GROUP_QA && ENABLE_INTERNET_SEARCH,
     webSearchProviders: ['DuckDuckGo', 'Wikipedia EN', 'Wikipedia PS', 'GDELT news'],
     moderation: {
@@ -775,6 +775,22 @@ const AI_SUMMARY_CACHE = new Map();
 const AI_SUMMARY_CACHE_TTL_MS = 5 * 60 * 1000;
 const OPENROUTER_MODEL = String(process.env.OPENROUTER_MODEL || 'openai/gpt-6-luna').trim();
 
+// API key له Environment Variable څخه، او که هغه نه وي، د container له دې فایل څخه لوستل کېږي.
+// د کیلي ارزښت هېڅکله لاګونو یا عام پیغامونو ته نه لیکل کېږي.
+function readOpenRouterApiKey() {
+  const envKey = String(process.env.OPENROUTER_API_KEY || '').trim();
+  if (envKey) return envKey;
+
+  try {
+    return fs.readFileSync(
+      path.resolve(process.cwd(), 'OPENROUTER_API_KEY'),
+      'utf8'
+    ).trim();
+  } catch {
+    return '';
+  }
+}
+
 function makeSourcePack(results) {
   return results.slice(0, 8).map((item, index) => ({
     number: index + 1,
@@ -789,7 +805,7 @@ function makeSourcePack(results) {
 async function summarizeSourcesInPashto(question, results, localAnswer = '') {
   // د AI لنډیز تر جلا اجازې پرته هېڅکله API ته غوښتنه نه لېږي.
   if (!ENABLE_AI_SUMMARIZATION || !ENABLE_GROUP_QA) return null;
-  const apiKey = String(process.env.OPENROUTER_API_KEY || '').trim();
+  const apiKey = readOpenRouterApiKey();
   if (!apiKey || !results.length) return null;
 
   const cacheKey = normalizePashto(question) + '|' +
