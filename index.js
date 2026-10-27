@@ -620,10 +620,17 @@ async function searchDuckDuckGo(query) {
         },
         signal: AbortSignal.timeout(10000),
       });
-      if (!response.ok) continue;
+      if (!response.ok) {
+        console.warn('⚠️ د DuckDuckGo لټون HTTP خطا ورکړه:', response.status, response.statusText || '');
+        continue;
+      }
       const html = await response.text();
       const results = parseDuckDuckGoResults(html);
       if (results.length) return results.slice(0, 4);
+      console.warn(
+        '⚠️ د DuckDuckGo ځواب ترلاسه شو، خو پېژندل شوې پایلې پکې ونه موندل شوې؛ HTML اوږدوالی:',
+        html.length
+      );
     } catch (err) {
       console.warn('⚠️ د ویب لټون یوه هڅه ناکامه شوه:', err?.message || err);
     }
@@ -653,11 +660,21 @@ async function searchWikipedia(query, language = 'en') {
       headers: { 'User-Agent': 'MaloomatBot/1.0 (Pashto educational WhatsApp bot)' },
       signal: AbortSignal.timeout(9000),
     });
-    if (!response.ok) return [];
+    if (!response.ok) {
+      console.warn('⚠️ د ویکیپیډیا ' + language + ' لټون HTTP خطا ورکړه:', response.status, response.statusText || '');
+      return [];
+    }
     const data = await response.json();
+    if (data?.error) {
+      console.warn('⚠️ د ویکیپیډیا ' + language + ' API خطا:', String(data.error.code || 'unknown'));
+      return [];
+    }
     const pages = Object.values(data?.query?.pages || {})
       .filter(page => page && page.title && page.extract)
       .slice(0, 4);
+    if (!pages.length) {
+      console.warn('⚠️ د ویکیپیډیا ' + language + ' لټون بریالی HTTP ځواب ورکړ، خو د کارولو وړ پایلې پکې نشته.');
+    }
     return pages.map(page => ({
       title: String(page.title).slice(0, 180),
       url: page.fullurl || ('https://' + language + '.wikipedia.org/?curid=' + page.pageid),
@@ -689,10 +706,17 @@ async function searchGdeltNews(query) {
       headers: { 'User-Agent': 'MaloomatBot/1.0 (public news search)' },
       signal: AbortSignal.timeout(10000),
     });
-    if (!response.ok) return [];
+    if (!response.ok) {
+      console.warn('⚠️ د GDELT خبرونو لټون HTTP خطا ورکړه:', response.status, response.statusText || '');
+      return [];
+    }
     const data = await response.json();
-    return (Array.isArray(data?.articles) ? data.articles : [])
-      .filter(item => item && item.url && item.title)
+    const articles = (Array.isArray(data?.articles) ? data.articles : [])
+      .filter(item => item && item.url && item.title);
+    if (!articles.length) {
+      console.warn('⚠️ د GDELT خبرونو API بریالی HTTP ځواب ورکړ، خو مقاله/خبر یې ونه موندل.');
+    }
+    return articles
       .slice(0, 5)
       .map(item => {
         let publishedAt = '';
@@ -789,7 +813,8 @@ async function searchInternet(query) {
     }, {});
     console.log('🌐 د انټرنېټ لټون پایلې:', JSON.stringify(providerCounts));
   } else {
-    console.warn('⚠️ د انټرنېټ ټولو سرچینو صفر پایلې ورکړې؛ موضوع:', topic.slice(0, 120));
+    // د کارونکي پوښتنه لاګ ته نه لیکو؛ د هر لټون کوونکي HTTP/شبکې تېروتنې پورته جلا ثبتېږي.
+    console.warn('⚠️ د انټرنېټ ټولو سرچینو صفر پایلې ورکړې. د HTTP او شبکې د تېروتنو لاګونه پورته وګورئ.');
   }
 
   INTERNET_SEARCH_CACHE.set(normalized, { time: now, results: unique });
