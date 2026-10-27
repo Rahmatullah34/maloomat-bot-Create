@@ -48,10 +48,11 @@ let whatsappConnectionState = 'unknown';
 // 1. د بوټ HTTP روغتیا او حالت
 // ======================================================
 
-// د پوښتنو ځوابونه، انټرنېټي لټون او AI لنډیز موقتي بند دي؛ د ګروپ مدیریت فعال پاتې کېږي.
-const ENABLE_GROUP_QA = false;
-const ENABLE_INTERNET_SEARCH = false;
-const ENABLE_AI_SUMMARIZATION = false;
+// د پوښتنو ځوابونه، د څو سرچینو انټرنېټي لټون او AI لنډیز فعال دي.
+ // دا بدلونونه د lib/moderation.js د ګروپ مدیریت منطق نه بدلوي.
+const ENABLE_GROUP_QA = true;
+const ENABLE_INTERNET_SEARCH = true;
+const ENABLE_AI_SUMMARIZATION = true;
 
 const app = express();
 
@@ -772,7 +773,7 @@ function isTimeSensitiveQuestion(question) {
 
 const AI_SUMMARY_CACHE = new Map();
 const AI_SUMMARY_CACHE_TTL_MS = 5 * 60 * 1000;
-const OPENROUTER_MODEL = String(process.env.OPENROUTER_MODEL || 'openrouter/free').trim();
+const OPENROUTER_MODEL = String(process.env.OPENROUTER_MODEL || 'openai/gpt-6-luna').trim();
 
 function makeSourcePack(results) {
   return results.slice(0, 8).map((item, index) => ({
