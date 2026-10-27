@@ -40,7 +40,7 @@ test('returns no links when all search results are unrelated', () => {
   assert.deepEqual(rankRelevantSearchResults('د انسان د زړه دنده څه ده؟', results), []);
 });
 
-test('can retain a broad-titled result when its snippet matches multiple topic terms', () => {
+test('rejects broad titles when the question has only one specific subject term', () => {
   const results = [
     { title: 'Health research', url: 'https://example.org/health', snippet: 'Research about the human heart and its function in circulation.' },
     { title: 'Jainism', url: 'https://example.org/jainism', snippet: 'A religious tradition.' },
@@ -48,5 +48,5 @@ test('can retain a broad-titled result when its snippet matches multiple topic t
 
   const filtered = rankRelevantSearchResults('د انسان د زړه دنده څه ده؟', results);
 
-  assert.deepEqual(filtered.map(item => item.title), ['Health research']);
+  assert.deepEqual(filtered.map(item => item.title), []);
 });
