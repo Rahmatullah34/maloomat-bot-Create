@@ -22,6 +22,9 @@ const {
   isWhatsAppStatusShare,
   extractText,
   looksLikeQuestion,
+  setTemporaryMute,
+  getTemporaryMuteStatus,
+  TEMPORARY_MUTE_DEFAULT_MS,
   rememberMessage,
   recordGroupMessage,
   recordRepeatedMessage,
@@ -114,10 +117,37 @@ test('isWhatsAppStatusShare: اصلي Status نیسي، نقل شوې برخه �
   );
 });
 
-test('looksLikeQuestion: پوښتنې پېژني، عادي جمله نه', () => {
+test('looksLikeQuestion: پوښتنه، تشریح غوښتنه او عادي وینا سره جلا کوي', () => {
   assert.equal(looksLikeQuestion('دا څه دی؟'), true);
-  assert.equal(looksLikeQuestion('سلام علیکم'), false);
+  assert.equal(looksLikeQuestion('د انسان د زړه دنده څه ده'), true);
+  assert.equal(looksLikeQuestion('کله چې نبي کریم ﷺ جهاد ته تلو، زغره یې چا جوړه کړې وه؟'), true);
+  assert.equal(looksLikeQuestion('د زغرې په اړه معلومات راکړه'), true);
   assert.equal(looksLikeQuestion('how does it work'), true);
+  assert.equal(looksLikeQuestion('سلام علیکم'), false);
+  assert.equal(looksLikeQuestion('نن هوا ښه ده'), false);
+  assert.equal(looksLikeQuestion('خلک وایي چې سبا باران دی'), false);
+  assert.equal(looksLikeQuestion('کله چې زه ماشوم وم، هلته مې ژوند کاوه'), false);
+});
+
+test('temporary mute: د درېیم اخطار لپاره دوه ساعته محدودیت ساتي', () => {
+  const group = 'test-mute@g.us';
+  const user = 'temporary-member@s.whatsapp.net';
+  assert.equal(TEMPORARY_MUTE_DEFAULT_MS, 2 * 60 * 60 * 1000);
+  assert.equal(getTemporaryMuteStatus(group, user), null);
+
+  const muted = setTemporaryMute(group, user, TEMPORARY_MUTE_DEFAULT_MS);
+  assert.ok(muted && muted.expiresAt > Date.now());
+  const status = getTemporaryMuteStatus(group, user);
+  assert.ok(status && status.remainingMs > 0);
+  assert.equal(getTemporaryMuteStatus('another-group@g.us', user), null);
+});
+
+test('temporary mute: ختم شوی محدودیت نور فعال نه پاتې کېږي', async () => {
+  const group = 'test-mute-expiry@g.us';
+  const user = 'temporary-expiry@s.whatsapp.net';
+  setTemporaryMute(group, user, 25);
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  assert.equal(getTemporaryMuteStatus(group, user), null);
 });
 
 test('rememberMessage: تکراري آی‌ډي بېرته نه مني', () => {
