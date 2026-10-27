@@ -15,6 +15,7 @@ const {
 
 const P = require('pino');
 const express = require('express');
+const { rankRelevantSearchResults } = require('./lib/search-relevance');
 
 // د نظم ساتنې خالصې کړنې او حالت له جلا ماډول اخیستل کیږي
 // (lib/moderation.js) څو په ازموینو کې و ازمویل شي.
@@ -799,19 +800,28 @@ async function searchInternet(query) {
   }
 
   const seen = new Set();
-  const unique = combined.filter(item => {
+  const deduplicated = combined.filter(item => {
     const key = canonicalResultUrl(item.url);
     if (!key || seen.has(key)) return false;
     seen.add(key);
     return true;
-  }).slice(0, 10);
+  });
+
+  // د لټون ټولې خامې پایلې د کارونکي د موضوع له کلیمو سره پرتله کړه.
+  // یوازې اړوندې سرچینې AI ته او د WhatsApp وروستي پیغام ته لېږل کېږي.
+  const unique = rankRelevantSearchResults(query, deduplicated, 10);
 
   if (unique.length) {
     const providerCounts = unique.reduce((counts, item) => {
       counts[item.provider || 'نورې سرچینې'] = (counts[item.provider || 'نورې سرچینې'] || 0) + 1;
       return counts;
     }, {});
-    console.log('🌐 د انټرنېټ لټون پایلې:', JSON.stringify(providerCounts));
+    console.log('🌐 د تړاو له فلټر وروسته د انټرنېټ لټون پایلې:', JSON.stringify(providerCounts));
+  } else if (deduplicated.length) {
+    console.warn(
+      '⚠️ د انټرنېټ لټون ' + deduplicated.length +
+      ' بېلابېلې پایلې وموندلې، خو د پوښتنې له موضوع سره یې کافي تړاو ونه موندل شو؛ دا لینکونه نه لېږل کېږي.'
+    );
   } else {
     // د کارونکي پوښتنه لاګ ته نه لیکو؛ د هر لټون کوونکي HTTP/شبکې تېروتنې پورته جلا ثبتېږي.
     console.warn('⚠️ د انټرنېټ ټولو سرچینو صفر پایلې ورکړې. د HTTP او شبکې د تېروتنو لاګونه پورته وګورئ.');
