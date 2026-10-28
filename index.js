@@ -13,6 +13,8 @@ const {
 const P = require('pino');
 const express = require('express');
 const { rankRelevantSearchResults } = require('./lib/search-relevance');
+const { buildAnswerPlan } = require('./lib/answer-plan');
+const { splitWhatsAppText } = require('./lib/answer-delivery');
 const {
   buildSearchQueries,
   getCuratedFallbackSources,
@@ -758,6 +760,7 @@ async function summarizeSourcesInPashto(question, results, localAnswer = '') {
   const cached = AI_SUMMARY_CACHE.get(cacheKey);
   if (cached && now - cached.time < AI_SUMMARY_CACHE_TTL_MS) return cached.answer;
 
+  const answerPlan = buildAnswerPlan(question);
   const sources = makeSourcePack(results);
   const payload = {
     model: OPENROUTER_MODEL,
@@ -767,6 +770,7 @@ async function summarizeSourcesInPashto(question, results, localAnswer = '') {
       {
         role: 'system',
         content: [
+          answerPlan.instructions,
           'ته د پښتو ژبې یو دقیق څېړونکی او لیکوال یې.',
           'د کارونکي پوښتنې ته په روانه، روښانه او مفصله پښتو ځواب ولیکه.',
           'که اړوندې سرچینې ورکړل شوې وي، د هغو له شواهدو سره سم ځواب ولیکه او د سرچینو د متن د ناسموالي امکان په پام کې ونیسه. که سرچینې نه وي، د عمومي او ثابتو موضوعاتو لپاره له خپلې پوهې ځواب ورکړه؛ د تازه یا بدلېدونکو معلوماتو په اړه سرچینه نه وي، په ښکاره ووایه چې اوسنی حقیقت دې نه دی تایید کړی.',
@@ -828,17 +832,69 @@ async function summarizeSourcesInPashto(question, results, localAnswer = '') {
       }
 
       const data = await response.json();
-      const answer = String(data?.choices?.[0]?.message?.content || '')
+      const choice = data?.choices?.[0] || {};
+      let answer = String(choice?.message?.content || '')
         .trim()
-        // د ماډل له خوا تولید شوي URLونه او جعلي سرچینه-نمبرونه نه خپروو؛ واقعي لینکونه لاندې د لټون له پایلو راځي.
         .replace(/https?:\/\/[^\s<>()]+/giu, '')
         .replace(/\[(?:سرچینه|source)\s*\d+\]/giu, '')
         .trim();
-
       if (!answer) {
         console.warn('⚠️ د OpenRouter ځواب تش و؛ هڅه:', attempt + 1);
         if (attempt === 0) continue;
         return null;
+      }
+
+      // که ماډل د ټوکن حد ته رسېدلی وي، یوازې یو ځل له همدې ځایه دوام ترې وغواړه.
+      if (choice.finish_reason === 'length') {
+        let continuationSucceeded = false;
+        console.warn('ℹ️ د AI ځواب د ټوکن حد ته ورسېد؛ د بشپړولو یوه هڅه کېږي.');
+        const continuationPayload = {
+          ...payload,
+          max_tokens: Math.min(1600, Math.max(800, AI_MAX_OUTPUT_TOKENS)),
+          messages: [
+            ...payload.messages,
+            { role: 'assistant', content: answer },
+            {
+              role: 'user',
+              content: 'د پخواني ځواب له وروستۍ جملې څخه بې له تکراره دوام ورکړه. مخکینی متن بیا مه لیکه. یوازې د ورکړل شوو سرچینو ملاتړ شوې خبرې ولیکه، جعلي لینک یا نېټه مه جوړوه او ځواب په طبیعي پایله بشپړ کړه.',
+            },
+          ],
+        };
+        try {
+          const continuationResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              Authorization: 'Bearer ' + apiKey,
+              'Content-Type': 'application/json',
+              'X-Title': 'Maloomat AI - Pashto Research',
+            },
+            body: JSON.stringify(continuationPayload),
+            signal: AbortSignal.timeout(18000),
+          });
+          if (continuationResponse.ok) {
+            const continuationData = await continuationResponse.json();
+            const continuationChoice = continuationData?.choices?.[0] || {};
+            const continuation = String(continuationChoice?.message?.content || '')
+              .trim()
+              .replace(/https?:\/\/[^\s<>()]+/giu, '')
+              .replace(/\[(?:سرچینه|source)\s*\d+\]/giu, '')
+              .trim();
+            if (continuation) {
+              answer += '\n\n' + continuation;
+              continuationSucceeded = continuationChoice.finish_reason !== 'length';
+            }
+            if (continuationChoice.finish_reason === 'length') {
+              console.warn('⚠️ د AI د دوام ځواب هم د تولید حد ته ورسېد.');
+            }
+          } else {
+            console.warn('⚠️ د AI د ځواب د بشپړولو غوښتنه ناکامه شوه؛ HTTP:', continuationResponse.status);
+          }
+        } catch (continuationError) {
+          console.warn('⚠️ د AI د ځواب د بشپړولو هڅه ناکامه شوه:', continuationError?.message || continuationError);
+        }
+        if (!continuationSucceeded) {
+          answer += '\n\n⚠️ د ځواب اوږدوالی د AI د تولید حد ته ورسېد؛ ځینې جزئیات ممکن نیمګړي وي.';
+        }
       }
 
       AI_SUMMARY_CACHE.set(cacheKey, { time: now, answer });
@@ -846,7 +902,7 @@ async function summarizeSourcesInPashto(question, results, localAnswer = '') {
         const oldestKey = AI_SUMMARY_CACHE.keys().next().value;
         if (oldestKey) AI_SUMMARY_CACHE.delete(oldestKey);
       }
-      return answer.slice(0, 6500);
+      return answer;
     } catch (err) {
       const errorMessage = String(err?.message || err || '');
       const retryable = err?.name === 'TimeoutError' ||
@@ -934,6 +990,7 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
     return true;
   }
 
+  const answerPlan = buildAnswerPlan(question);
   const localAnswer = answerFromOfflineKnowledge(question);
   const asksAfghanistanContext = /افغانستان|افغاني|afghanistan|کابل|kabul/iu.test(question);
   const localAnswerCoversContext = Boolean(
@@ -948,6 +1005,7 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
   // د کره او نسبتاً ثابتې محلي موضوع لپاره مستقیم ځواب ورکړه؛ بې‌اړخه ویب پایلې مه ورسره ګډوه.
   if (
     usableLocalAnswer &&
+    !answerPlan.detailed &&
     !requestsInternetSearch(question) &&
     !isTimeSensitiveQuestion(question)
   ) {
@@ -1013,8 +1071,8 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
 
   const aiKeyConfigured = Boolean(readOpenRouterApiKey());
   const fallbackText = aiKeyConfigured
-    ? '📚 د دې پوښتنې لپاره محلي یا د لټون باوري سرچینه پیدا نه شوه، او د AI خدمت هم دا ځل د ځواب په جوړولو بریالی نه شو. د سرور لاګونو کې د OpenRouter د تېروتنې پیغام وګورئ.'
-    : '📚 د دې پوښتنې لپاره محلي یا د لټون باوري سرچینه پیدا نه شوه، او د AI کیلي هم تنظیم شوې نه ده. د پروژې مدیر دې په SillyDev کې د OPENROUTER_API_KEY شتون او د /health په راپور کې aiSummarization وګوري.';
+    ? '📚 دا ځل د پوښتنې لپاره د تایید وړ معلومات نه شول ترلاسه کېدای؛ د انټرنېټ لټون یا د AI ځواب جوړول ناکام شول. لږ وروسته یې بیا وپوښتئ، یا د موضوع رسمي/معتبر لینک راولېږئ. د تخنیکي تشخیص لپاره د SillyDev لاګونه وګورئ.'
+    : '📚 د پوښتنې لپاره باوري سرچینه پیدا نه شوه او د AI کیلي هم تنظیم شوې نه ده. د پروژې مدیر دې په SillyDev کې د OPENROUTER_API_KEY شتون او د /health په راپور کې aiSummarization وګوري.';
   await safeSend(socket, groupJid, {
     text: fallbackText + '\n\n⚠️ تر تایید شوې سرچینې پرته د ناسم ځواب له جوړولو ډډه کوم. پوښتنه بیا هڅه کړئ یا یوه باوري سرچینه ورسره شریک کړئ.'
   });
@@ -1178,10 +1236,23 @@ async function safeSend(
       return null;
     }
 
-    return await socket.sendMessage(
-      jid,
-      content
-    );
+    // اوږده عادي متني ځوابونه په جلا WhatsApp پیغامونو وېشه؛ نورې رسنۍ مه تکراروه.
+    const canSplitText = typeof content.text === 'string' &&
+      Object.keys(content).length === 1;
+    const messageParts = canSplitText ? splitWhatsAppText(content.text) : [null];
+
+    if (canSplitText && messageParts.length > 1) {
+      let lastResult = null;
+      for (let index = 0; index < messageParts.length; index += 1) {
+        lastResult = await socket.sendMessage(jid, { text: messageParts[index] });
+        if (index < messageParts.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 350));
+        }
+      }
+      return lastResult;
+    }
+
+    return await socket.sendMessage(jid, content);
   } catch (err) {
     console.error(
       '❌ د WhatsApp پیغام لېږلو ستونزه:',

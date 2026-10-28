@@ -97,3 +97,22 @@ test('matches Facebook Content Monetization official titles to a Pashto question
 
   assert.deepEqual(filtered.map((item) => item.title), ['Facebook Content Monetization — Meta official guide']);
 });
+
+
+test('matches Ahmad Shah Durrani and battles in English source titles', () => {
+  const results = [
+    { title: 'Ahmad Shah Durrani: military campaigns and battles', url: 'https://iranicaonline.org/articles/ahmad-shah-durrani', snippet: 'Historical overview of the Durrani ruler.' },
+    { title: 'Jainism', url: 'https://example.org/jainism', snippet: 'A religious tradition.' },
+  ];
+  const filtered = rankRelevantSearchResults('د احمدشاه بابا مشهورې جګړې', results);
+  assert.deepEqual(filtered.map((item) => item.title), ['Ahmad Shah Durrani: military campaigns and battles']);
+});
+
+test('prefers more authoritative sources when relevance is otherwise equal', () => {
+  const results = [
+    { title: 'Ahmad Shah Durrani battles', url: 'https://random-blog.example/battles', snippet: 'Ahmad Shah Durrani battles and campaigns.' },
+    { title: 'Ahmad Shah Durrani battles', url: 'https://iranicaonline.org/articles/ahmad-shah-durrani', snippet: 'Ahmad Shah Durrani battles and campaigns.' },
+  ];
+  const filtered = rankRelevantSearchResults('احمدشاه بابا مشهورې جګړې', results);
+  assert.equal(filtered[0].url, 'https://iranicaonline.org/articles/ahmad-shah-durrani');
+});

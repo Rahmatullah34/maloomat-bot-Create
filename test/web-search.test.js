@@ -58,3 +58,11 @@ test('provides an official Meta fallback source for Facebook monetization when s
   assert.match(results[0].url, /^https:\/\/about\.fb\.com\//);
   assert.deepEqual(getCuratedFallbackSources('د زړه دنده څه ده؟'), []);
 });
+
+
+test('adds English research queries for detailed Ahmad Shah Baba battle questions', () => {
+  const queries = buildSearchQueries('د احمدشاه بابا اړوند تفصيلي ځواب؟ دهغه مشهورې جګړې؟');
+  assert.ok(queries.length <= 3);
+  assert.ok(queries.some((query) => /Ahmad Shah Durrani.*battles/i.test(query)));
+  assert.ok(queries.some((query) => /Panipat 1761/i.test(query)));
+});
