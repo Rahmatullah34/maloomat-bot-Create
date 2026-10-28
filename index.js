@@ -24,7 +24,7 @@ const {
   parseDuckDuckGoResults,
 } = require('./lib/web-search');
 const { isCryptoEducationQuestion } = require('./lib/crypto-question');
-const { filterTrustedReligiousSources, hasTrustedReligiousReferenceText, requiresAuthoritativeReligiousSource, asksForReligiousReferences } = require('./lib/religious-source-policy');
+const { filterTrustedReligiousSources, hasTrustedReligiousReferenceText, requiresAuthoritativeReligiousSource, isQuranRukuCountQuestion, asksForReligiousReferences } = require('./lib/religious-source-policy');
 const { startAutoPublisher, getAutoPublisherStatus } = require('./lib/auto-publisher');
 
 // د نظم ساتنې خالصې کړنې او حالت له جلا ماډول اخیستل کیږي
@@ -878,6 +878,21 @@ async function searchInternet(query) {
     unique = [...supplementalSources, ...unique].slice(0, 10);
     usingCuratedFallback = true;
     console.log('📚 د احمدشاه بابا د تاریخي پوښتنې لپاره باوري حوالې ورزیاتې شوې.');
+  }
+
+  if (isQuranRukuCountQuestion(query)) {
+    const existingUrls = new Set(unique.map(item => canonicalResultUrl(item.url)));
+    const curatedRukuSources = getCuratedFallbackSources(query).filter(item =>
+      String(item.provider || '').startsWith('Curated Quran ruku reference')
+    );
+    const supplementalSources = curatedRukuSources.filter(item => {
+      const key = canonicalResultUrl(item.url);
+      if (!key || existingUrls.has(key)) return false;
+      existingUrls.add(key);
+      return true;
+    });
+    unique = [...supplementalSources, ...unique].slice(0, 10);
+    usingCuratedFallback = supplementalSources.length > 0 || usingCuratedFallback;
   }
 
   if (!unique.length) {
