@@ -555,10 +555,10 @@ function rememberWikipediaRateLimit(response) {
 
 function simplifyWikipediaSearchQuery(query) {
   const value = String(query || '').trim();
-  // Do not collapse a specific human-creation research query to the generic
-  // Wikipedia article "Quran"; retain the actual question for relevant matches.
-  if (/(?:why did allah create|purpose of human creation|human creation in islam|created mankind|create human beings)/i.test(value)) {
-    return value.length > 120 ? value.slice(0, 120).trim() : value;
+  // Keep specific research topics intact instead of reducing them to generic Wikipedia pages.
+  // This includes human creation, the Prophet's burial, and riba/interest questions.
+  if (/(?:why did allah create|purpose of human creation|human creation in islam|created mankind|create human beings|prophet muhammad.*(?:burial|grave|buried|tomb)|who is buried beside prophet muhammad|islamic prohibition.*riba|prohibition.*riba|riba.*(?:prohibition|islam|quran)|usury.*(?:islam|quran)|sahih muslim 1598)/i.test(value)) {
+    return value.length > 140 ? value.slice(0, 140).trim() : value;
   }
   const shortcuts = [
     [/minor signs of the hour|signs of the day of judgment|signs of the day of judgement/i, 'Signs of the Hour'],
