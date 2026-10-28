@@ -51,6 +51,18 @@ test('expands Pashto Facebook monetization questions into a useful English query
   assert.ok(queries.length <= 3);
 });
 
+test('builds targeted English searches for a detailed Pashto Islamic question', () => {
+  const queries = buildSearchQueries('د قیامت وړې نښې مفصل او کتابونو معلومات راکړه؟');
+  assert.equal(queries.length, 3);
+  assert.ok(queries.some(query => /minor signs of the Hour/i.test(query)));
+  assert.ok(queries.some(query => /Day of Judgment.*hadith/i.test(query)));
+});
+
+test('builds source-oriented English searches for general Islamic questions', () => {
+  const queries = buildSearchQueries('د اسلام پنځه بناوې څه دي؟');
+  assert.ok(queries.some(query => /Five Pillars of Islam/i.test(query)));
+});
+
 test('provides an official Meta fallback source for Facebook monetization when search fails', () => {
   const results = getCuratedFallbackSources('د فیسبوک مونټایزیشن طریقه څه ده؟');
   assert.equal(results.length, 1);
