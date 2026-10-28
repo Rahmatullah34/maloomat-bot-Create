@@ -329,7 +329,7 @@ test('د قوانینو امر د سپم او نورو moderation فلټرونو
   const rulesCommandPosition = indexSrc.indexOf('if (isGroupRulesCommand(text))');
   const burstCheckPosition = indexSrc.indexOf('const burst = recordGroupMessage');
   const badWordCheckPosition = indexSrc.indexOf('if (containsBadWord(text))');
-  const linkCheckPosition = indexSrc.indexOf('ENABLE_LINK_MODERATION &&');
+  const linkCheckPosition = indexSrc.indexOf('LINK_PATTERN.test(text)', rulesCommandPosition);
 
   assert.ok(rulesCommandPosition >= 0, 'د قوانینو امر باید موجود وي');
   assert.ok(rulesCommandPosition < burstCheckPosition, 'د قوانینو امر باید د سپم شمېر تر مخه وي');
