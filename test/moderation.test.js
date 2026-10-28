@@ -16,6 +16,7 @@ const {
   isGroupAllowed,
   isHistoryCleanupEnabled,
   normalizePashto,
+  hasMatchingPhoneNumber,
   isGroupRulesCommand,
   containsBadWord,
   LINK_PATTERN,
@@ -54,6 +55,22 @@ test('normalizePashto: عربي تورې او نښانې سموي', () => {
   assert.equal(normalizePashto('كتاب يى'), 'کتاب یی');
   assert.equal(normalizePashto('سلام! ؟'), 'سلام');
   assert.equal(normalizePashto(''), '');
+});
+
+test('hasMatchingPhoneNumber: د مالک شمېره په محلي/نړیوال PN بڼه پېژني، LID نه', () => {
+  const owner = '0707285093';
+  for (const identifier of [
+    '0707285093@s.whatsapp.net',
+    '93707285093@s.whatsapp.net',
+    '93707285093:4@s.whatsapp.net',
+    '707285093@s.whatsapp.net',
+    '+93707285093',
+    '0707285093',
+  ]) {
+    assert.equal(hasMatchingPhoneNumber([identifier], owner), true, identifier);
+  }
+  assert.equal(hasMatchingPhoneNumber(['707285093@lid'], owner), false);
+  assert.equal(hasMatchingPhoneNumber(['99999999999@s.whatsapp.net'], owner), false);
 });
 
 test('isGroupRulesCommand: د قوانینو امر په پښتو/عربي لیکدود او نښو کې پېژني', () => {
@@ -297,9 +314,9 @@ test('تایید شوی اډمین د چټک او تکراري سپم له اخ�
   );
   assert.match(indexSrc, /async function resolveGroupSender\s*\(/,
     'اډمین باید د WhatsApp د ګروپ metadata له مخې وپېژندل شي');
-  assert.match(indexSrc, /if\s*\(!isSenderGroupAdmin\)\s*\{\s*const burst = recordGroupMessage/,
+  assert.match(indexSrc, /if\s*\(!isSenderGroupAdmin && !isFullModerationExempt\)\s*\{\s*const burst = recordGroupMessage/,
     'د چټک سپم حد باید یوازې پر عادي غړو تطبیق شي');
-  assert.match(indexSrc, /if\s*\(!isSenderGroupAdmin\)\s*\{\s*const repeated = recordRepeatedMessage/,
+  assert.match(indexSrc, /if\s*\(!isSenderGroupAdmin && !isFullModerationExempt\)\s*\{\s*const repeated = recordRepeatedMessage/,
     'د تکراري سپم حذف باید یوازې پر عادي غړو تطبیق شي');
 });
 
@@ -328,7 +345,7 @@ test('د قوانینو امر د سپم او نورو moderation فلټرونو
   );
   const rulesCommandPosition = indexSrc.indexOf('if (isGroupRulesCommand(text))');
   const burstCheckPosition = indexSrc.indexOf('const burst = recordGroupMessage');
-  const badWordCheckPosition = indexSrc.indexOf('if (containsBadWord(text))');
+  const badWordCheckPosition = indexSrc.indexOf('containsBadWord(text)', rulesCommandPosition);
   const linkCheckPosition = indexSrc.indexOf('LINK_PATTERN.test(text)', rulesCommandPosition);
 
   assert.ok(rulesCommandPosition >= 0, 'د قوانینو امر باید موجود وي');
@@ -336,6 +353,23 @@ test('د قوانینو امر د سپم او نورو moderation فلټرونو
   assert.ok(rulesCommandPosition < badWordCheckPosition, 'د قوانینو امر باید د کنځلو فلټر تر مخه وي');
   assert.ok(rulesCommandPosition < linkCheckPosition, 'د قوانینو امر باید د لینک فلټر تر مخه وي');
   assert.match(indexSrc, /isGroupRulesCommand\(text\)/);
+});
+
+test('0707285093 د ګروپ له ټولو اتومات moderation څخه معاف دی', () => {
+  const indexSrc = fs.readFileSync(
+    path.join(__dirname, '..', 'index.js'),
+    'utf8'
+  );
+  assert.match(indexSrc, /const FULL_MODERATION_EXEMPT_PHONE_NUMBER = '0707285093'/);
+  assert.match(indexSrc, /function isFullModerationExemptSender\(senderIdentifiers\)/);
+  assert.match(indexSrc, /!isFullModerationExempt\s*\?\s*getTemporaryMuteStatus/);
+  assert.match(indexSrc, /if \(statusShare && !isFullModerationExempt\)/);
+  assert.match(indexSrc, /if \(channelForward && !isFullModerationExempt\)/);
+  assert.match(indexSrc, /if \(!isSenderGroupAdmin && !isFullModerationExempt\) \{\s*const burst = recordGroupMessage/);
+  assert.match(indexSrc, /if \(!isFullModerationExempt && containsBadWord\(text\)\)/);
+  assert.match(indexSrc, /ENABLE_LINK_MODERATION &&\s*!isFullModerationExempt &&\s*LINK_PATTERN\.test\(text\)/);
+  assert.match(indexSrc, /if \(!isSenderGroupAdmin && !isFullModerationExempt\) \{\s*const repeated = recordRepeatedMessage/);
+  assert.match(indexSrc, /if \(historySenderIsExempt\) continue/);
 });
 
 test('د لینکونو اتومات بندیز فعال دی، خو لایکونه/غبرګونونه اخطار نه اخلي', () => {
