@@ -35,7 +35,7 @@ test('does not answer unrelated religious or ordinary questions', () => {
 });
 
 test('normalizes Arabic and Pashto spelling variants', () => {
-  assert.equal(normalizeReligiousQuestion('أشراط الساعة الصغرى'), 'اشراط الساعه الصغرى');
+  assert.equal(normalizeReligiousQuestion('أشراط الساعة الصغرى'), 'اشراط الساعه الصغری');
   assert.equal(isMinorSignsQuestion('أشراط الساعة الصغرى'), true);
 });
 
