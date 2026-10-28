@@ -24,7 +24,7 @@ test('recognizes a scheduled slot only within its short grace window', () => {
   assert.equal(getDueSlot(new Date('2026-10-27T03:34:00.000Z')).key, '08:00');
   assert.equal(getDueSlot(new Date('2026-10-27T03:39:00.000Z')).key, '08:00');
   assert.equal(getDueSlot(new Date('2026-10-27T03:40:00.000Z')), null);
-  assert.equal(getDueSlot(new Date('2026-10-27T05:00:00.000Z')).key, '09:00' === '08:00' ? '08:00' : null);
+  assert.equal(getDueSlot(new Date('2026-10-27T05:00:00.000Z')), null);
 });
 
 test('daily topic rotation is deterministic and covers configured subjects', () => {
