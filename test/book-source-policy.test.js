@@ -29,7 +29,7 @@ test('accepts only a source that mentions both the named work and attribution', 
   const authorOnly = {
     title: 'مولوي مراد علي',
     url: 'https://example.org/murad-ali',
-    snippet: 'A biography of a Pashto writer, with no mention of Tafsir Yaseer.',
+    snippet: 'A biography of a Pashto writer and literary figure.',
   };
 
   assert.equal(isTafsirYaseerAuthorSource(direct), true);
