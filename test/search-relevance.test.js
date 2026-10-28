@@ -174,3 +174,12 @@ test('returns no generic religious link when the specific subject is absent', ()
   const results = [{ title: 'په اسلام کي د شورا ارزښت', url: 'https://ps.wikipedia.org/wiki/شورا', snippet: 'د اسلام د شورا او مشورې ارزښت.' }];
   assert.deepEqual(rankRelevantSearchResults('د ږیرې خریل په اسلام کې څه حکم دی؟', results), []);
 });
+
+test('matches Pashto book-title aliases and rejects generic Quran pages for Tafsir Yaseer', () => {
+  const results = [
+    { title: 'Quran', url: 'https://en.wikipedia.org/wiki/Quran', snippet: 'The Quran is the central religious text of Islam.' },
+    { title: 'Tafseer Yaseer Pashto author Maulvi Murad Ali', url: 'https://pashtonlegacylibrarykandahar.com/books1/3974', snippet: 'Tafseer Yaseer is a Pashto commentary and its author is listed as Maulvi Murad Ali.' },
+  ];
+  const filtered = rankRelevantSearchResults('تفسیر یسیر پښتو کې چا لیکلی؟', results);
+  assert.deepEqual(filtered.map(item => item.title), ['Tafseer Yaseer Pashto author Maulvi Murad Ali']);
+});

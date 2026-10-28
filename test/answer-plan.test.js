@@ -87,3 +87,10 @@ test('generates subject-specific English research hints for beard questions', ()
   assert.ok(hints.some(query => /beard/i.test(query)));
   assert.ok(hints.some(query => /Bukhari|Muslim|beards/i.test(query)));
 });
+
+test('uses book-specific source queries for the Pashto Tafsir Yaseer authorship question', () => {
+  const hints = getResearchQueryHints('تفسیر یسیر پښتو کې چا لیکلی؟');
+  assert.ok(hints.some(query => /Tafseer Yaseer.*author/i.test(query)));
+  assert.ok(hints.some(query => /تفسیر یسیر.*مراد علي/i.test(query)));
+  assert.ok(hints.every(query => !/Quran verses translation tafsir/i.test(query)));
+});
