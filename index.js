@@ -24,7 +24,7 @@ const {
   parseDuckDuckGoResults,
 } = require('./lib/web-search');
 const { isCryptoEducationQuestion } = require('./lib/crypto-question');
-const { filterTrustedReligiousSources, hasTrustedReligiousReferenceText, requiresAuthoritativeReligiousSource, isQuranRukuCountQuestion, isQuranLongestWordQuestion, asksForReligiousReferences } = require('./lib/religious-source-policy');
+const { filterTrustedReligiousSources, hasTrustedReligiousReferenceText, requiresAuthoritativeReligiousSource, isQuranRukuCountQuestion, asksForReligiousReferences } = require('./lib/religious-source-policy');
 const { buildVerifiedQuranLongestWordAnswer } = require('./lib/quran-text-policy');
 const { startAutoPublisher, getAutoPublisherStatus } = require('./lib/auto-publisher');
 
