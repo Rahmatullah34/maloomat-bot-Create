@@ -23,7 +23,7 @@ const {
   parseDuckDuckGoResults,
 } = require('./lib/web-search');
 const { isCryptoEducationQuestion } = require('./lib/crypto-question');
-const { filterTrustedReligiousSources, hasTrustedReligiousReferenceText } = require('./lib/religious-source-policy');
+const { filterTrustedReligiousSources, hasTrustedReligiousReferenceText, requiresAuthoritativeReligiousSource, asksForReligiousReferences } = require('./lib/religious-source-policy');
 const { startAutoPublisher, getAutoPublisherStatus } = require('./lib/auto-publisher');
 
 // د نظم ساتنې خالصې کړنې او حالت له جلا ماډول اخیستل کیږي
@@ -478,7 +478,7 @@ async function searchDuckDuckGo(query) {
           'User-Agent': 'Mozilla/5.0 (compatible; MaloomatBot/1.0; informational search)',
           'Accept': 'text/html,application/xhtml+xml',
         },
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(5000),
       });
       if (!response.ok) {
         console.warn('⚠️ د DuckDuckGo لټون HTTP خطا ورکړه:', response.status, response.statusText || '');
@@ -495,6 +495,7 @@ async function searchDuckDuckGo(query) {
       );
     } catch (err) {
       console.warn('⚠️ د ویب لټون یوه هڅه ناکامه شوه:', err?.message || err);
+      if (err?.name === 'TimeoutError' || err?.name === 'AbortError' || /timeout|aborted/i.test(String(err?.message || ''))) break;
     }
   }
   return [];
@@ -949,9 +950,13 @@ async function summarizeSourcesInPashto(question, results, localAnswer = '') {
   const evidenceResults = answerPlan.category === 'religion'
     ? filterTrustedReligiousSources(suppliedResults, question)
     : suppliedResults;
-  // د دیني ادعاوو لپاره له باوري سرچینې پرته د AI د حافظې پر بنسټ ځواب نه جوړېږي.
-  if (answerPlan.category === 'religion' && evidenceResults.length === 0) {
-    console.warn('ℹ️ د دیني پوښتنې لپاره باوري او اړونده سرچینه نشته؛ بې‌سرچینې AI ځواب نه جوړېږي.');
+  const noReligiousEvidence = answerPlan.category === 'religion' && evidenceResults.length === 0;
+  const requiresReligiousEvidence = answerPlan.category === 'religion' &&
+    (requiresAuthoritativeReligiousSource(question) || asksForReligiousReferences(question));
+
+  // دقیق آیت/حدیث، فتوا او هر هغه ځواب چې کارونکي یې حواله غواړي، له واقعي ماخذ پرته نه اټکل کېږي.
+  if (noReligiousEvidence && requiresReligiousEvidence) {
+    console.warn('ℹ️ د دیني پوښتنې لپاره باوري سرچینه نشته او پوښتنه دقیق ماخذ غواړي؛ اټکلي ځواب نه جوړېږي.');
     return null;
   }
   const apiKey = readOpenRouterApiKey();
@@ -985,7 +990,9 @@ async function summarizeSourcesInPashto(question, results, localAnswer = '') {
           'که ګټور وي، ۳–۷ مهم ټکي یا لنډ ګامونه وکاروه، خو هر ځواب ته په زور لېست، سرلیک، لنډه پایله یا د تایید یادونه مه ورزیاتوه. بې‌ځایه تکرار مه کوه او ځواب یوازې د اوږدوالي لپاره مه غځوه؛ د حقایقو دقت له اوږدوالي مهم دی.',
           'که کارونکی «ولې»، «څنګه» یا «چا جوړ کړی» پوښتنه وکړي، یوازې نوم یا یوه جمله مه لیکه؛ د امکان تر حده دلیل او اړوند شالید هم تشریح کړه، خو نامعلوم جزئیات مه جوړوه.',
           'د پیغام نیت وپېژنه: مستقیمه پوښتنه ځواب کړه؛ عادي بیان، سلام، ټوکه، د بل چا نقل شوې وینا یا عمومي تبصره په خپله پوښتنه مه ګرځوه او د داسې پیغام لپاره بې‌غوښتنې ځواب مه جوړوه.',
-          'په دیني او تاریخي موضوعاتو کې حدیث، تاریخي روایت، مشهور نقل او ثابت حقیقت سره جلا کړه. د نوم، نېټې یا پېښې جزئیات یوازې هغه وخت قطعي بیان کړه چې په ورکړل شوې باوري سرچینه کې ملاتړ ولري؛ که سرچینه یې نه ثابتوي، په صراحت ووایه چې مشخص نوم یا جزئیات نه دي ثابت، او اټکل مه کوه.',
+          noReligiousEvidence
+            ? 'د دې عمومي دیني پوښتنې لپاره آنلاین باوري سرچینه ونه موندل شوه. یوازې عمومي او پراخه پېژندل شوي معلومات په محتاط ډول تشریح کړه؛ دقیق آیت، حدیث، د حدیث شمېره/سند/درجه، فتوا یا ځانګړی شرعي حکم مه اټکلوه. هېڅ جعلي کتاب، حواله، اقتباس یا URL مه جوړوه؛ په پای کې ووایه چې آنلاین سرچینه دې نه ده تایید کړې.'
+            : 'په دیني او تاریخي موضوعاتو کې حدیث، تاریخي روایت، مشهور نقل او ثابت حقیقت سره جلا کړه. د نوم، نېټې یا پېښې جزئیات یوازې هغه وخت قطعي بیان کړه چې په ورکړل شوې باوري سرچینه کې ملاتړ ولري؛ که سرچینه یې نه ثابتوي، په صراحت ووایه چې مشخص نوم یا جزئیات نه دي ثابت، او اټکل مه کوه.',
           'په ځواب کې هېڅ URL، ویب لینک، [سرچینه 1] یا د سرچینو جعلي لېست مه لیکه؛ پروګرام به یوازې واقعي ترلاسه شوي لینکونه جلا ورزیات کړي.',
           'که سرچینې نامربوطې، کمزورې یا سره متضادې وي، دا محدودیت په پښتو بیان کړه؛ د څو سرچینو دعوه مه کوه که اړوندې څو سرچینې نه وي.',
           'هیڅکله مه وایه چې د ویب پاڼې بشپړ متن دې لوستی که یوازې لنډ اقتباس درکړل شوی وي.',
@@ -1204,9 +1211,14 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
     localAnswer && asksAfghanistanContext && !localAnswerCoversContext
   );
   let usableLocalAnswer = localContextMismatch ? '' : localAnswer;
+  const hasVerifiedLocalReligiousSource = Boolean(
+    usableLocalAnswer && hasTrustedReligiousReferenceText(usableLocalAnswer, question)
+  );
+  const requiresLocalReligiousEvidence = answerPlan.category === 'religion' &&
+    (requiresAuthoritativeReligiousSource(question) || asksForReligiousReferences(question));
   if (answerPlan.category === 'religion' && usableLocalAnswer &&
-      !hasTrustedReligiousReferenceText(usableLocalAnswer, question)) {
-    console.warn('ℹ️ د دیني موضوع لپاره محلي ځواب معتبره سرچینه نه لري؛ دا ځواب نه کارول کېږي.');
+      !hasVerifiedLocalReligiousSource && requiresLocalReligiousEvidence) {
+    console.warn('ℹ️ د دیني پوښتنې لپاره محلي ځواب معتبر ماخذ نه لري؛ د دقیقې حوالې غوښتنه بې‌سرچینې نه ځوابېږي.');
     usableLocalAnswer = '';
   }
 
@@ -1217,7 +1229,10 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
     !requestsInternetSearch(question) &&
     !isTimeSensitiveQuestion(question)
   ) {
-    await safeSend(socket, groupJid, { text: usableLocalAnswer });
+    const localMessage = answerPlan.category === 'religion' && !hasVerifiedLocalReligiousSource
+      ? usableLocalAnswer + '\n\nℹ️ دا عمومي ځواب د آنلاین سرچینې له لارې په دې ځل نه دی تایید شوی؛ دقیقې دیني حوالې پکې نه دي اټکل شوې.'
+      : usableLocalAnswer;
+    await safeSend(socket, groupJid, { text: localMessage });
     return true;
   }
 
