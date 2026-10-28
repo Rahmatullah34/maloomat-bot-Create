@@ -739,8 +739,8 @@ const AI_SUMMARY_CACHE_TTL_MS = 5 * 60 * 1000;
 const OPENROUTER_MODEL = String(process.env.OPENROUTER_MODEL || 'openai/gpt-6-luna').trim();
 const configuredOutputTokens = Number(process.env.AI_MAX_OUTPUT_TOKENS);
 const AI_MAX_OUTPUT_TOKENS = Number.isFinite(configuredOutputTokens) && configuredOutputTokens >= 500
-  ? Math.min(2000, Math.floor(configuredOutputTokens))
-  : 1400;
+  ? Math.min(3000, Math.floor(configuredOutputTokens))
+  : 2000;
 
 // API key له Environment Variable څخه، او که هغه نه وي، د container له دې فایل څخه لوستل کېږي.
 // د کیلي ارزښت هېڅکله لاګونو یا عام پیغامونو ته نه لیکل کېږي.
@@ -881,7 +881,7 @@ async function summarizeSourcesInPashto(question, results, localAnswer = '') {
         console.warn('ℹ️ د AI ځواب د ټوکن حد ته ورسېد؛ د بشپړولو یوه هڅه کېږي.');
         const continuationPayload = {
           ...payload,
-          max_tokens: Math.min(1600, Math.max(800, AI_MAX_OUTPUT_TOKENS)),
+          max_tokens: Math.min(2400, Math.max(1000, AI_MAX_OUTPUT_TOKENS)),
           messages: [
             ...payload.messages,
             { role: 'assistant', content: answer },
@@ -1116,7 +1116,7 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
     ? '📚 دا ځل د پوښتنې لپاره د تایید وړ معلومات نه شول ترلاسه کېدای؛ د انټرنېټ لټون یا د AI ځواب جوړول ناکام شول. لږ وروسته یې بیا وپوښتئ، یا د موضوع رسمي/معتبر لینک راولېږئ. د تخنیکي تشخیص لپاره د SillyDev لاګونه وګورئ.'
     : '📚 د پوښتنې لپاره باوري سرچینه پیدا نه شوه او د AI کیلي هم تنظیم شوې نه ده. د پروژې مدیر دې په SillyDev کې د OPENROUTER_API_KEY شتون او د /health په راپور کې aiSummarization وګوري.';
   await safeSend(socket, groupJid, {
-    text: fallbackText + '\n\n⚠️ تر تایید شوې سرچینې پرته د ناسم ځواب له جوړولو ډډه کوم. پوښتنه بیا هڅه کړئ یا یوه باوري سرچینه ورسره شریک کړئ.'
+    text: isReligiousQuestion ? fallbackText : fallbackText + '\n\n⚠️ تر تایید شوې سرچینې پرته د ناسم ځواب له جوړولو ډډه کوم. پوښتنه بیا هڅه کړئ یا یوه باوري سرچینه ورسره شریک کړئ.'
   });
   return true;
 }
