@@ -775,7 +775,9 @@ async function searchInternet(query) {
   if (cached && now - cached.time < INTERNET_SEARCH_CACHE_TTL_MS) return cached.results;
 
   const allSearchQueries = buildSearchQueries(query);
-  const isReligiousSearch = buildAnswerPlan(query).category === 'religion';
+  const searchAnswerPlan = buildAnswerPlan(query);
+  const isReligiousSearch = searchAnswerPlan.category === 'religion';
+  const requiresSourceBackedFactualResults = requiresFactualSourceEvidence(query, searchAnswerPlan.category);
   const containsPashto = /[\u0600-\u06FF]/u.test(query);
   // Pashto religious questions need their concise English topic hints first;
   // starting with the raw Pashto sentence is rarely useful on English reference sites.
@@ -830,9 +832,16 @@ async function searchInternet(query) {
           relevantRound.push(item);
         }
       }
-      if (filterTrustedReligiousSources(relevantRound, query).length > 0) break;
-    } else if (rankRelevantSearchResults(query, deduplicatedRound, 10).length > 0) {
-      break;
+      const eligibleRound = requiresSourceBackedFactualResults
+        ? filterAuthoritativeFactualSources(relevantRound, query, searchAnswerPlan.category)
+        : filterTrustedReligiousSources(relevantRound, query);
+      if (eligibleRound.length > 0) break;
+    } else {
+      const relevantRound = rankRelevantSearchResults(query, deduplicatedRound, 10);
+      const eligibleRound = requiresSourceBackedFactualResults
+        ? filterAuthoritativeFactualSources(relevantRound, query, searchAnswerPlan.category)
+        : relevantRound;
+      if (eligibleRound.length > 0) break;
     }
   }
 
@@ -999,13 +1008,13 @@ async function summarizeSourcesInPashto(question, results, localAnswer = '') {
     ? filterTafsirYaseerAuthorSources(suppliedResults)
     : suppliedResults;
   const factualEvidenceRequired = requiresFactualSourceEvidence(question, answerPlan.category);
-  const evidenceResults = answerPlan.category === 'religion'
-    ? filterTrustedReligiousSources(topicScopedResults, question)
-    : factualEvidenceRequired
-      ? filterAuthoritativeFactualSources(topicScopedResults, question, answerPlan.category)
+  const evidenceResults = factualEvidenceRequired
+    ? filterAuthoritativeFactualSources(topicScopedResults, question, answerPlan.category)
+    : answerPlan.category === 'religion'
+      ? filterTrustedReligiousSources(topicScopedResults, question)
       : topicScopedResults;
   const noReligiousEvidence = answerPlan.category === 'religion' && evidenceResults.length === 0;
-  if (factualEvidenceRequired && answerPlan.category !== 'religion' && evidenceResults.length === 0) {
+  if (factualEvidenceRequired && evidenceResults.length === 0) {
     console.warn('ℹ️ د تاریخي، سیاسي یا علمي پوښتنې لپاره باوري سرچینه نشته؛ بې‌سرچینې ځواب نه جوړېږي.');
     return null;
   }
@@ -1041,7 +1050,7 @@ async function summarizeSourcesInPashto(question, results, localAnswer = '') {
         role: 'system',
         content: [
           answerPlan.instructions,
-          ...(factualEvidenceRequired && answerPlan.category !== 'religion'
+          ...(factualEvidenceRequired
             ? ['د دې تاریخي، سیاسي یا علمي ځواب لپاره یوازې د ورکړل شوو معتبره سرچینو پر شواهدو تکیه وکړه. ثابت حقایق له تحلیل، نظر او احتمالي تعبیر څخه جلا کړه؛ د یوې ډلې یا دولت موخې بې له شواهدو مه اټکلوه. که سرچینې د ادعا ملاتړ نه کوي، ادعا مه وړاندې کوه او جعلي لینک یا حواله مه جوړوه.']
             : []),
           'ته د پښتو ژبې یو دقیق څېړونکی او لیکوال یې.',
@@ -1379,7 +1388,7 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
 
   const aiKeyConfigured = Boolean(readOpenRouterApiKey());
   const isReligiousQuestion = answerPlan.category === 'religion';
-  const fallbackText = requiresFactualEvidence && !isReligiousQuestion
+  const fallbackText = requiresFactualEvidence
     ? '📚 دا ځل د دې تاریخي، سیاسي یا علمي پوښتنې لپاره کافي معتبرې سرچینې ونه موندل شوې؛ نو بې‌سنده ادعا د تایید شوي حقیقت په توګه نه وړاندې کوم. یوه رسمي، پوهنتوني، علمي یا باوري خبري سرچینه شریکه کړئ، یا وروسته بیا هڅه وکړئ.'
     : isTafsirYaseerAuthorshipQuestion(question)
     ? '📚 د «تفسیر یسیر» د لیکوال نوم مې دا ځل په داسې باوري سرچینه کې ونه شو تاییدولای چې همدا کتاب او لیکوال په څرګنده یاد کړي؛ نو د ناسم نوم له اټکل کولو ډډه کوم.'
