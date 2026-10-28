@@ -9,6 +9,7 @@ const {
   hasTrustedReligiousReferenceText,
   requiresAuthoritativeReligiousSource,
   isQuranRukuCountQuestion,
+  isQuranLongestWordQuestion,
   asksForReligiousReferences,
 } = require('../lib/religious-source-policy');
 
@@ -159,4 +160,35 @@ test('distinguishes explicit source requests from general religious questions', 
   assert.equal(asksForReligiousReferences('د قیامت وړې نښې مفصل او د کتابونو له حوالو سره راکړه؟'), true);
   assert.equal(asksForReligiousReferences('د اسلام معنا څه ده؟'), false);
   assert.equal(asksForReligiousReferences('Give me the source references for this claim'), true);
+});
+
+test('requires authoritative sources for Quran longest-word questions and rejects generic Wikipedia pages', () => {
+  const question = 'په قرآن کریم کې تر ټولو اوږده کلمه کومه ده؟';
+  const quranVerse = {
+    title: 'Surah Al-Hijr 15:22 — Quran.com',
+    url: 'https://quran.com/ar/al-hijr/22/translations/224',
+    snippet: 'Quran text for Surah Al-Hijr 15:22 includes the exact Mushaf wording فَأَسۡقَيۡنَٰكُمُوهُ in its verse context.',
+  };
+  const islamweb = {
+    title: 'Longest word in the Quran — IslamWeb',
+    url: 'https://islamweb.net/en/printfatwa.php?id=81317',
+    snippet: 'IslamWeb identifies فأسقيناكموه as the longest word in the Quran and locates it in Surah 15, verse 22.',
+  };
+  const wiki = {
+    title: 'Quran',
+    url: 'https://en.wikipedia.org/wiki/Quran',
+    snippet: 'The Quran is the central religious text of Islam.',
+  };
+
+  assert.equal(isQuranLongestWordQuestion(question), true);
+  assert.equal(isQuranLongestWordQuestion('What is the longest word in the Quran?'), true);
+  assert.equal(isQuranLongestWordQuestion('په قرآن کې څو رکوع ګانې دي؟'), false);
+  assert.equal(requiresAuthoritativeReligiousSource(question), true);
+  assert.equal(isTrustedReligiousSource(quranVerse, question), true);
+  assert.equal(isTrustedReligiousSource(islamweb, question), true);
+  assert.equal(isTrustedReligiousSource(wiki, question), false);
+  assert.deepEqual(filterTrustedReligiousSources([wiki, quranVerse, islamweb], question).map(item => item.title), [
+    'Surah Al-Hijr 15:22 — Quran.com',
+    'Longest word in the Quran — IslamWeb',
+  ]);
 });
