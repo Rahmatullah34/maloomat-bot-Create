@@ -24,6 +24,7 @@ test('does not accept lookalike or unrelated domains', () => {
   assert.equal(isTrustedReligiousDomain('javascript:alert(1)'), false);
   assert.equal(isTrustedReligiousDomain('not a URL'), false);
   assert.equal(isTrustedReligiousDomain('https://random-blog.example/religion'), false);
+  assert.equal(isTrustedReligiousDomain('http://sunnah.com/bukhari:8'), false);
 });
 
 test('requires a title and actual excerpt text, not only a trusted URL', () => {
