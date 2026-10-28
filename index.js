@@ -1944,8 +1944,8 @@ async function startBot() {
               console.log('🔐 د اډمین غوښتنه؛ د ګروپ JID: ' + groupJid);
               const privateReply = await safeSend(socket, participantJid, {
                 text:
-                  '📌 د دې WhatsApp ګروپ JID:\\n' + groupJid + '\\n\\n' +
-                  'په SillyDev کې د AUTO_POST_GROUP_JID د ارزښت په توګه همدا دقیق ID وکاروه.\\n' +
+                  '📌 د دې WhatsApp ګروپ JID:\n' + groupJid + '\n\n' +
+                  'په SillyDev کې د AUTO_POST_GROUP_JID د ارزښت په توګه همدا دقیق ID وکاروه.\n' +
                   'یادونه: اتومات خپرول تر AUTO_POST_ENABLED=true پورې بند پاتې کېږي.',
               });
               await safeSend(socket, groupJid, {
