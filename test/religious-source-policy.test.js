@@ -53,6 +53,37 @@ test('accepts an offline religious answer only when it includes an approved refe
   assert.equal(hasTrustedReligiousReferenceText('د سرچینې لینک نشته'), false);
 });
 
+test('allows encyclopedic references for general religious background questions', () => {
+  const wiki = {
+    title: 'Islam',
+    url: 'https://en.wikipedia.org/wiki/Islam',
+    snippet: 'Islam is an Abrahamic monotheistic religion whose central text is the Quran.',
+  };
+  assert.equal(isTrustedReligiousSource(wiki, 'What is Islam?'), true);
+  assert.deepEqual(filterTrustedReligiousSources([wiki], 'What is Islam?').map(item => item.title), ['Islam']);
+});
+
+test('requires authoritative Islamic sources for hadith, citations, and rulings', () => {
+  const wiki = {
+    title: 'Signs of the Hour',
+    url: 'https://en.wikipedia.org/wiki/Signs_of_the_hour',
+    snippet: 'An explanatory overview that mentions several traditions and beliefs about the end times.',
+  };
+  const hadith = {
+    title: 'Sahih al-Bukhari 1036',
+    url: 'https://sunnah.com/bukhari:1036',
+    snippet: 'A source text containing the narrated wording and the identified hadith reference.',
+  };
+
+  assert.equal(isTrustedReligiousSource(wiki, 'د حدیث کره حواله او شمېره راکړه'), false);
+  assert.deepEqual(
+    filterTrustedReligiousSources([wiki, hadith], 'د حدیث کره حواله او شمېره راکړه').map(item => item.title),
+    ['Sahih al-Bukhari 1036'],
+  );
+  assert.equal(hasTrustedReligiousReferenceText('https://en.wikipedia.org/wiki/Signs_of_the_hour', 'کتابونو حوالې راکړه'), false);
+  assert.equal(hasTrustedReligiousReferenceText('https://sunnah.com/bukhari:1036', 'کتابونو حوالې راکړه'), true);
+});
+
 test('filters untrusted blogs and empty snippets from religious search results', () => {
   const results = [
     {
