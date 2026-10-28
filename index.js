@@ -136,6 +136,8 @@ app.get('/health', (_req, res) => {
       lastDisconnectAt: whatsappLastDisconnectAt,
       reconnectScheduled: Boolean(reconnectTimer),
       authSessionSaved: fs.existsSync(path.join(AUTH_DIR, 'creds.json')),
+      sessionResetRequested: /^(1|true|yes)$/i.test(String(process.env.RESET_WHATSAPP_SESSION || '').trim()),
+      sessionResetMarkerPresent: fs.existsSync(RESET_MARKER),
     },
     allowedGroups: allowedGroupsCount(),
     historyCleanup: isHistoryCleanupEnabled(),
@@ -2043,7 +2045,7 @@ async function startBot() {
           if (!hasLink && !channelForward && !statusShare) continue;
 
           if (attempted >= maxDeletesPerSync) {
-            console.log('⚠️ د پخوانیو لینکونو پاکول په دې همغږي کې ۱۰۰ پیغامونو ته محدود شول؛ د موبایل/WhatsApp د تاریخ او حذف محدودیتونه هم شته.');
+            console.log('⚠️ د پخواني Status/چینل پاکول په دې همغږي کې ۱۰۰ پیغامونو ته محدود شول؛ د WhatsApp د تاریخ او حذف محدودیتونه هم شته.');
             break;
           }
 
@@ -2070,7 +2072,7 @@ async function startBot() {
         );
       } catch (err) {
         console.error(
-          '❌ د پخوانیو لینکونو د تاریخ پاکول ناکام شول:',
+          '❌ د پخواني Status/چینل د تاریخ پاکول ناکام شول:',
           err?.message || err
         );
       }
