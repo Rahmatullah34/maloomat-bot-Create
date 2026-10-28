@@ -19,6 +19,7 @@ const {
   buildSearchQueries,
   getCuratedFallbackSources,
   getSearchPageHint,
+  isAhmadShahQuestion,
   parseDuckDuckGoResults,
 } = require('./lib/web-search');
 const { isCryptoEducationQuestion } = require('./lib/crypto-question');
@@ -660,6 +661,26 @@ async function searchInternet(query) {
   // یوازې اړوندې سرچینې AI ته او د WhatsApp وروستي پیغام ته لېږل کېږي.
   let unique = rankRelevantSearchResults(query, deduplicated, 10);
   let usingCuratedFallback = false;
+
+  // د احمدشاه بابا په تاریخي پوښتنو کې باوري ثابتې حوالې له لټون سره ضمیمه کړه؛
+  // نامربوطې پایلې د rankRelevantSearchResults له خوا رد کېږي.
+  const curatedHistoricalSources = isAhmadShahQuestion(query)
+    ? getCuratedFallbackSources(query).filter(item =>
+        String(item.provider || '').startsWith('Curated historical reference')
+      )
+    : [];
+  if (curatedHistoricalSources.length) {
+    const existingUrls = new Set(unique.map(item => canonicalResultUrl(item.url)));
+    const supplementalSources = curatedHistoricalSources.filter(item => {
+      const key = canonicalResultUrl(item.url);
+      if (!key || existingUrls.has(key)) return false;
+      existingUrls.add(key);
+      return true;
+    });
+    unique = [...supplementalSources, ...unique].slice(0, 10);
+    usingCuratedFallback = true;
+    console.log('📚 د احمدشاه بابا د تاریخي پوښتنې لپاره باوري حوالې ورزیاتې شوې.');
+  }
 
   // کله چې ویب لټون هېڅ اړونده نتیجه ورنه کړي، یوازې د پوښتنو لپاره یو تایید شوی
   // رسمي Meta لینک ورکوو چې مشخصه، تازه او عامه لارښوونه لري؛ نور موضوعات نه اټکل کېږي.
