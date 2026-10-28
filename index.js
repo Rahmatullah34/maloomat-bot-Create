@@ -23,6 +23,7 @@ const {
   parseDuckDuckGoResults,
 } = require('./lib/web-search');
 const { isCryptoEducationQuestion } = require('./lib/crypto-question');
+const { answerReligiousKnowledge } = require('./lib/religious-knowledge');
 const { startAutoPublisher, getAutoPublisherStatus } = require('./lib/auto-publisher');
 
 // د نظم ساتنې خالصې کړنې او حالت له جلا ماډول اخیستل کیږي
@@ -994,6 +995,14 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
   const mathAnswer = answerSimpleMathQuestion(question);
   if (mathAnswer) {
     await safeSend(socket, groupJid, { text: mathAnswer });
+    return true;
+  }
+
+  // د قیامت د وړو نښو په څېر د باوري حدیثي سرچینو لرونکې پوښتنې له ویب لټون څخه خپلواک ځوابېږي.
+  // دا د لټون د ناکامۍ پر مهال د بې‌سرچینې او ځان‌متناقض ځواب مخه نیسي.
+  const religiousAnswer = answerReligiousKnowledge(question);
+  if (religiousAnswer) {
+    await safeSend(socket, groupJid, { text: religiousAnswer });
     return true;
   }
 
