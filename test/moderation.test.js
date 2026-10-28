@@ -20,6 +20,7 @@ const {
   LINK_PATTERN,
   isForwardedChannelMessage,
   isWhatsAppStatusShare,
+  isReactionMessage,
   extractText,
   looksLikeQuestion,
   setTemporaryMute,
@@ -115,6 +116,22 @@ test('isWhatsAppStatusShare: اصلي Status نیسي، نقل شوې برخه �
     }),
     false
   );
+});
+
+test('isReactionMessage: لایکونه اخطار نه اخلي او نقل شوې محتوا غلط نه پېژندل کېږي', () => {
+  assert.equal(
+    isReactionMessage({ reactionMessage: { text: '❤️', key: { remoteJid: 'group@g.us', id: 'post-1' } } }),
+    true
+  );
+  assert.equal(
+    isReactionMessage({ ephemeralMessage: { message: { reactionMessage: { text: '👍' } } } }),
+    true
+  );
+  assert.equal(
+    isReactionMessage({ conversation: 'مننه، لایک مې درکړ', contextInfo: { quotedMessage: { reactionMessage: { text: '❤️' } } } }),
+    false
+  );
+  assert.equal(isReactionMessage({ conversation: 'عادي پیغام' }), false);
 });
 
 test('looksLikeQuestion: د پای پوښتنیزه نښه لازمي ده', () => {
@@ -292,18 +309,20 @@ test('د پوښتنو ځوابونه، انټرنېټي لټون او AI لنډ�
 });
 
 
-test('د لینکونو اتومات اخطار بند دی، خو د ګروپ نور کنټرولونه فعال پاتې دي', () => {
+test('د لینکونو اتومات بندیز فعال دی، خو لایکونه/غبرګونونه اخطار نه اخلي', () => {
   const indexSrc = fs.readFileSync(
     path.join(__dirname, '..', 'index.js'),
     'utf8'
   );
 
-  assert.match(indexSrc, /const ENABLE_LINK_MODERATION = false/);
+  assert.match(indexSrc, /const ENABLE_LINK_MODERATION = true/);
   assert.match(indexSrc, /links:\s*ENABLE_LINK_MODERATION/);
   assert.match(indexSrc, /const hasLink = ENABLE_LINK_MODERATION && LINK_PATTERN\.test\(text\)/);
   assert.match(indexSrc, /ENABLE_LINK_MODERATION\s*&&\s*LINK_PATTERN\.test\(text\)/);
   assert.match(indexSrc, /containsBadWord\(text\)/);
   assert.match(indexSrc, /recordRepeatedMessage\(groupJid, stableParticipantJid, text\)/);
+  assert.match(indexSrc, /if \(isReactionMessage\(msg\.message\)\)/,
+    'د WhatsApp لایکونه باید د عادي ګروپي نظم او اخطارونو له شمېر څخه وایستل شي');
 });
 
 test('WhatsApp connection settings keep a live socket and expose session diagnostics', () => {
