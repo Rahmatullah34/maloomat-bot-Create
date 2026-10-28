@@ -1854,9 +1854,22 @@ async function startBot() {
               }
 
               if (!isAuthorizedPrivateSender) {
+                const lidMappingAvailable =
+                  typeof socket.signalRepository?.lidMapping?.getPNForLID === 'function';
+                let lidMappingFound = false;
+                if (groupJid.endsWith('@lid') && lidMappingAvailable) {
+                  try {
+                    const mapped = await socket.signalRepository.lidMapping.getPNForLID(groupJid);
+                    lidMappingFound = Boolean(mapped);
+                  } catch (err) {
+                    console.warn('⚠️ د LID نقشې لوستل ناکام شول:', err?.message || err);
+                  }
+                }
                 console.log(
-                  '🔒 شخصي پیغام رد شو؛ د مجازې شمېرې پېژندنه ونه شوه (JID ډول: ' +
-                  (groupJid.endsWith('@lid') ? 'LID' : 'PN') + ').'
+                  '🔒 شخصي پیغام رد شو؛ د مجازې شمېرې پېژندنه ونه شوه؛ ' +
+                  'JID=' + groupJid +
+                  '; د نقشې وسیله=' + (lidMappingAvailable ? 'شته' : 'نه شته') +
+                  '; نقشه موندل شوې=' + (lidMappingFound ? 'هو' : 'نه') + '.'
                 );
                 continue;
               }
