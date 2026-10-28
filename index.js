@@ -23,7 +23,7 @@ const {
   parseDuckDuckGoResults,
 } = require('./lib/web-search');
 const { isCryptoEducationQuestion } = require('./lib/crypto-question');
-const { answerReligiousKnowledge } = require('./lib/religious-knowledge');
+const { filterTrustedReligiousSources, hasTrustedReligiousReferenceText } = require('./lib/religious-source-policy');
 const { startAutoPublisher, getAutoPublisherStatus } = require('./lib/auto-publisher');
 
 // د نظم ساتنې خالصې کړنې او حالت له جلا ماډول اخیستل کیږي
@@ -442,7 +442,7 @@ function answerSimpleMathQuestion(question) {
 function answerCommonPashtoQuestion(question) {
   const value = normalizePashto(String(question || ''));
   if (/اسلام.*(?:بناو|رکن)|(?:بناو|رکن).*اسلام/u.test(value)) {
-    return '📚 اسلام پنځه بناوې لري:\n۱) کلمهٔ شهادت\n۲) لمونځ\n۳) زکات\n۴) د رمضان روژه\n۵) د وس لرونکي مسلمان حج.';
+    return '📚 اسلام پنځه بناوې لري:\n۱) کلمهٔ شهادت\n۲) لمونځ\n۳) زکات\n۴) د رمضان روژه\n۵) د وس لرونکي مسلمان حج.\n\n📖 سرچینه: صحیح مسلم، د جبرائیل علیه السلام حدیث، حدیث ۸a.\nhttps://sunnah.com/muslim:8a';
   }
   return null;
 }
@@ -739,8 +739,8 @@ const AI_SUMMARY_CACHE_TTL_MS = 5 * 60 * 1000;
 const OPENROUTER_MODEL = String(process.env.OPENROUTER_MODEL || 'openai/gpt-6-luna').trim();
 const configuredOutputTokens = Number(process.env.AI_MAX_OUTPUT_TOKENS);
 const AI_MAX_OUTPUT_TOKENS = Number.isFinite(configuredOutputTokens) && configuredOutputTokens >= 500
-  ? Math.min(2000, Math.floor(configuredOutputTokens))
-  : 1400;
+  ? Math.min(3000, Math.floor(configuredOutputTokens))
+  : 2000;
 
 // API key له Environment Variable څخه، او که هغه نه وي، د container له دې فایل څخه لوستل کېږي.
 // د کیلي ارزښت هېڅکله لاګونو یا عام پیغامونو ته نه لیکل کېږي.
@@ -772,18 +772,27 @@ function makeSourcePack(results) {
 async function summarizeSourcesInPashto(question, results, localAnswer = '') {
   // د AI لنډیز تر جلا اجازې پرته هېڅکله API ته غوښتنه نه لېږي.
   if (!ENABLE_AI_SUMMARIZATION || !ENABLE_GROUP_QA) return null;
+  const answerPlan = buildAnswerPlan(question);
+  const suppliedResults = Array.isArray(results) ? results : [];
+  const evidenceResults = answerPlan.category === 'religion'
+    ? filterTrustedReligiousSources(suppliedResults)
+    : suppliedResults;
+  // د دیني ادعاوو لپاره له باوري سرچینې پرته د AI د حافظې پر بنسټ ځواب نه جوړېږي.
+  if (answerPlan.category === 'religion' && evidenceResults.length === 0) {
+    console.warn('ℹ️ د دیني پوښتنې لپاره باوري او اړونده سرچینه نشته؛ بې‌سرچینې AI ځواب نه جوړېږي.');
+    return null;
+  }
   const apiKey = readOpenRouterApiKey();
   if (!apiKey) return null;
 
   const cacheKey = normalizePashto(question) + '|' +
-    results.slice(0, 6).map(item => canonicalResultUrl(item.url)).join('|') +
+    evidenceResults.slice(0, 6).map(item => canonicalResultUrl(item.url)).join('|') +
     '|' + String(localAnswer || '').slice(0, 160);
   const now = Date.now();
   const cached = AI_SUMMARY_CACHE.get(cacheKey);
   if (cached && now - cached.time < AI_SUMMARY_CACHE_TTL_MS) return cached.answer;
 
-  const answerPlan = buildAnswerPlan(question);
-  const sources = makeSourcePack(results);
+  const sources = makeSourcePack(evidenceResults);
   const payload = {
     model: OPENROUTER_MODEL,
     temperature: 0.2,
@@ -872,7 +881,7 @@ async function summarizeSourcesInPashto(question, results, localAnswer = '') {
         console.warn('ℹ️ د AI ځواب د ټوکن حد ته ورسېد؛ د بشپړولو یوه هڅه کېږي.');
         const continuationPayload = {
           ...payload,
-          max_tokens: Math.min(1600, Math.max(800, AI_MAX_OUTPUT_TOKENS)),
+          max_tokens: Math.min(2400, Math.max(1000, AI_MAX_OUTPUT_TOKENS)),
           messages: [
             ...payload.messages,
             { role: 'assistant', content: answer },
@@ -998,14 +1007,6 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
     return true;
   }
 
-  // د قیامت د وړو نښو په څېر د باوري حدیثي سرچینو لرونکې پوښتنې له ویب لټون څخه خپلواک ځوابېږي.
-  // دا د لټون د ناکامۍ پر مهال د بې‌سرچینې او ځان‌متناقض ځواب مخه نیسي.
-  const religiousAnswer = answerReligiousKnowledge(question);
-  if (religiousAnswer) {
-    await safeSend(socket, groupJid, { text: religiousAnswer });
-    return true;
-  }
-
   const commonAnswer = answerCommonPashtoQuestion(question);
   if (commonAnswer) {
     await safeSend(socket, groupJid, { text: commonAnswer });
@@ -1030,7 +1031,12 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
   const localContextMismatch = Boolean(
     localAnswer && asksAfghanistanContext && !localAnswerCoversContext
   );
-  const usableLocalAnswer = localContextMismatch ? '' : localAnswer;
+  let usableLocalAnswer = localContextMismatch ? '' : localAnswer;
+  if (answerPlan.category === 'religion' && usableLocalAnswer &&
+      !hasTrustedReligiousReferenceText(usableLocalAnswer)) {
+    console.warn('ℹ️ د دیني موضوع لپاره محلي ځواب معتبره سرچینه نه لري؛ دا ځواب نه کارول کېږي.');
+    usableLocalAnswer = '';
+  }
 
   // د کره او نسبتاً ثابتې محلي موضوع لپاره مستقیم ځواب ورکړه؛ بې‌اړخه ویب پایلې مه ورسره ګډوه.
   if (
@@ -1054,21 +1060,24 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
 
   if (shouldSearchInternet && ENABLE_INTERNET_SEARCH) {
     const webResults = await searchInternet(question);
-    if (webResults.length) {
-      const aiSummary = await summarizeSourcesInPashto(question, webResults, usableLocalAnswer);
+    const answerableResults = answerPlan.category === 'religion'
+      ? filterTrustedReligiousSources(webResults)
+      : webResults;
+    if (answerableResults.length) {
+      const aiSummary = await summarizeSourcesInPashto(question, answerableResults, usableLocalAnswer);
       if (aiSummary) {
-        const answerHeading = webResults.length >= 2
+        const answerHeading = answerableResults.length >= 2
           ? '🤖 *د موندل شوو سرچینو په مرسته د AI ځواب*'
           : '🤖 *د AI ځواب*';
         await safeSend(socket, groupJid, {
-          text: answerHeading + '\n\n' + aiSummary + formatVerifiedSourceLinks(webResults) +
+          text: answerHeading + '\n\n' + aiSummary + formatVerifiedSourceLinks(answerableResults) +
             (usableLocalAnswer
               ? '\n\n📚 *د بوټ له ثبت شوو معلوماتو څخه:* \n' + usableLocalAnswer.slice(0, 1200)
               : ''),
         });
       } else {
         await safeSend(socket, groupJid, {
-          text: formatInternetResults(question, webResults) +
+          text: formatInternetResults(question, answerableResults) +
             '\n\nℹ️ د اتومات مفصل پښتو لنډیز لپاره په سرور کې OPENROUTER_API_KEY تنظیم کړئ. تر هغې پورې بوټ د موندل شوو سرچینو سرلیکونه او لنډ اقتباسونه ښيي.' +
             (usableLocalAnswer
               ? '\n\n📚 *د بوټ له ثبت شوو معلوماتو څخه:* \n' + usableLocalAnswer.slice(0, 900)
@@ -1100,11 +1109,14 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
   if (!looksLikeQuestion(question) && !requestsInternetSearch(question)) return false;
 
   const aiKeyConfigured = Boolean(readOpenRouterApiKey());
-  const fallbackText = aiKeyConfigured
+  const isReligiousQuestion = answerPlan.category === 'religion';
+  const fallbackText = isReligiousQuestion
+    ? '📚 د دې دیني پوښتنې لپاره له باوري، اړوندې دیني یا علمي سرچینې څخه کافي شواهد ترلاسه نه شول. د ناسم آیت، حدیث، روایت، فتوا یا شرعي حکم د جوړولو پر ځای ځواب نه اټکلم. که د قرآن، حدیث، معتبر کتاب یا پېژندل شوې مرجع لینک راولېږئ، د هماغې سرچینې له مخې یې تشریح کوم.'
+    : aiKeyConfigured
     ? '📚 دا ځل د پوښتنې لپاره د تایید وړ معلومات نه شول ترلاسه کېدای؛ د انټرنېټ لټون یا د AI ځواب جوړول ناکام شول. لږ وروسته یې بیا وپوښتئ، یا د موضوع رسمي/معتبر لینک راولېږئ. د تخنیکي تشخیص لپاره د SillyDev لاګونه وګورئ.'
     : '📚 د پوښتنې لپاره باوري سرچینه پیدا نه شوه او د AI کیلي هم تنظیم شوې نه ده. د پروژې مدیر دې په SillyDev کې د OPENROUTER_API_KEY شتون او د /health په راپور کې aiSummarization وګوري.';
   await safeSend(socket, groupJid, {
-    text: fallbackText + '\n\n⚠️ تر تایید شوې سرچینې پرته د ناسم ځواب له جوړولو ډډه کوم. پوښتنه بیا هڅه کړئ یا یوه باوري سرچینه ورسره شریک کړئ.'
+    text: isReligiousQuestion ? fallbackText : fallbackText + '\n\n⚠️ تر تایید شوې سرچینې پرته د ناسم ځواب له جوړولو ډډه کوم. پوښتنه بیا هڅه کړئ یا یوه باوري سرچینه ورسره شریک کړئ.'
   });
   return true;
 }

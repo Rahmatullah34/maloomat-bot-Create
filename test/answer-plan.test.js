@@ -27,6 +27,22 @@ test('recognizes health, religion, science, translation, and current topics', ()
   assert.equal(classifyQuestion('د افغانستان تازه خبرونه څه دي؟'), 'current');
 });
 
+test('classifies religious questions across Islamic and other faith topics', () => {
+  for (const question of [
+    'د قیامت وړې نښې کومې دي؟',
+    'د رسول الله ﷺ سیرت راکړه؟',
+    'د قرآن او حدیث له مخې د دې مسئلې حکم څه دی؟',
+    'What does the Bible say about forgiveness?',
+    'Explain the history of Judaism',
+    'What is Buddhist teaching about compassion?',
+    'What medicine should a Muslim use while fasting?',
+  ]) {
+    const plan = buildAnswerPlan(question);
+    assert.equal(plan.category, 'religion', question);
+    assert.match(plan.instructions, /باوري او موضوع پورې تړلې سرچینه/);
+  }
+});
+
 test('does not force a detailed response for a short ordinary question', () => {
   assert.equal(isDetailedQuestion('زړه څه کوي؟'), false);
   assert.equal(buildAnswerPlan('زړه څه کوي؟').detailed, false);
