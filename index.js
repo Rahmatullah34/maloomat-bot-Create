@@ -34,6 +34,7 @@ const {
   allowedGroupsCount,
   isHistoryCleanupEnabled,
   normalizePashto,
+  isGroupRulesCommand,
   containsBadWord,
   LINK_PATTERN,
   isForwardedChannelMessage,
@@ -2336,6 +2337,16 @@ async function startBot() {
               .replace(/[!.؟?،,]/g, '')
               .trim();
 
+            // د قوانینو امر د سپم شمېر، کنځلو او لینک مدیریت تر مخه اجرا کړه؛
+            // د پښتو/عربي «ی» توپیر او د جملې پای نښې د ځواب مخه نه نیسي.
+            if (isGroupRulesCommand(text)) {
+              console.log('📜 د ګروپ قوانینو غوښتنه پېژندل شوه؛ غړی=' + name);
+              await safeSend(socket, groupJid, {
+                text: `📜 محترم ${name} جانه!\n\n` + GROUP_RULES,
+              });
+              continue;
+            }
+
             console.log(
               `📩 ګروپي پیغام؛ غړی=${name}; ` +
               `متن=${text.slice(0, 40)}`
@@ -2482,33 +2493,6 @@ async function startBot() {
                 '🚫 په ګروپ کې د نامجازو لینکونو خپرول منع دي.',
                 true,
                 stableParticipantJid
-              );
-
-              continue;
-            }
-
-            // ==========================================
-            // 22. د قوانینو غوښتنه
-            // ==========================================
-
-            const ruleCommands = [
-              'قوانین',
-              'قانون',
-              'د ګروپ قوانین',
-              'د ګروپ قانون',
-              'rules',
-              'group rules',
-            ];
-
-            if (ruleCommands.includes(cleanText)) {
-              await safeSend(
-                socket,
-                groupJid,
-                {
-                  text:
-                    `📜 محترم ${name} جانه!\n\n` +
-                    GROUP_RULES,
-                }
               );
 
               continue;
