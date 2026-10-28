@@ -17,6 +17,7 @@ test('accepts established primary-text and academic reference domains', () => {
   assert.equal(isTrustedReligiousDomain('https://www.britannica.com/topic/religion'), true);
   assert.equal(isTrustedReligiousDomain('https://www.vatican.va/'), true);
   assert.equal(isTrustedReligiousDomain('https://www.sefaria.org/'), true);
+  assert.equal(isTrustedReligiousDomain('https://pashtonlegacylibrarykandahar.com/books1/3974'), true);
 });
 
 test('does not accept lookalike or unrelated domains', () => {
