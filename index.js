@@ -501,10 +501,63 @@ async function searchDuckDuckGo(query) {
 }
 
 async function searchWikipedia(query, language = 'en') {
-  const endpoint = 'https://' + language + '.wikipedia.org/w/api.php?' + new URLSearchParams({
+  const languageCode = /^(?:ps|en|ar|ur|fa)$/.test(String(language)) ? language : 'en';
+  const decodeExcerpt = (value) => String(value || '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&#x27;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // د REST لټون API د مقالې لنډ اقتباس او تشریح مستقیم راکوي؛
+  // پخوانی generator API لاندې د احتیاطي بدیل په توګه ساتل شوی.
+  const restEndpoint = 'https://' + languageCode + '.wikipedia.org/w/rest.php/v1/search/page?' +
+    new URLSearchParams({ q: String(query || ''), limit: '4' }).toString();
+
+  try {
+    const response = await fetch(restEndpoint, {
+      headers: {
+        'User-Agent': 'MaloomatBot/1.0 (Pashto educational WhatsApp bot)',
+        'Accept': 'application/json',
+      },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (response.ok) {
+      const data = await response.json();
+      const pages = (Array.isArray(data?.pages) ? data.pages : [])
+        .filter(page => page && page.title && (page.excerpt || page.description))
+        .slice(0, 4);
+      const results = pages.map(page => {
+        const excerpt = decodeExcerpt(page.excerpt);
+        const description = decodeExcerpt(page.description);
+        const slug = String(page.key || page.title).trim().replace(/\s+/g, '_');
+        const snippet = [description, excerpt].filter(Boolean).join(' — ').slice(0, 1100);
+        return {
+          title: String(page.title).slice(0, 180),
+          url: 'https://' + languageCode + '.wikipedia.org/wiki/' + encodeURIComponent(slug).replace(/%2F/gi, '/'),
+          snippet,
+          description,
+          provider: languageCode === 'ps' ? 'Wikipedia پښتو' : 'Wikipedia ' + languageCode.toUpperCase(),
+        };
+      }).filter(item => item.title && item.url && item.snippet.length >= 40);
+      if (results.length) return results;
+      console.warn('⚠️ د ویکیپیډیا ' + languageCode + ' REST لټون پایلې درلودې نه، پخوانی API ازمویل کېږي.');
+    } else {
+      console.warn('⚠️ د ویکیپیډیا ' + languageCode + ' REST لټون HTTP خطا ورکړه:', response.status, response.statusText || '');
+    }
+  } catch (err) {
+    console.warn('⚠️ د ویکیپیډیا ' + languageCode + ' REST لټون ناکام شو:', err?.message || err);
+  }
+
+  // سازګاري: که REST API نتیجه ورنه کړي، پخوانی MediaWiki API وکاروه.
+  const legacyEndpoint = 'https://' + languageCode + '.wikipedia.org/w/api.php?' + new URLSearchParams({
     action: 'query',
     generator: 'search',
-    gsrsearch: query,
+    gsrsearch: String(query || ''),
     gsrnamespace: '0',
     gsrwhat: 'text',
     gsrlimit: '4',
@@ -518,33 +571,33 @@ async function searchWikipedia(query, language = 'en') {
   }).toString();
 
   try {
-    const response = await fetch(endpoint, {
+    const response = await fetch(legacyEndpoint, {
       headers: { 'User-Agent': 'MaloomatBot/1.0 (Pashto educational WhatsApp bot)' },
-      signal: AbortSignal.timeout(9000),
+      signal: AbortSignal.timeout(6000),
     });
     if (!response.ok) {
-      console.warn('⚠️ د ویکیپیډیا ' + language + ' لټون HTTP خطا ورکړه:', response.status, response.statusText || '');
+      console.warn('⚠️ د ویکیپیډیا ' + languageCode + ' پخوانی API HTTP خطا ورکړه:', response.status, response.statusText || '');
       return [];
     }
     const data = await response.json();
     if (data?.error) {
-      console.warn('⚠️ د ویکیپیډیا ' + language + ' API خطا:', String(data.error.code || 'unknown'));
+      console.warn('⚠️ د ویکیپیډیا ' + languageCode + ' API خطا:', String(data.error.code || 'unknown'));
       return [];
     }
     const pages = Object.values(data?.query?.pages || {})
       .filter(page => page && page.title && page.extract)
       .slice(0, 4);
     if (!pages.length) {
-      console.warn('⚠️ د ویکیپیډیا ' + language + ' لټون بریالی HTTP ځواب ورکړ، خو د کارولو وړ پایلې پکې نشته.');
+      console.warn('⚠️ د ویکیپیډیا ' + languageCode + ' په دواړو API لټونونو کې د کارولو وړ اقتباس ونه موندل شو.');
     }
     return pages.map(page => ({
       title: String(page.title).slice(0, 180),
-      url: page.fullurl || ('https://' + language + '.wikipedia.org/?curid=' + page.pageid),
-      snippet: String(page.extract).slice(0, 1100),
-      provider: language === 'ps' ? 'Wikipedia پښتو' : 'Wikipedia English',
+      url: page.fullurl || ('https://' + languageCode + '.wikipedia.org/?curid=' + page.pageid),
+      snippet: decodeExcerpt(page.extract).slice(0, 1100),
+      provider: languageCode === 'ps' ? 'Wikipedia پښتو' : 'Wikipedia ' + languageCode.toUpperCase(),
     }));
   } catch (err) {
-    console.warn('⚠️ د ویکیپیډیا ' + language + ' لټون ناکام شو:', err?.message || err);
+    console.warn('⚠️ د ویکیپیډیا ' + languageCode + ' پخوانی API ناکام شو:', err?.message || err);
     return [];
   }
 }
