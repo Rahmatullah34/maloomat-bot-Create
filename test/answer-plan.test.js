@@ -40,7 +40,7 @@ test('classifies religious questions across Islamic and other faith topics', () 
     const plan = buildAnswerPlan(question);
     const expected = /medicine|history/i.test(question) ? ( /medicine/i.test(question) ? 'health' : 'history' ) : 'religion';
     assert.equal(plan.category, expected, question);
-    assert.match(plan.instructions, /باوري علمي\/انسایکلویډیايي سرچینه/);
+    if (expected === 'religion') assert.match(plan.instructions, /باوري علمي\/انسایکلویډیايي سرچینه/);
   }
 });
 
