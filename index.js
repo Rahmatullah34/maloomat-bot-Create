@@ -34,6 +34,7 @@ const {
   allowedGroupsCount,
   isHistoryCleanupEnabled,
   normalizePashto,
+  hasMatchingPhoneNumber,
   isGroupRulesCommand,
   containsBadWord,
   LINK_PATTERN,
@@ -87,6 +88,13 @@ const ENABLE_INTERNET_SEARCH = true;
 const ENABLE_AI_SUMMARIZATION = true;
 // د نامجازو لینکونو اتومات اخطار/حذف فعال دی؛ کنځل، Status/چینل فارورډونه او سپم هم فعال پاتې دي.
 const ENABLE_LINK_MODERATION = true;
+
+// دا شمېره د ګروپ د ټولو اتومات نظم/اخطارونو څخه معاف ده؛ نور غړي او قوانین نه بدلېږي.
+const FULL_MODERATION_EXEMPT_PHONE_NUMBER = '0707285093';
+
+function isFullModerationExemptSender(senderIdentifiers) {
+  return hasMatchingPhoneNumber(senderIdentifiers, FULL_MODERATION_EXEMPT_PHONE_NUMBER);
+}
 
 // د ګروپ کنټرول: له درېیم اخطار وروسته د غړي پیغامونه د ټاکلې مودې لپاره حذف کېږي.
 const WARNING_MUTE_ENABLED = !/^(?:0|false|no|off)$/i.test(
@@ -1662,6 +1670,7 @@ async function resolveGroupSender(socket, groupJid, senderIdentifiers) {
   return {
     isAdmin: isGroupAdminParticipant(participant),
     participantKey: getCanonicalParticipantIdentifier(participants, senderIdentifiers),
+    phoneNumber: participant?.phoneNumber || null,
   };
 }
 
@@ -2022,6 +2031,21 @@ async function startBot() {
           if (!groupJid.endsWith('@g.us')) continue;
           if (!isGroupAllowed(groupJid)) continue;
 
+          const historySenderIdentifiers = [
+            msg.key?.participant,
+            msg.key?.participantAlt,
+            msg.key?.participantPn,
+          ].filter(Boolean);
+          let historySenderIsExempt = isFullModerationExemptSender(historySenderIdentifiers);
+          if (!historySenderIsExempt && historySenderIdentifiers.some((id) => /@lid$/i.test(String(id)))) {
+            const historySenderResolution = await resolveGroupSender(socket, groupJid, historySenderIdentifiers);
+            historySenderIsExempt = isFullModerationExemptSender([
+              ...historySenderIdentifiers,
+              historySenderResolution.phoneNumber,
+            ]);
+          }
+          if (historySenderIsExempt) continue;
+
           const messageId = msg.key.id;
           if (messageId && !rememberMessage(`${groupJid}:${messageId}`)) {
             continue;
@@ -2353,12 +2377,26 @@ async function startBot() {
             );
 
             // د PN/LID دواړه پېژندپاڼې ورکوو؛ ثابت کلید د شمېر، اخطار او موقتي محدودیت لپاره هم کارېږي.
+            const senderIdentifiers = [
+              participantJid,
+              msg.key?.participant,
+              msg.key?.participantAlt,
+              msg.key?.participantPn,
+              msg.key?.remoteJidAlt,
+            ].filter(Boolean);
             const senderResolution = await resolveGroupSender(
               socket,
               groupJid,
-              [participantJid, msg.key?.participant, msg.key?.participantAlt]
+              senderIdentifiers
             );
             const isSenderGroupAdmin = senderResolution.isAdmin;
+            const isFullModerationExempt = isFullModerationExemptSender([
+              ...senderIdentifiers,
+              senderResolution.phoneNumber,
+            ]);
+            if (isFullModerationExempt) {
+              console.log('🔐 د مالک باوري شمېره د ګروپ له ټولو اتومات نظم/اخطارونو معاف وپېژندل شوه.');
+            }
             const stableParticipantJid = senderResolution.participantKey || participantJid;
 
             // اډمین کولای شي د اتومات خپرولو لپاره د همدې ګروپ JID په خصوصي پیغام کې ترلاسه کړي.
@@ -2382,7 +2420,7 @@ async function startBot() {
               continue;
             }
 
-            const activeMute = WARNING_MUTE_ENABLED
+            const activeMute = WARNING_MUTE_ENABLED && !isFullModerationExempt
               ? getTemporaryMuteStatus(groupJid, stableParticipantJid)
               : null;
             if (activeMute) {
@@ -2403,7 +2441,7 @@ async function startBot() {
             // ==========================================
             // د WhatsApp چینلونو فارورډ شوي پوسټونه
             // ==========================================
-            if (statusShare) {
+            if (statusShare && !isFullModerationExempt) {
               await deleteGroupMessage(
                 socket,
                 groupJid,
@@ -2416,7 +2454,7 @@ async function startBot() {
               continue;
             }
 
-            if (channelForward) {
+            if (channelForward && !isFullModerationExempt) {
               await deleteGroupMessage(
                 socket,
                 groupJid,
@@ -2436,7 +2474,7 @@ async function startBot() {
             // ==========================================
             // اډمین د چټکو پیغامونو د شمېر له امله نه حذف کېږي او نه اخطار اخلي.
             // د اډمین لینکونه د رول له مخې اجازه لري؛ د کنځلو او منع شوي فارورډ کنټرولونه لا هم جلا فعال دي.
-            if (!isSenderGroupAdmin) {
+            if (!isSenderGroupAdmin && !isFullModerationExempt) {
               const burst = recordGroupMessage(groupJid, stableParticipantJid);
               if (burst.count > BURST_LIMIT) {
                 if (burst.shouldWarn) burst.markWarned();
@@ -2457,7 +2495,7 @@ async function startBot() {
             // 19. د کنځلو او سپکاوي مخنیوی
             // ==========================================
 
-            if (containsBadWord(text)) {
+            if (!isFullModerationExempt && containsBadWord(text)) {
               await deleteGroupMessage(
                 socket,
                 groupJid,
@@ -2477,6 +2515,7 @@ async function startBot() {
 
             if (
               ENABLE_LINK_MODERATION &&
+              !isFullModerationExempt &&
               LINK_PATTERN.test(text) &&
               !(await isLinkPermittedForSender(
                 socket,
@@ -2536,7 +2575,7 @@ async function startBot() {
             // ==========================================
             // 24. د عادي غړو د تکراري سپم مخنیوی
             // اډمین د تکرار له شمېر څخه معاف دی؛ نور د کنځلو او لینک اصول پرې هم تطبیقېږي.
-            if (!isSenderGroupAdmin) {
+            if (!isSenderGroupAdmin && !isFullModerationExempt) {
               const repeated = recordRepeatedMessage(groupJid, stableParticipantJid, text);
               if (repeated.shouldDelete) {
                 await deleteGroupMessage(
