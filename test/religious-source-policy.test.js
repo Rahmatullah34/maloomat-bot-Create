@@ -68,6 +68,8 @@ test('allows encyclopedic references for general religious background questions'
 test('distinguishes general religious background from precise religious claims', () => {
   assert.equal(requiresAuthoritativeReligiousSource('د قیامت وړې نښې مفصل او کتابونو معلومات راکړه؟'), false);
   assert.equal(requiresAuthoritativeReligiousSource('What is a hadith?'), false);
+  assert.equal(requiresAuthoritativeReligiousSource('د لمانځه فرضونه کوم دي؟'), false);
+  assert.equal(requiresAuthoritativeReligiousSource('د روژې فرضونه کوم دي؟'), false);
   assert.equal(requiresAuthoritativeReligiousSource('د دې حدیث کره حواله او شمېره راکړه؟'), true);
   assert.equal(requiresAuthoritativeReligiousSource('ایا دا عمل حلال دی که حرام؟'), true);
   assert.equal(requiresAuthoritativeReligiousSource('د قرآن د دې آیت کره متن او شمېره راکړه؟'), true);
