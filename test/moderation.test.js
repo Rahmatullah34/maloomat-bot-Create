@@ -314,9 +314,9 @@ test('تایید شوی اډمین د چټک او تکراري سپم له اخ�
   );
   assert.match(indexSrc, /async function resolveGroupSender\s*\(/,
     'اډمین باید د WhatsApp د ګروپ metadata له مخې وپېژندل شي');
-  assert.match(indexSrc, /if\s*\(!isSenderGroupAdmin\)\s*\{\s*const burst = recordGroupMessage/,
+  assert.match(indexSrc, /if\s*\(!isSenderGroupAdmin && !isFullModerationExempt\)\s*\{\s*const burst = recordGroupMessage/,
     'د چټک سپم حد باید یوازې پر عادي غړو تطبیق شي');
-  assert.match(indexSrc, /if\s*\(!isSenderGroupAdmin\)\s*\{\s*const repeated = recordRepeatedMessage/,
+  assert.match(indexSrc, /if\s*\(!isSenderGroupAdmin && !isFullModerationExempt\)\s*\{\s*const repeated = recordRepeatedMessage/,
     'د تکراري سپم حذف باید یوازې پر عادي غړو تطبیق شي');
 });
 
@@ -345,7 +345,7 @@ test('د قوانینو امر د سپم او نورو moderation فلټرونو
   );
   const rulesCommandPosition = indexSrc.indexOf('if (isGroupRulesCommand(text))');
   const burstCheckPosition = indexSrc.indexOf('const burst = recordGroupMessage');
-  const badWordCheckPosition = indexSrc.indexOf('if (containsBadWord(text))');
+  const badWordCheckPosition = indexSrc.indexOf('containsBadWord(text)', rulesCommandPosition);
   const linkCheckPosition = indexSrc.indexOf('LINK_PATTERN.test(text)', rulesCommandPosition);
 
   assert.ok(rulesCommandPosition >= 0, 'د قوانینو امر باید موجود وي');
