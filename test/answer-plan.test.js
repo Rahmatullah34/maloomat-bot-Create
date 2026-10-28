@@ -56,6 +56,18 @@ test('adds reliable English research hints for Ahmad Shah Durrani battles', () =
   assert.match(hints[1], /Panipat 1761/);
 });
 
+test('generates English research queries for common Islamic questions', () => {
+  const signs = getResearchQueryHints('د قیامت وړې نښې مفصل او کتابونو معلومات راکړه؟');
+  assert.ok(signs.some(query => /minor signs of the Hour/i.test(query)));
+  assert.ok(signs.some(query => /hadith/i.test(query)));
+
+  const pillars = getResearchQueryHints('د اسلام پنځه بناوې څه دي؟');
+  assert.ok(pillars.some(query => /Five Pillars of Islam/i.test(query)));
+
+  const prayer = getResearchQueryHints('د لمانځه فرضونه کوم دي؟');
+  assert.ok(prayer.some(query => /Salah|Islamic prayer/i.test(query)));
+});
+
 test('does not invent historical research hints for unrelated questions', () => {
   assert.deepEqual(getResearchQueryHints('سلام'), []);
 });
