@@ -58,6 +58,16 @@ test('adds reliable English research hints for Ahmad Shah Durrani battles', () =
   assert.match(hints[1], /Panipat 1761/);
 });
 
+test('uses Hadith Jibril research hints for the six articles of faith and resurrection questions', () => {
+  const pillars = getResearchQueryHints('د ایمان شپږ ارکان کوم دي؟');
+  assert.ok(pillars.some(query => /Six articles of faith.*Hadith Jibril.*Sahih Muslim 8a/i.test(query)));
+  assert.ok(pillars.some(query => /Resurrection after death.*Last Day/i.test(query)));
+
+  const seven = getResearchQueryHints('ولې ٧ دي وروسته له مرګه پرژوندایمان؟');
+  assert.ok(seven.some(query => /Six articles of faith.*Hadith Jibril/i.test(query)));
+  assert.ok(seven.some(query => /Resurrection after death.*Last Day/i.test(query)));
+});
+
 test('generates English research queries for common Islamic questions', () => {
   const signs = getResearchQueryHints('د قیامت وړې نښې مفصل او کتابونو معلومات راکړه؟');
   assert.ok(signs.some(query => /minor signs of the Hour/i.test(query)));
