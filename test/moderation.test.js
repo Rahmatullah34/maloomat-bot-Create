@@ -299,11 +299,11 @@ test('د لینکونو اتومات اخطار بند دی، خو د ګروپ �
   );
 
   assert.match(indexSrc, /const ENABLE_LINK_MODERATION = false/);
-  assert.match(indexSrc, /links:\\s*ENABLE_LINK_MODERATION/);
-  assert.match(indexSrc, /const hasLink = ENABLE_LINK_MODERATION && LINK_PATTERN\\.test\\(text\\)/);
-  assert.match(indexSrc, /ENABLE_LINK_MODERATION\\s*&&\\s*LINK_PATTERN\\.test\\(text\\)/);
-  assert.match(indexSrc, /containsBadWord\\(text\\)/);
-  assert.match(indexSrc, /recordRepeatedMessage\\(groupJid, stableParticipantJid, text\\)/);
+  assert.match(indexSrc, /links:\s*ENABLE_LINK_MODERATION/);
+  assert.match(indexSrc, /const hasLink = ENABLE_LINK_MODERATION && LINK_PATTERN\.test\(text\)/);
+  assert.match(indexSrc, /ENABLE_LINK_MODERATION\s*&&\s*LINK_PATTERN\.test\(text\)/);
+  assert.match(indexSrc, /containsBadWord\(text\)/);
+  assert.match(indexSrc, /recordRepeatedMessage\(groupJid, stableParticipantJid, text\)/);
 });
 
 test('WhatsApp connection settings keep a live socket and expose session diagnostics', () => {
@@ -312,11 +312,11 @@ test('WhatsApp connection settings keep a live socket and expose session diagnos
     'utf8'
   );
 
-  assert.match(indexSrc, /keepAliveIntervalMs:\\s*20_000/);
-  assert.match(indexSrc, /connectTimeoutMs:\\s*60_000/);
-  assert.match(indexSrc, /defaultQueryTimeoutMs:\\s*60_000/);
-  assert.match(indexSrc, /saveCreds\\(\\)\\.catch/);
+  assert.match(indexSrc, /keepAliveIntervalMs:\s*20_000/);
+  assert.match(indexSrc, /connectTimeoutMs:\s*60_000/);
+  assert.match(indexSrc, /defaultQueryTimeoutMs:\s*60_000/);
+  assert.match(indexSrc, /saveCreds\(\)\.catch/);
   assert.match(indexSrc, /lastDisconnectCode/);
-  assert.match(indexSrc, /authSessionSaved:\\s*fs\\.existsSync/);
+  assert.match(indexSrc, /authSessionSaved:\s*fs\.existsSync/);
   assert.match(indexSrc, /sessionResetRequested/);
 });
