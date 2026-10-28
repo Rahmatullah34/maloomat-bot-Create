@@ -145,3 +145,15 @@ test('rejects Ahmad Shah mentions in snippets when the result title is unrelated
   ];
   assert.deepEqual(rankRelevantSearchResults('د احمدشاه بابا تفصیلي معلومات', results), []);
 });
+
+test('rejects funeral-prayer pages for questions about ordinary prayer obligations', () => {
+  const results = [
+    { title: 'Funeral prayer (Islam)', url: 'https://en.wikipedia.org/wiki/Funeral_prayer_(Islam)', snippet: 'The Islamic funeral prayer.' },
+    { title: 'Salah', url: 'https://en.wikipedia.org/wiki/Salah', snippet: 'The ritual daily prayer in Islam.' },
+    { title: 'Islamic prayer obligations', url: 'https://example.org/islamic-prayer-obligations', snippet: 'Required parts of the daily salah prayer.' },
+  ];
+  const filtered = rankRelevantSearchResults('د لمانځه فرضونه کوم دي؟', results);
+  assert.ok(filtered.some(item => item.title === 'Salah'));
+  assert.ok(filtered.some(item => item.title === 'Islamic prayer obligations'));
+  assert.ok(filtered.every(item => item.title !== 'Funeral prayer (Islam)'));
+});

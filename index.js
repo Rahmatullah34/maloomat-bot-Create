@@ -1139,7 +1139,7 @@ function formatVerifiedSourceLinks(results) {
     if (!key || seen.has(key)) return false;
     seen.add(key);
     return true;
-  }).slice(0, 5);
+  }).slice(0, 3);
   if (!valid.length) return '';
   return '\n\n🔎 *د لټون له پایلو څخه ترلاسه شوي لینکونه:*\n' + valid.map((item, index) =>
     (index + 1) + '. ' + String(item.title || 'بې سرلیکه سرچینه').slice(0, 160) + '\n' + String(item.url).trim()
