@@ -157,3 +157,20 @@ test('rejects funeral-prayer pages for questions about ordinary prayer obligatio
   assert.ok(filtered.some(item => item.title === 'Islamic prayer obligations'));
   assert.ok(filtered.every(item => item.title !== 'Funeral prayer (Islam)'));
 });
+
+test('rejects a general Islam page for a specific beard ruling question', () => {
+  const results = [
+    { title: 'په اسلام کي د شورا ارزښت', url: 'https://ps.wikipedia.org/wiki/شورا', snippet: 'د اسلام د شورا او مشورې ارزښت.' },
+    { title: 'Beard in Islam', url: 'https://en.wikipedia.org/wiki/Religious_views_on_beards', snippet: 'Religious views on beards include Islamic teachings and differing scholarly views.' },
+    { title: 'Sahih al-Bukhari: Trim the moustache and grow the beard', url: 'https://sunnah.com/bukhari:5892', snippet: 'The report concerns trimming the moustache and leaving the beard.' },
+  ];
+  const filtered = rankRelevantSearchResults('د ږیرې خریل په اسلام کې څه حکم دی؟', results);
+  assert.ok(filtered.some(item => /Beard in Islam/i.test(item.title)));
+  assert.ok(filtered.some(item => /Sahih al-Bukhari/i.test(item.title)));
+  assert.ok(filtered.every(item => !/شورا|consultation/i.test(item.title)));
+});
+
+test('returns no generic religious link when the specific subject is absent', () => {
+  const results = [{ title: 'په اسلام کي د شورا ارزښت', url: 'https://ps.wikipedia.org/wiki/شورا', snippet: 'د اسلام د شورا او مشورې ارزښت.' }];
+  assert.deepEqual(rankRelevantSearchResults('د ږیرې خریل په اسلام کې څه حکم دی؟', results), []);
+});
