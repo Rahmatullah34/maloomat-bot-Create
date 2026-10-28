@@ -74,7 +74,7 @@ test('builds Quran-ruku-specific searches and curated sources instead of generic
   const sources = getCuratedFallbackSources(question);
   assert.equal(sources.length, 2);
   assert.ok(sources.some(item => /api-docs\.quran\.foundation/.test(item.url) && /558/.test(item.snippet)));
-  assert.ok(sources.some(item => /search\.manduamah\.com/.test(item.url) && /540.*558|558.*540/.test(item.snippet)));
+  assert.ok(sources.some(item => /search\.mandumah\.com/.test(item.url) && /540.*558|558.*540/.test(item.snippet)));
   assert.ok(sources.every(item => item.provider.startsWith('Curated Quran ruku reference')));
 });
 
