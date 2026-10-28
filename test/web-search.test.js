@@ -87,6 +87,18 @@ test('builds targeted Pashto riba queries with Quran and hadith fallbacks', () =
   assert.equal(filterTrustedReligiousSources(sources, question).length, 3);
 });
 
+test('provides a Sahih Muslim fallback for the six articles of faith and afterlife question', () => {
+  const question = 'ولې ٧ دي وروسته له مرګه پرژوندایمان؟';
+  const queries = buildSearchQueries(question);
+  assert.ok(queries.some(query => /Six articles of faith.*Hadith Jibril.*Sahih Muslim 8a/i.test(query)));
+  const sources = getCuratedFallbackSources(question);
+  assert.equal(sources.length, 1);
+  assert.equal(sources[0].url, 'https://sunnah.com/muslim:8a');
+  assert.match(sources[0].snippet, /six articles of faith/i);
+  assert.match(sources[0].snippet, /resurrection after death is included.*Last Day/i);
+  assert.equal(filterTrustedReligiousSources(sources, question).length, 1);
+});
+
 test('builds source-oriented English searches for general Islamic questions', () => {
   const queries = buildSearchQueries('د اسلام پنځه بناوې څه دي؟');
   assert.ok(queries.some(query => /Five Pillars of Islam/i.test(query)));
