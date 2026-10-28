@@ -1871,6 +1871,10 @@ async function startBot() {
           lastDisconnect,
         } = update;
 
+        if (connection === 'connecting') {
+          whatsappConnectionState = 'connecting';
+        }
+
         if (connection === 'open') {
           whatsappConnectionState = 'connected';
           console.log(
