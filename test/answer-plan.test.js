@@ -38,8 +38,9 @@ test('classifies religious questions across Islamic and other faith topics', () 
     'What medicine should a Muslim use while fasting?',
   ]) {
     const plan = buildAnswerPlan(question);
-    assert.equal(plan.category, 'religion', question);
-    assert.match(plan.instructions, /باوري علمي\/انسایکلویډیايي سرچینه/);
+    const expected = /medicine|history/i.test(question) ? ( /medicine/i.test(question) ? 'health' : 'history' ) : 'religion';
+    assert.equal(plan.category, expected, question);
+    if (expected === 'religion') assert.match(plan.instructions, /باوري علمي\/انسایکلویډیايي سرچینه/);
   }
 });
 
@@ -70,4 +71,13 @@ test('generates English research queries for common Islamic questions', () => {
 
 test('does not invent historical research hints for unrelated questions', () => {
   assert.deepEqual(getResearchQueryHints('سلام'), []);
+});
+
+
+test('keeps the main topic ahead of incidental religious words', () => {
+  assert.equal(classifyQuestion('What medicine should a Muslim use while fasting?'), 'health');
+  assert.equal(classifyQuestion('Explain the history of Judaism'), 'history');
+  assert.equal(classifyQuestion('د الله نوم په کمپیوټر کې څنګه ولیکم؟'), 'how_to');
+  assert.equal(classifyQuestion('د احمدشاه بابا مشهورې جګړې کومې وې؟'), 'history');
+  assert.equal(classifyQuestion('د لمانځه فرضونه کوم دي؟'), 'religion');
 });
