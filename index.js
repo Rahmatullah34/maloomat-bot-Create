@@ -396,8 +396,6 @@ function answerFromOfflineKnowledge(question) {
       ? '\n\nℹ️ دا ځواب د بوټ له ثبت شوو معلوماتو څخه دی؛ د تازه بدلېدونکو خبرونو، بیو او شمېرو لپاره رسمي سرچینه وګورئ.'
       : '');
 }
-
-
 function answerSimpleMathQuestion(question) {
   const digitMap = {
     '۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9',
@@ -1197,7 +1195,6 @@ async function safeSend(
       jid,
       content
     );
-
   } catch (err) {
     console.error(
       '❌ د WhatsApp پیغام لېږلو ستونزه:',
@@ -1794,7 +1791,8 @@ async function startBot() {
               continue;
             }
 
-            // شخصي چټ جلا اداره کېږي؛ د ګروپ د مدیریت قواعد نه پرې تطبیقېږي.            if (!groupJid.endsWith('@g.us')) {
+            // شخصي چټ جلا اداره کېږي؛ د ګروپ د مدیریت قواعد نه پرې تطبیقېږي.
+            if (!groupJid.endsWith('@g.us')) {
               // یوازې عادي شخصي WhatsApp چټونه ومنه؛ Status، چینل او نور ډولونه بند دي.
               if (
                 !ENABLE_PRIVATE_QA ||
