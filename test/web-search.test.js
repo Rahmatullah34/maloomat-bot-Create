@@ -9,6 +9,7 @@ const {
   isFacebookMonetizationQuestion,
   parseDuckDuckGoResults,
 } = require('../lib/web-search');
+const { filterTrustedReligiousSources } = require('../lib/religious-source-policy');
 
 test('extracts DuckDuckGo result links and decodes HTML text', () => {
   const html = [
@@ -56,6 +57,34 @@ test('builds targeted English searches for a detailed Pashto Islamic question', 
   assert.equal(queries.length, 3);
   assert.ok(queries.some(query => /minor signs of the Hour/i.test(query)));
   assert.ok(queries.some(query => /Day of Judgment.*hadith/i.test(query)));
+});
+
+test('builds targeted Pashto research queries and trusted fallbacks for Prophet burial questions', () => {
+  const question = 'پوښتنه ده حضرت محمد صلی الله علیه وسلام قبر له چا سره ل';
+  assert.deepEqual(buildSearchQueries(question), [
+    'Prophet Muhammad burial place Aisha house graves Abu Bakr Umar Sahih al-Bukhari 1389 1392',
+    'Who is buried beside Prophet Muhammad in Medina Abu Bakr Umar reliable Islamic source',
+  ]);
+  const sources = getCuratedFallbackSources(question);
+  assert.equal(sources.length, 2);
+  assert.ok(sources.every(item => /sunnah\.com/.test(item.url)));
+  assert.ok(sources.some(item => /Sahih al-Bukhari 1389/.test(item.title)));
+  assert.ok(sources.some(item => /Sahih al-Bukhari 1392/.test(item.title)));
+  assert.equal(filterTrustedReligiousSources(sources, question).length, 2);
+});
+
+test('builds targeted Pashto riba queries with Quran and hadith fallbacks', () => {
+  const question = 'ربا او دحرمت دلیل مفصل ځواب؟';
+  assert.deepEqual(buildSearchQueries(question), [
+    'Islamic prohibition of riba Quran 2:275 2:278 2:279 Sahih Muslim 1598',
+    'Riba usury interest prohibition Islam Quran Sunnah scholarly explanation',
+  ]);
+  const sources = getCuratedFallbackSources(question);
+  assert.equal(sources.length, 3);
+  assert.ok(sources.some(item => /quran\.com/.test(item.url) && /2:275/.test(item.snippet)));
+  assert.ok(sources.some(item => /sunnah\.com\/muslim:1598/.test(item.url)));
+  assert.ok(sources.some(item => /islamweb\.net/.test(item.url)));
+  assert.equal(filterTrustedReligiousSources(sources, question).length, 3);
 });
 
 test('builds source-oriented English searches for general Islamic questions', () => {

@@ -555,6 +555,11 @@ function rememberWikipediaRateLimit(response) {
 
 function simplifyWikipediaSearchQuery(query) {
   const value = String(query || '').trim();
+  // Keep specific research topics intact instead of reducing them to generic Wikipedia pages.
+  // This includes human creation, the Prophet's burial, and riba/interest questions.
+  if (/(?:why did allah create|purpose of human creation|human creation in islam|created mankind|create human beings|prophet muhammad.*(?:burial|grave|buried|tomb)|who is buried beside prophet muhammad|islamic prohibition.*riba|prohibition.*riba|riba.*(?:prohibition|islam|quran)|usury.*(?:islam|quran)|sahih muslim 1598)/i.test(value)) {
+    return value.length > 140 ? value.slice(0, 140).trim() : value;
+  }
   const shortcuts = [
     [/minor signs of the hour|signs of the day of judgment|signs of the day of judgement/i, 'Signs of the Hour'],
     [/five pillars of islam/i, 'Five Pillars of Islam'],
@@ -906,12 +911,30 @@ async function searchInternet(query) {
     usingCuratedFallback = supplementalSources.length > 0 || usingCuratedFallback;
   }
 
-  if (!unique.length) {
-    const curated = getCuratedFallbackSources(query);
-    if (curated.length) {
-      unique = curated;
+  // Use curated references if a provider returned nothing or no source that passes the religious-source policy.
+  // This prevents generic/untrusted results from suppressing a subject-specific reliable fallback.
+  const curated = getCuratedFallbackSources(query);
+  const curatedEligible = isReligiousSearch
+    ? filterTrustedReligiousSources(curated, query)
+    : curated;
+  const hasEligibleReligiousResults = isReligiousSearch &&
+    filterTrustedReligiousSources(unique, query).length > 0;
+  if ((!unique.length || (isReligiousSearch && !hasEligibleReligiousResults)) && curatedEligible.length) {
+    const existingUrls = new Set(unique.map(item => canonicalResultUrl(item.url)));
+    const supplementalSources = curatedEligible.filter(item => {
+      const key = canonicalResultUrl(item.url);
+      if (!key || existingUrls.has(key)) return false;
+      existingUrls.add(key);
+      return true;
+    });
+    if (supplementalSources.length) {
+      unique = [...supplementalSources, ...unique].slice(0, 10);
       usingCuratedFallback = true;
-      console.warn('ℹ️ د عادي ویب لټون پر ځای د Facebook monetization لپاره رسمي Meta fallback کارول کېږي.');
+      console.warn(
+        isReligiousSearch
+          ? '📚 د عادي لټون پایلې کافي باوري دیني سرچینې نه لرلې؛ د موضوع اړوندې ټاکل شوې سرچینې ورزیاتې شوې.'
+          : '📚 د عادي ویب لټون پر ځای د موضوع اړوند ټاکل شوې بدیله سرچینه کارول کېږي.'
+      );
     }
   }
 
@@ -1354,7 +1377,9 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
       } else {
         await safeSend(socket, groupJid, {
           text: formatInternetResults(question, answerableResults) +
-            '\n\nℹ️ د اتومات مفصل پښتو لنډیز لپاره په سرور کې OPENROUTER_API_KEY تنظیم کړئ. تر هغې پورې بوټ د موندل شوو سرچینو سرلیکونه او لنډ اقتباسونه ښيي.' +
+            (readOpenRouterApiKey()
+              ? '\n\nℹ️ د AI خدمت دا ځل مفصل پښتو لنډیز ورنه کړ؛ اصلي حوالې او لنډ اقتباسونه پورته دي. لږ وروسته بیا هڅه وکړئ.'
+              : '\n\nℹ️ د اتومات مفصل پښتو لنډیز لپاره په سرور کې OPENROUTER_API_KEY تنظیم کړئ. تر هغې پورې بوټ د موندل شوو سرچینو سرلیکونه او لنډ اقتباسونه ښيي.') +
             (usableLocalAnswer && !requiresFactualEvidence
               ? '\n\n📚 *د بوټ له ثبت شوو معلوماتو څخه:* \n' + usableLocalAnswer.slice(0, 900)
               : ''),
