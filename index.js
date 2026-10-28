@@ -14,6 +14,7 @@ const P = require('pino');
 const express = require('express');
 const { rankRelevantSearchResults } = require('./lib/search-relevance');
 const { buildAnswerPlan } = require('./lib/answer-plan');
+const { requiresFactualSourceEvidence, filterAuthoritativeFactualSources } = require('./lib/factual-source-policy');
 const { isTafsirYaseerAuthorshipQuestion, filterTafsirYaseerAuthorSources } = require('./lib/book-source-policy');
 const { splitWhatsAppText } = require('./lib/answer-delivery');
 const {
@@ -905,6 +906,15 @@ async function searchInternet(query) {
     }
   }
 
+  const factualEvidenceRequired = requiresFactualSourceEvidence(query, buildAnswerPlan(query).category);
+  if (factualEvidenceRequired) {
+    const originalCount = unique.length;
+    unique = filterAuthoritativeFactualSources(unique, query, buildAnswerPlan(query).category);
+    if (originalCount > 0 && unique.length === 0) {
+      console.warn('⚠️ د دې تاریخي، سیاسي یا علمي پوښتنې پایلې معتبرې سرچینې نه لري؛ نامعتبرې پایلې نه کارول کېږي.');
+    }
+  }
+
   if (unique.length) {
     const providerCounts = unique.reduce((counts, item) => {
       counts[item.provider || 'نورې سرچینې'] = (counts[item.provider || 'نورې سرچینې'] || 0) + 1;
@@ -988,10 +998,17 @@ async function summarizeSourcesInPashto(question, results, localAnswer = '') {
   const topicScopedResults = isSpecificBookAuthorship
     ? filterTafsirYaseerAuthorSources(suppliedResults)
     : suppliedResults;
+  const factualEvidenceRequired = requiresFactualSourceEvidence(question, answerPlan.category);
   const evidenceResults = answerPlan.category === 'religion'
     ? filterTrustedReligiousSources(topicScopedResults, question)
-    : topicScopedResults;
+    : factualEvidenceRequired
+      ? filterAuthoritativeFactualSources(topicScopedResults, question, answerPlan.category)
+      : topicScopedResults;
   const noReligiousEvidence = answerPlan.category === 'religion' && evidenceResults.length === 0;
+  if (factualEvidenceRequired && answerPlan.category !== 'religion' && evidenceResults.length === 0) {
+    console.warn('ℹ️ د تاریخي، سیاسي یا علمي پوښتنې لپاره باوري سرچینه نشته؛ بې‌سرچینې ځواب نه جوړېږي.');
+    return null;
+  }
   if (isSpecificBookAuthorship && evidenceResults.length === 0) {
     console.warn('ℹ️ د تفسیر یسیر د لیکوال پوښتنې لپاره د کتاب او لیکوال دواړه تاییدوونکې سرچینه نشته؛ نوم نه اټکلېږي.');
     return null;
@@ -1024,6 +1041,9 @@ async function summarizeSourcesInPashto(question, results, localAnswer = '') {
         role: 'system',
         content: [
           answerPlan.instructions,
+          ...(factualEvidenceRequired && answerPlan.category !== 'religion'
+            ? ['د دې تاریخي، سیاسي یا علمي ځواب لپاره یوازې د ورکړل شوو معتبره سرچینو پر شواهدو تکیه وکړه. ثابت حقایق له تحلیل، نظر او احتمالي تعبیر څخه جلا کړه؛ د یوې ډلې یا دولت موخې بې له شواهدو مه اټکلوه. که سرچینې د ادعا ملاتړ نه کوي، ادعا مه وړاندې کوه او جعلي لینک یا حواله مه جوړوه.']
+            : []),
           'ته د پښتو ژبې یو دقیق څېړونکی او لیکوال یې.',
           'د کارونکي پوښتنې ته په روانه، روښانه او مفصله پښتو ځواب ولیکه.',
           'که اړوندې سرچینې ورکړل شوې وي، د هغو له شواهدو سره سم ځواب ولیکه او د سرچینو د متن د ناسموالي امکان په پام کې ونیسه. که سرچینې نه وي، د عمومي او ثابتو موضوعاتو لپاره له خپلې پوهې ځواب ورکړه؛ د تازه یا بدلېدونکو معلوماتو په اړه سرچینه نه وي، په ښکاره ووایه چې اوسنی حقیقت دې نه دی تایید کړی.',
@@ -1254,6 +1274,7 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
   }
 
   const answerPlan = buildAnswerPlan(question);
+  const requiresFactualEvidence = requiresFactualSourceEvidence(question, answerPlan.category);
   const localAnswer = answerFromOfflineKnowledge(question);
   const asksAfghanistanContext = /افغانستان|افغاني|afghanistan|کابل|kabul/iu.test(question);
   const localAnswerCoversContext = Boolean(
@@ -1278,6 +1299,7 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
   // د کره او نسبتاً ثابتې محلي موضوع لپاره مستقیم ځواب ورکړه؛ بې‌اړخه ویب پایلې مه ورسره ګډوه.
   if (
     usableLocalAnswer &&
+    !requiresFactualEvidence &&
     !answerPlan.detailed &&
     !requestsInternetSearch(question) &&
     !isTimeSensitiveQuestion(question)
@@ -1307,14 +1329,16 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
       ? filterTrustedReligiousSources(topicScopedResults, question)
       : topicScopedResults;
     if (answerableResults.length) {
-      const aiSummary = await summarizeSourcesInPashto(question, answerableResults, usableLocalAnswer);
+      const aiSummary = await summarizeSourcesInPashto(
+        question, answerableResults, requiresFactualEvidence ? '' : usableLocalAnswer
+      );
       if (aiSummary) {
         const answerHeading = answerableResults.length >= 2
           ? '🤖 *د موندل شوو سرچینو په مرسته د AI ځواب*'
           : '🤖 *د AI ځواب*';
         await safeSend(socket, groupJid, {
           text: answerHeading + '\n\n' + aiSummary + formatVerifiedSourceLinks(answerableResults) +
-            (usableLocalAnswer
+            (usableLocalAnswer && !requiresFactualEvidence
               ? '\n\n📚 *د بوټ له ثبت شوو معلوماتو څخه:* \n' + usableLocalAnswer.slice(0, 1200)
               : ''),
         });
@@ -1322,7 +1346,7 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
         await safeSend(socket, groupJid, {
           text: formatInternetResults(question, answerableResults) +
             '\n\nℹ️ د اتومات مفصل پښتو لنډیز لپاره په سرور کې OPENROUTER_API_KEY تنظیم کړئ. تر هغې پورې بوټ د موندل شوو سرچینو سرلیکونه او لنډ اقتباسونه ښيي.' +
-            (usableLocalAnswer
+            (usableLocalAnswer && !requiresFactualEvidence
               ? '\n\n📚 *د بوټ له ثبت شوو معلوماتو څخه:* \n' + usableLocalAnswer.slice(0, 900)
               : ''),
         });
@@ -1334,14 +1358,16 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
   // که لټون پایله ورنه کړي، د عادي پوښتنې لپاره بیا هم AI ته د ځواب جوړولو اجازه ورکړه.
   // د تازه معلوماتو په موضوع کې باید د سرچینې نشتوالی په ځواب کې روښانه شي.
   if (ENABLE_AI_SUMMARIZATION && readOpenRouterApiKey()) {
-    const aiAnswer = await summarizeSourcesInPashto(question, [], usableLocalAnswer);
+    const aiAnswer = await summarizeSourcesInPashto(
+      question, [], requiresFactualEvidence ? '' : usableLocalAnswer
+    );
     if (aiAnswer) {
       await safeSend(socket, groupJid, { text: '🤖 *د AI ځواب*\n\n' + aiAnswer });
       return true;
     }
   }
 
-  if (usableLocalAnswer) {
+  if (usableLocalAnswer && !requiresFactualEvidence) {
     const message = isTimeSensitiveQuestion(question)
       ? usableLocalAnswer + '\n\n⚠️ دا ځل انټرنېټي سرچینو نتیجه ورنه کړه؛ د تازه معلوماتو لپاره د سرچینې نېټه جلا وګورئ.'
       : usableLocalAnswer;
@@ -1353,7 +1379,9 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
 
   const aiKeyConfigured = Boolean(readOpenRouterApiKey());
   const isReligiousQuestion = answerPlan.category === 'religion';
-  const fallbackText = isTafsirYaseerAuthorshipQuestion(question)
+  const fallbackText = requiresFactualEvidence && !isReligiousQuestion
+    ? '📚 دا ځل د دې تاریخي، سیاسي یا علمي پوښتنې لپاره کافي معتبرې سرچینې ونه موندل شوې؛ نو بې‌سرنده ادعا د تایید شوي حقیقت په توګه نه وړاندې کوم. یوه رسمي، پوهنتوني، علمي یا باوري خبري سرچینه شریکه کړئ، یا وروسته بیا هڅه وکړئ.'
+    : isTafsirYaseerAuthorshipQuestion(question)
     ? '📚 د «تفسیر یسیر» د لیکوال نوم مې دا ځل په داسې باوري سرچینه کې ونه شو تاییدولای چې همدا کتاب او لیکوال په څرګنده یاد کړي؛ نو د ناسم نوم له اټکل کولو ډډه کوم.'
     : isReligiousQuestion
     ? '📚 د دې دیني پوښتنې لپاره له باوري، اړوندې دیني یا علمي سرچینې څخه کافي شواهد ترلاسه نه شول. د ناسم آیت، حدیث، روایت، فتوا یا شرعي حکم د جوړولو پر ځای ځواب نه اټکلم. که د قرآن، حدیث، معتبر کتاب یا پېژندل شوې مرجع لینک راولېږئ، د هماغې سرچینې له مخې یې تشریح کوم.'
