@@ -500,8 +500,60 @@ async function searchDuckDuckGo(query) {
   return [];
 }
 
+// Wikimedia throttles unauthenticated requests; keep requests serial and respect Retry-After.
+let wikipediaRequestQueue = Promise.resolve();
+let wikipediaBackoffUntil = 0;
+let wikipediaLastRequestAt = 0;
+const WIKIPEDIA_USER_AGENT = 'MaloomatBot/1.0 (https://github.com/Rahmatullah34/maloomat-bot-Create)';
+
+function withWikipediaRequestSpacing(task) {
+  const request = wikipediaRequestQueue.then(async () => {
+    if (Date.now() < wikipediaBackoffUntil) return null;
+    const spacing = 1200 - (Date.now() - wikipediaLastRequestAt);
+    if (spacing > 0) await new Promise(resolve => setTimeout(resolve, spacing));
+    if (Date.now() < wikipediaBackoffUntil) return null;
+    wikipediaLastRequestAt = Date.now();
+    return task();
+  });
+  wikipediaRequestQueue = request.then(() => undefined, () => undefined);
+  return request;
+}
+
+function rememberWikipediaRateLimit(response) {
+  const raw = String(response?.headers?.get?.('retry-after') || '').trim();
+  let waitMs = Number(raw) * 1000;
+  if (!Number.isFinite(waitMs) || waitMs <= 0) {
+    const dateMs = Date.parse(raw);
+    waitMs = Number.isFinite(dateMs) ? dateMs - Date.now() : 60000;
+  }
+  wikipediaBackoffUntil = Math.max(wikipediaBackoffUntil, Date.now() + Math.max(1000, waitMs));
+}
+
+function simplifyWikipediaSearchQuery(query) {
+  const value = String(query || '').trim();
+  const shortcuts = [
+    [/minor signs of the hour|signs of the day of judgment|signs of the day of judgement/i, 'Signs of the Hour'],
+    [/five pillars of islam/i, 'Five Pillars of Islam'],
+    [/salah|islamic prayer|prayer in islam/i, 'Prayer in Islam'],
+    [/ramadan|fasting in islam/i, 'Ramadan'],
+    [/zakat|zakah/i, 'Zakat'],
+    [/hajj|umrah/i, 'Hajj'],
+    [/wudu|ablution|ritual purification/i, 'Wudu'],
+    [/prophet muhammad|seerah|sirah/i, 'Muhammad'],
+    [/quran|tafsir/i, 'Quran'],
+    [/hadith|sunnah/i, 'Hadith'],
+    [/islamic eschatology/i, 'Islamic eschatology'],
+    [/islam beliefs|islam overview/i, 'Islam'],
+  ];
+  for (const [pattern, shortQuery] of shortcuts) {
+    if (pattern.test(value)) return shortQuery;
+  }
+  return value.length > 100 ? value.slice(0, 100).trim() : value;
+}
+
 async function searchWikipedia(query, language = 'en') {
   const languageCode = /^(?:ps|en|ar|ur|fa)$/.test(String(language)) ? language : 'en';
+  const wikiQuery = simplifyWikipediaSearchQuery(query);
   const decodeExcerpt = (value) => String(value || '')
     .replace(/<[^>]*>/g, ' ')
     .replace(/&amp;/gi, '&')
@@ -513,19 +565,27 @@ async function searchWikipedia(query, language = 'en') {
     .replace(/\s+/g, ' ')
     .trim();
 
-  // د REST لټون API د مقالې لنډ اقتباس او تشریح مستقیم راکوي؛
-  // پخوانی generator API لاندې د احتیاطي بدیل په توګه ساتل شوی.
   const restEndpoint = 'https://' + languageCode + '.wikipedia.org/w/rest.php/v1/search/page?' +
-    new URLSearchParams({ q: String(query || ''), limit: '4' }).toString();
+    new URLSearchParams({ q: wikiQuery, limit: '4' }).toString();
 
   try {
-    const response = await fetch(restEndpoint, {
+    const response = await withWikipediaRequestSpacing(() => fetch(restEndpoint, {
       headers: {
-        'User-Agent': 'MaloomatBot/1.0 (Pashto educational WhatsApp bot)',
+        'User-Agent': WIKIPEDIA_USER_AGENT,
+        'Api-User-Agent': WIKIPEDIA_USER_AGENT,
         'Accept': 'application/json',
       },
       signal: AbortSignal.timeout(6000),
-    });
+    }));
+    if (!response) {
+      console.warn('ℹ️ د ویکیپیډیا لټون موقتاً درول شوی؛ د 429 محدودیت د ختمېدو انتظار کوي.');
+      return [];
+    }
+    if (response.status === 429) {
+      rememberWikipediaRateLimit(response);
+      console.warn('⚠️ د ویکیپیډیا REST API د 429 محدودیت ورکړ؛ د Retry-After له مخې نوې غوښتنې ځنډول کېږي.');
+      return [];
+    }
     if (response.ok) {
       const data = await response.json();
       const pages = (Array.isArray(data?.pages) ? data.pages : [])
@@ -545,19 +605,21 @@ async function searchWikipedia(query, language = 'en') {
         };
       }).filter(item => item.title && item.url && item.snippet.length >= 40);
       if (results.length) return results;
-      console.warn('⚠️ د ویکیپیډیا ' + languageCode + ' REST لټون پایلې درلودې نه، پخوانی API ازمویل کېږي.');
+      console.warn('⚠️ د ویکیپیډیا ' + languageCode + ' REST لټون د «' + wikiQuery.slice(0, 55) + '» لپاره کارېدونکی اقتباس ونه موند.');
     } else {
       console.warn('⚠️ د ویکیپیډیا ' + languageCode + ' REST لټون HTTP خطا ورکړه:', response.status, response.statusText || '');
+      // Do not immediately retry a throttled/overloaded endpoint through another API.
+      if (response.status === 503) return [];
     }
   } catch (err) {
     console.warn('⚠️ د ویکیپیډیا ' + languageCode + ' REST لټون ناکام شو:', err?.message || err);
   }
 
-  // سازګاري: که REST API نتیجه ورنه کړي، پخوانی MediaWiki API وکاروه.
+  // Use the legacy API only when REST returned no usable data and did not rate-limit us.
   const legacyEndpoint = 'https://' + languageCode + '.wikipedia.org/w/api.php?' + new URLSearchParams({
     action: 'query',
     generator: 'search',
-    gsrsearch: String(query || ''),
+    gsrsearch: wikiQuery,
     gsrnamespace: '0',
     gsrwhat: 'text',
     gsrlimit: '4',
@@ -571,10 +633,20 @@ async function searchWikipedia(query, language = 'en') {
   }).toString();
 
   try {
-    const response = await fetch(legacyEndpoint, {
-      headers: { 'User-Agent': 'MaloomatBot/1.0 (Pashto educational WhatsApp bot)' },
+    const response = await withWikipediaRequestSpacing(() => fetch(legacyEndpoint, {
+      headers: {
+        'User-Agent': WIKIPEDIA_USER_AGENT,
+        'Api-User-Agent': WIKIPEDIA_USER_AGENT,
+        'Accept': 'application/json',
+      },
       signal: AbortSignal.timeout(6000),
-    });
+    }));
+    if (!response) return [];
+    if (response.status === 429) {
+      rememberWikipediaRateLimit(response);
+      console.warn('⚠️ د ویکیپیډیا پخواني API د 429 محدودیت ورکړ؛ د Retry-After درناوی کېږي.');
+      return [];
+    }
     if (!response.ok) {
       console.warn('⚠️ د ویکیپیډیا ' + languageCode + ' پخوانی API HTTP خطا ورکړه:', response.status, response.statusText || '');
       return [];
@@ -587,9 +659,6 @@ async function searchWikipedia(query, language = 'en') {
     const pages = Object.values(data?.query?.pages || {})
       .filter(page => page && page.title && page.extract)
       .slice(0, 4);
-    if (!pages.length) {
-      console.warn('⚠️ د ویکیپیډیا ' + languageCode + ' په دواړو API لټونونو کې د کارولو وړ اقتباس ونه موندل شو.');
-    }
     return pages.map(page => ({
       title: String(page.title).slice(0, 180),
       url: page.fullurl || ('https://' + languageCode + '.wikipedia.org/?curid=' + page.pageid),
@@ -681,26 +750,66 @@ async function searchInternet(query) {
   const cached = INTERNET_SEARCH_CACHE.get(normalized);
   if (cached && now - cached.time < INTERNET_SEARCH_CACHE_TTL_MS) return cached.results;
 
-  const searchQueries = buildSearchQueries(query);
-
-  // لومړی د پوښتنې اصلي موضوع لټوو؛ اوږده جمله یوازې د اضافي هڅې لپاره کاروو.
-  // سرچینې په موازي ډول لټول کېږي او د یوې سرچینې ناکامي نورې نه بندوي.
-  const searches = [];
-  for (const searchQuery of searchQueries) {
-    searches.push(
-      searchDuckDuckGo(searchQuery),
-      searchWikipedia(searchQuery, 'ps'),
-      searchWikipedia(searchQuery, 'en')
-    );
-    if (isNewsQuestion(query) || isTimeSensitiveQuestion(query)) {
-      searches.push(searchGdeltNews(searchQuery));
-    }
+  const allSearchQueries = buildSearchQueries(query);
+  const isReligiousSearch = buildAnswerPlan(query).category === 'religion';
+  const containsPashto = /[\u0600-\u06FF]/u.test(query);
+  // Pashto religious questions need their concise English topic hints first;
+  // starting with the raw Pashto sentence is rarely useful on English reference sites.
+  let searchQueries = allSearchQueries;
+  if (isReligiousSearch && containsPashto) {
+    const englishQueries = allSearchQueries.filter(item => !/[\u0600-\u06FF]/u.test(item));
+    const nativeQueries = allSearchQueries.filter(item => /[\u0600-\u06FF]/u.test(item));
+    searchQueries = [...englishQueries, ...nativeQueries];
   }
+  searchQueries = [...new Set(searchQueries)].slice(0, isReligiousSearch ? 2 : 3);
 
-  const settled = await Promise.allSettled(searches);
   const combined = [];
-  for (const result of settled) {
-    if (result.status === 'fulfilled' && Array.isArray(result.value)) combined.push(...result.value);
+  const attemptedQueries = [];
+
+  // Search in small rounds. This caps the fan-out to two or three requests instead
+  // of sending every variant to Wikipedia at once and causing 429s/timeouts.
+  for (const searchQuery of searchQueries) {
+    attemptedQueries.push(searchQuery);
+    const tasks = [
+      searchDuckDuckGo(searchQuery),
+      searchWikipedia(searchQuery, 'en'),
+    ];
+    if (!isReligiousSearch && containsPashto) tasks.push(searchWikipedia(searchQuery, 'ps'));
+
+    const settled = await Promise.allSettled(tasks);
+    for (const result of settled) {
+      if (result.status === 'fulfilled' && Array.isArray(result.value)) combined.push(...result.value);
+    }
+
+    if (isNewsQuestion(query) || isTimeSensitiveQuestion(query)) {
+      const newsResults = await searchGdeltNews(searchQuery);
+      combined.push(...newsResults);
+    }
+
+    const deduplicatedRound = [];
+    const seenRound = new Set();
+    for (const item of combined) {
+      const key = canonicalResultUrl(item.url);
+      if (!key || seenRound.has(key)) continue;
+      seenRound.add(key);
+      deduplicatedRound.push(item);
+    }
+
+    if (isReligiousSearch) {
+      const relevantRound = [];
+      const relevantUrls = new Set();
+      for (const candidateQuery of attemptedQueries) {
+        for (const item of rankRelevantSearchResults(candidateQuery, deduplicatedRound, 5)) {
+          const key = canonicalResultUrl(item.url);
+          if (!key || relevantUrls.has(key)) continue;
+          relevantUrls.add(key);
+          relevantRound.push(item);
+        }
+      }
+      if (filterTrustedReligiousSources(relevantRound, query).length > 0) break;
+    } else if (rankRelevantSearchResults(query, deduplicatedRound, 10).length > 0) {
+      break;
+    }
   }
 
   const seen = new Set();
@@ -711,15 +820,11 @@ async function searchInternet(query) {
     return true;
   });
 
-  // د لټون ټولې خامې پایلې د کارونکي د موضوع له کلیمو سره پرتله کړه.
-  // دیني پوښتنې په څو انګلیسي/موضوعي لټونونو هم ارزول کېږي، ځکه خام Pashto پوښتنه
-  // کله ناکله د انګلیسي سرچینو له سرلیکونو سره په کلیمو نه نښلي.
-  const isReligiousSearch = buildAnswerPlan(query).category === 'religion';
   let unique;
   if (isReligiousSearch) {
     const rankedReligious = [];
     const rankedUrls = new Set();
-    for (const searchQuery of searchQueries) {
+    for (const searchQuery of attemptedQueries) {
       for (const item of rankRelevantSearchResults(searchQuery, deduplicated, 5)) {
         const key = canonicalResultUrl(item.url);
         if (!key || rankedUrls.has(key)) continue;
@@ -731,10 +836,10 @@ async function searchInternet(query) {
   } else {
     unique = rankRelevantSearchResults(query, deduplicated, 10);
   }
+
   let usingCuratedFallback = false;
 
-  // د احمدشاه بابا په تاریخي پوښتنو کې باوري ثابتې حوالې له لټون سره ضمیمه کړه؛
-  // نامربوطې پایلې د rankRelevantSearchResults له خوا رد کېږي.
+  // Established historical references remain available when the search providers fail.
   const curatedHistoricalSources = isAhmadShahQuestion(query)
     ? getCuratedFallbackSources(query).filter(item =>
         String(item.provider || '').startsWith('Curated historical reference')
@@ -753,8 +858,6 @@ async function searchInternet(query) {
     console.log('📚 د احمدشاه بابا د تاریخي پوښتنې لپاره باوري حوالې ورزیاتې شوې.');
   }
 
-  // کله چې ویب لټون هېڅ اړونده نتیجه ورنه کړي، یوازې د پوښتنو لپاره یو تایید شوی
-  // رسمي Meta لینک ورکوو چې مشخصه، تازه او عامه لارښوونه لري؛ نور موضوعات نه اټکل کېږي.
   if (!unique.length) {
     const curated = getCuratedFallbackSources(query);
     if (curated.length) {
@@ -781,11 +884,10 @@ async function searchInternet(query) {
       ' بېلابېلې پایلې وموندلې، خو د پوښتنې له موضوع سره یې کافي تړاو ونه موندل شو؛ دا لینکونه نه لېږل کېږي.'
     );
   } else {
-    // د کارونکي پوښتنه لاګ ته نه لیکو؛ د هر لټون کوونکي HTTP/شبکې تېروتنې پورته جلا ثبتېږي.
     console.warn('⚠️ د انټرنېټ ټولو سرچینو صفر پایلې ورکړې. د HTTP او شبکې د تېروتنو لاګونه پورته وګورئ.');
   }
 
-  INTERNET_SEARCH_CACHE.set(normalized, { time: now, results: unique });
+  INTERNET_SEARCH_CACHE.set(normalized, { time: Date.now(), results: unique });
   if (INTERNET_SEARCH_CACHE.size > 150) {
     const oldestKey = INTERNET_SEARCH_CACHE.keys().next().value;
     if (oldestKey) INTERNET_SEARCH_CACHE.delete(oldestKey);
