@@ -116,3 +116,32 @@ test('prefers more authoritative sources when relevance is otherwise equal', () 
   const filtered = rankRelevantSearchResults('احمدشاه بابا مشهورې جګړې', results);
   assert.equal(filtered[0].url, 'https://iranicaonline.org/articles/ahmad-shah-durrani');
 });
+
+
+test('rejects a tangential Raghunath Rao page for an Ahmad Shah battles question', () => {
+  const results = [
+    {
+      title: 'Raghunath Rao',
+      url: 'https://en.wikipedia.org/wiki/Raghunath_Rao',
+      snippet: 'The Maratha commander opposed the forces of Ahmad Shah Durrani in northern India.',
+    },
+    {
+      title: 'Third Battle of Panipat',
+      url: 'https://en.wikipedia.org/wiki/Third_Battle_of_Panipat',
+      snippet: 'Ahmad Shah Durrani led an Afghan coalition against the Maratha Confederacy on 14 January 1761.',
+    },
+  ];
+  const filtered = rankRelevantSearchResults('د احمدشاه بابا مشهورې جګړې', results);
+  assert.deepEqual(filtered.map((item) => item.title), ['Third Battle of Panipat']);
+});
+
+test('rejects Ahmad Shah mentions in snippets when the result title is unrelated', () => {
+  const results = [
+    {
+      title: 'Raghunath Rao',
+      url: 'https://en.wikipedia.org/wiki/Raghunath_Rao',
+      snippet: 'Ahmad Shah Durrani and Maratha forces clashed during the campaign.',
+    },
+  ];
+  assert.deepEqual(rankRelevantSearchResults('د احمدشاه بابا تفصیلي معلومات', results), []);
+});
