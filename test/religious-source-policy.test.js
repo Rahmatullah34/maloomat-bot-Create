@@ -7,6 +7,7 @@ const {
   isTrustedReligiousSource,
   filterTrustedReligiousSources,
   hasTrustedReligiousReferenceText,
+  requiresAuthoritativeReligiousSource,
 } = require('../lib/religious-source-policy');
 
 test('accepts established primary-text and academic reference domains', () => {
@@ -63,6 +64,14 @@ test('allows encyclopedic references for general religious background questions'
   assert.deepEqual(filterTrustedReligiousSources([wiki], 'What is Islam?').map(item => item.title), ['Islam']);
 });
 
+test('distinguishes general religious background from precise religious claims', () => {
+  assert.equal(requiresAuthoritativeReligiousSource('د قیامت وړې نښې مفصل او کتابونو معلومات راکړه؟'), false);
+  assert.equal(requiresAuthoritativeReligiousSource('What is a hadith?'), false);
+  assert.equal(requiresAuthoritativeReligiousSource('د دې حدیث کره حواله او شمېره راکړه؟'), true);
+  assert.equal(requiresAuthoritativeReligiousSource('ایا دا عمل حلال دی که حرام؟'), true);
+  assert.equal(requiresAuthoritativeReligiousSource('د قرآن د دې آیت کره متن او شمېره راکړه؟'), true);
+});
+
 test('requires authoritative Islamic sources for hadith, citations, and rulings', () => {
   const wiki = {
     title: 'Signs of the Hour',
@@ -76,11 +85,12 @@ test('requires authoritative Islamic sources for hadith, citations, and rulings'
   };
 
   assert.equal(isTrustedReligiousSource(wiki, 'د حدیث کره حواله او شمېره راکړه'), false);
+  assert.equal(isTrustedReligiousSource(wiki, 'د قیامت وړې نښې مفصل او کتابونو معلومات راکړه؟'), true);
   assert.deepEqual(
     filterTrustedReligiousSources([wiki, hadith], 'د حدیث کره حواله او شمېره راکړه').map(item => item.title),
     ['Sahih al-Bukhari 1036'],
   );
-  assert.equal(hasTrustedReligiousReferenceText('https://en.wikipedia.org/wiki/Signs_of_the_hour', 'کتابونو حوالې راکړه'), false);
+  assert.equal(hasTrustedReligiousReferenceText('https://en.wikipedia.org/wiki/Signs_of_the_hour', 'کتابونو حوالې راکړه'), true);
   assert.equal(hasTrustedReligiousReferenceText('https://sunnah.com/bukhari:1036', 'کتابونو حوالې راکړه'), true);
 });
 
