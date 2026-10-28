@@ -35,6 +35,7 @@ test('classifies religious questions across Islamic and other faith topics', () 
     'What does the Bible say about forgiveness?',
     'Explain the history of Judaism',
     'What is Buddhist teaching about compassion?',
+    'What medicine should a Muslim use while fasting?',
   ]) {
     const plan = buildAnswerPlan(question);
     assert.equal(plan.category, 'religion', question);
