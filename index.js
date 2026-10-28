@@ -57,6 +57,8 @@ const {
 
 // د WhatsApp د اتصال ریښتیایي حالت؛ د /health په ځواب کې ښودل کیږي.
 let whatsappConnectionState = 'unknown';
+let whatsappLastDisconnectCode = null;
+let whatsappLastDisconnectAt = null;
 
 // ======================================================
 // 1. د بوټ HTTP روغتیا او حالت
@@ -81,6 +83,8 @@ const PRIVATE_QA_ALLOWED_LIDS = new Set([
 ]);
 const ENABLE_INTERNET_SEARCH = true;
 const ENABLE_AI_SUMMARIZATION = true;
+// اتومات لینک اخطار/حذف بند دی؛ کنځل، Status/چینل فارورډونه او سپم جلا فعال پاتې دي.
+const ENABLE_LINK_MODERATION = false;
 
 // د ګروپ کنټرول: له درېیم اخطار وروسته د غړي پیغامونه د ټاکلې مودې لپاره حذف کېږي.
 const WARNING_MUTE_ENABLED = !/^(?:0|false|no|off)$/i.test(
@@ -113,7 +117,7 @@ app.get('/health', (_req, res) => {
     webSearchProviders: ['DuckDuckGo', 'Wikipedia EN', 'Wikipedia PS', 'GDELT news'],
     moderation: {
       badWords: true,
-      links: true,
+      links: ENABLE_LINK_MODERATION,
       flood: true,
       repeatedMessages: true,
       maxMessagesPerWindow: 3,
@@ -128,6 +132,10 @@ app.get('/health', (_req, res) => {
     knowledgeEntries: OFFLINE_KNOWLEDGE.length,
     whatsapp: {
       connection: whatsappConnectionState,
+      lastDisconnectCode: whatsappLastDisconnectCode,
+      lastDisconnectAt: whatsappLastDisconnectAt,
+      reconnectScheduled: Boolean(reconnectTimer),
+      authSessionSaved: fs.existsSync(path.join(AUTH_DIR, 'creds.json')),
     },
     allowedGroups: allowedGroupsCount(),
     historyCleanup: isHistoryCleanupEnabled(),
@@ -1437,7 +1445,7 @@ const GROUP_RULES = `📜 *Maloomat AI | معلومات AI — د ګروپ رس�
 
 🤝 *۲ ـ متقابل درناوی:* له ټولو غړو سره په ادب چلند وکړئ. کنځل، سپکاوی، ګواښ، ځورول، ملنډې او شخصي شخړې منع دي.
 
-🔗 *۳ ـ لینکونه او اعلانونه:* د ادارې له اجازې پرته ویب‌لینکونه، بلنې، سوداګریز اعلانونه، د نورو ګروپونو لینکونه او تبلیغاتي پیغامونه مه خپروئ.
+🔗 *۳ ـ لینکونه او اعلانونه:* ګټور او اړوند لینکونه په مسؤلیت شریک کړئ؛ مشکوک، فریبکار او تکراري تبلیغاتي پیغامونه مه خپروئ.
 
 🚫 *۴ ـ سپم او تکراري پیغامونه:* یو پیغام بیا بیا مه استوئ؛ ډېر پرله‌پسې پیغامونه، بې‌ځایه ټګونه او د ګروپ ګډوډول منع دي.
 
@@ -1760,8 +1768,14 @@ async function startBot() {
       markOnlineOnConnect: true,
       printQRInTerminal: false,
 
+      // د WhatsApp اتصال ژوندی ساتلو لپاره واضح timeout/keepalive ارزښتونه.
+      // Linked device باید د اصلي موبایل له بندېدو سره سم له منځه ولاړ نه شي.
+      keepAliveIntervalMs: 20_000,
+      connectTimeoutMs: 60_000,
+      defaultQueryTimeoutMs: 60_000,
+
       // د حافظې د سپما لپاره د WhatsApp د بشپړ پخواني تاریخ همغږي بنده ده.
-      // د راتلونکو پیغامونو د لینکونو کنټرول جلا فعال پاتې کېږي.
+      // لینک اخطارونه بند دي؛ Status/چینل فارورډونه لا هم جلا کتنه کېږي.
       syncFullHistory: false,
     };
 
@@ -1862,7 +1876,7 @@ async function startBot() {
           );
 
           console.log(
-            '🛡️ د ګروپ مدیریت فعال دی: کنځل، دیني پارونه، لینکونه، د Status/چینل فارورډونه، چټک او تکراري سپم؛ ' +
+            '🛡️ د ګروپ مدیریت فعال دی: کنځل، د Status/چینل فارورډونه، چټک او تکراري سپم؛ لینک اخطارونه: ' + (ENABLE_LINK_MODERATION ? 'فعال' : 'بند') + '; ' +
             'د پوښتنو ځوابونه: ' + (ENABLE_GROUP_QA ? 'فعال' : 'موقتي بند') +
             '؛ ویب لټون: ' + (ENABLE_GROUP_QA && ENABLE_INTERNET_SEARCH ? 'فعال' : 'بند') +
             '؛ شخصي چټ: ' + (ENABLE_PRIVATE_QA && ENABLE_GROUP_QA ? 'فعال' : 'بند') +
@@ -1889,15 +1903,20 @@ async function startBot() {
 
           const statusCode =
             lastDisconnect?.error?.output?.statusCode;
+          whatsappLastDisconnectCode = statusCode || null;
+          whatsappLastDisconnectAt = new Date().toISOString();
+          const disconnectReason = String(lastDisconnect?.error?.message || '').slice(0, 180);
 
           console.error(
             '⚠️ د WhatsApp اتصال بند شو؛ حالت:',
-            statusCode || 'نامعلوم'
+            statusCode || 'نامعلوم',
+            '; دلیل:', disconnectReason || 'نه دی ورکړل شوی'
           );
 
           if (
             statusCode === DisconnectReason.loggedOut
           ) {
+            whatsappConnectionState = 'logged_out';
             console.error(
               '❌ حساب له WhatsApp څخه وتلی؛ ' +
               'د نوي اتصال اړتیا شته.'
@@ -1949,7 +1968,7 @@ async function startBot() {
                   '📖 د زده‌کړې، تاریخ، جغرافیې او عمومي پوهې مطالب\n' +
                   '💡 پوښتنه لرې؟ په روښانه ډول یې ولیکه؛ په درناوي له نورو غړو سره خپل معلومات او تجربې شریکې کړه.\n' +
                   '🤝 ستا ګډون زموږ د ډلې ارزښت زیاتوي. راځئ یو بل ته درناوی وکړو او په ګډه زده‌کړه وکړو.\n' +
-                  '🛡️ مهرباني وکړه: کنځل، سپکاوی، نامجاز لینکونه او پرله‌پسې سپم مه خپروه.\n' +
+                  '🛡️ مهرباني وکړه: کنځل، سپکاوی او پرله‌پسې سپم مه خپروه. د لینک اخطارونه اتومات بند دي.\n' +
                   '🌟 زموږ شعار: معلومات زده کړه، پوهه خپره کړه! 🌟\n' +
                   '📜 د ګروپ قوانین جلا لوستل غواړې؟ یوازې «قوانین» ولیکه؛ بوټ به یې درولېږي.',
 
@@ -2004,11 +2023,12 @@ async function startBot() {
           const text = extractText(msg.message);
           const channelForward = isForwardedChannelMessage(msg);
           const statusShare = isWhatsAppStatusShare(msg);
+          const hasLink = ENABLE_LINK_MODERATION && LINK_PATTERN.test(text);
 
           const historyParticipantJid =
             msg.key?.participant || msg.key?.participantAlt || '';
           const permittedHistoryLink =
-            LINK_PATTERN.test(text) &&
+            hasLink &&
             !channelForward &&
             !statusShare &&
             await isLinkPermittedForSender(
@@ -2018,9 +2038,9 @@ async function startBot() {
               [historyParticipantJid, msg.key?.participantAlt]
             );
 
-          // د اجازې لرونکي استوونکي لینکونه د تاریخ په پاکولو کې هم مه حذفوه.
+          // د لینک کنټرول چې بند وي، یوازې د URL لرونکي پخواني پیغامونه مه حذفوه.
           if (permittedHistoryLink) continue;
-          if (!LINK_PATTERN.test(text) && !channelForward && !statusShare) continue;
+          if (!hasLink && !channelForward && !statusShare) continue;
 
           if (attempted >= maxDeletesPerSync) {
             console.log('⚠️ د پخوانیو لینکونو پاکول په دې همغږي کې ۱۰۰ پیغامونو ته محدود شول؛ د موبایل/WhatsApp د تاریخ او حذف محدودیتونه هم شته.');
@@ -2046,7 +2066,7 @@ async function startBot() {
         }
 
         console.log(
-          `🧹 د پخواني تاریخ پاکول: ${checked} ګروپي پیغامونه وکتل شول؛ ${attempted} د لینک/چینل پوسټ حذف ته وسپارل شول.`
+          `🧹 د پخواني تاریخ پاکول: ${checked} ګروپي پیغامونه وکتل شول؛ ${attempted} د پخواني Status/چینل پوسټ حذف ته وسپارل شول.`
         );
       } catch (err) {
         console.error(
@@ -2428,10 +2448,11 @@ async function startBot() {
             }
 
             // ==========================================
-            // 20. د لینکونو مخنیوی
+            // 20. د لینکونو مخنیوی (اوس بند دی؛ نور نظم کنټرولونه جلا پاتې دي)
             // ==========================================
 
             if (
+              ENABLE_LINK_MODERATION &&
               LINK_PATTERN.test(text) &&
               !(await isLinkPermittedForSender(
                 socket,
