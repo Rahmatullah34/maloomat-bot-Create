@@ -1935,6 +1935,27 @@ async function startBot() {
             const isSenderGroupAdmin = senderResolution.isAdmin;
             const stableParticipantJid = senderResolution.participantKey || participantJid;
 
+            // اډمین کولای شي د اتومات خپرولو لپاره د همدې ګروپ JID په خصوصي پیغام کې ترلاسه کړي.
+            // دا د ډلې نوم یا د بل ګروپ ID نه اټکلوي؛ یوازې د پیغام حقیقي remoteJid کاروي.
+            if (
+              isSenderGroupAdmin &&
+              /^(?:groupid|group id|group jid|د ګروپ id|د ګروپ jid|ګروپ id|ګروپ jid|ګروپ ایدی|ګروپ آیډي|ګروپ آی ډي)$/iu.test(cleanText)
+            ) {
+              console.log('🔐 د اډمین غوښتنه؛ د ګروپ JID: ' + groupJid);
+              const privateReply = await safeSend(socket, participantJid, {
+                text:
+                  '📌 د دې WhatsApp ګروپ JID:\\n' + groupJid + '\\n\\n' +
+                  'په SillyDev کې د AUTO_POST_GROUP_JID د ارزښت په توګه همدا دقیق ID وکاروه.\\n' +
+                  'یادونه: اتومات خپرول تر AUTO_POST_ENABLED=true پورې بند پاتې کېږي.',
+              });
+              await safeSend(socket, groupJid, {
+                text: privateReply
+                  ? '✅ د ګروپ پېژندونکی مې ستا خصوصي WhatsApp چټ ته ولېږه.'
+                  : 'ℹ️ د ګروپ پېژندونکی د SillyDev Console په لاګ کې ثبت شو؛ مهرباني وکړئ Console وګوره.',
+              });
+              continue;
+            }
+
             const activeMute = WARNING_MUTE_ENABLED
               ? getTemporaryMuteStatus(groupJid, stableParticipantJid)
               : null;
