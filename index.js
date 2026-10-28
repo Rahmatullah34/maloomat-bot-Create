@@ -63,6 +63,11 @@ const PRIVATE_QA_ALLOWED_NUMBERS = new Set([
   '707285093',
   '93707285093',
 ]);
+// د همدې مجازې شمېرې لپاره د WhatsApp بدیل LID چې په ازموینې لاګ کې ښکاره شو.
+// یوازې دا دقیق LID منل کېږي؛ نور نامعلوم LIDونه رد پاتې کېږي.
+const PRIVATE_QA_ALLOWED_LIDS = new Set([
+  '195953604702223',
+]);
 const ENABLE_INTERNET_SEARCH = true;
 const ENABLE_AI_SUMMARIZATION = true;
 
@@ -1819,11 +1824,17 @@ async function startBot() {
                 return PRIVATE_QA_ALLOWED_NUMBERS.has(digits);
               };
 
-              let isAuthorizedPrivateSender =
-                privateSenderJids.some(isPermittedPrivatePhoneJid);
+              const isPermittedPrivateLid = (jid) =>
+                typeof jid === 'string' &&
+                /@lid$/.test(jid) &&
+                PRIVATE_QA_ALLOWED_LIDS.has(jid.split('@')[0].split(':')[0]);
 
-              // که WhatsApp د PN بدیل ونه لېږي، د Baileys له محلي LID↔PN نقشې یې پیدا کړه.
-              // دا یوازې د مجازې شمېرې د تایید لپاره کارېږي؛ نامعلوم LID ته اجازه نه ورکول کېږي.
+              let isAuthorizedPrivateSender =
+                privateSenderJids.some(isPermittedPrivatePhoneJid) ||
+                privateSenderJids.some(isPermittedPrivateLid);
+
+              // که LID په ځانګړي اجازه‌لیست کې نه وي، د Baileys له محلي نقشې د PN موندلو هڅه وکړه.
+              // نامعلوم LID ته په خپله اجازه نه ورکول کېږي.
               if (
                 !isAuthorizedPrivateSender &&
                 typeof socket.signalRepository?.lidMapping?.getPNForLID === 'function'
