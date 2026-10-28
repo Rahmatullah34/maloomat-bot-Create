@@ -911,12 +911,30 @@ async function searchInternet(query) {
     usingCuratedFallback = supplementalSources.length > 0 || usingCuratedFallback;
   }
 
-  if (!unique.length) {
-    const curated = getCuratedFallbackSources(query);
-    if (curated.length) {
-      unique = curated;
+  // Use curated references if a provider returned nothing or no source that passes the religious-source policy.
+  // This prevents generic/untrusted results from suppressing a subject-specific reliable fallback.
+  const curated = getCuratedFallbackSources(query);
+  const curatedEligible = isReligiousSearch
+    ? filterTrustedReligiousSources(curated, query)
+    : curated;
+  const hasEligibleReligiousResults = isReligiousSearch &&
+    filterTrustedReligiousSources(unique, query).length > 0;
+  if ((!unique.length || (isReligiousSearch && !hasEligibleReligiousResults)) && curatedEligible.length) {
+    const existingUrls = new Set(unique.map(item => canonicalResultUrl(item.url)));
+    const supplementalSources = curatedEligible.filter(item => {
+      const key = canonicalResultUrl(item.url);
+      if (!key || existingUrls.has(key)) return false;
+      existingUrls.add(key);
+      return true;
+    });
+    if (supplementalSources.length) {
+      unique = [...supplementalSources, ...unique].slice(0, 10);
       usingCuratedFallback = true;
-      console.warn('ℹ️ د عادي ویب لټون پر ځای د Facebook monetization لپاره رسمي Meta fallback کارول کېږي.');
+      console.warn(
+        isReligiousSearch
+          ? '📚 د عادي لټون پایلې کافي باوري دیني سرچینې نه لرلې؛ د موضوع اړوندې ټاکل شوې سرچینې ورزیاتې شوې.'
+          : '📚 د عادي ویب لټون پر ځای د موضوع اړوند ټاکل شوې بدیله سرچینه کارول کېږي.'
+      );
     }
   }
 
