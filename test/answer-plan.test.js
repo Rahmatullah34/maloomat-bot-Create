@@ -71,6 +71,14 @@ test('generates English research queries for common Islamic questions', () => {
   const humanCreation = getResearchQueryHints('الله تعالی انسان ولي اشرف مخلوقاتو پيدا کړي دي؟');
   assert.ok(humanCreation.some(query => /Why did Allah create human beings/i.test(query)));
   assert.ok(humanCreation.some(query => /purpose of human creation/i.test(query)));
+
+  const prophetBurial = getResearchQueryHints('پوښتنه ده حضرت محمد صلی الله علیه وسلام قبر له چا سره ل');
+  assert.ok(prophetBurial.some(query => /Prophet Muhammad burial place.*Abu Bakr Umar/i.test(query)));
+  assert.ok(prophetBurial.some(query => /buried beside Prophet Muhammad/i.test(query)));
+
+  const riba = getResearchQueryHints('ربا او دحرمت دلیل مفصل ځواب؟');
+  assert.ok(riba.some(query => /Islamic prohibition of riba.*Quran 2:275/i.test(query)));
+  assert.ok(riba.some(query => /Sunnah scholarly explanation/i.test(query)));
 });
 
 test('does not invent historical research hints for unrelated questions', () => {
