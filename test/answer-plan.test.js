@@ -67,6 +67,10 @@ test('generates English research queries for common Islamic questions', () => {
 
   const prayer = getResearchQueryHints('د لمانځه فرضونه کوم دي؟');
   assert.ok(prayer.some(query => /Salah|Islamic prayer/i.test(query)));
+
+  const humanCreation = getResearchQueryHints('الله تعالی انسان ولي اشرف مخلوقاتو پيدا کړي دي؟');
+  assert.ok(humanCreation.some(query => /Why did Allah create human beings/i.test(query)));
+  assert.ok(humanCreation.some(query => /purpose of human creation/i.test(query)));
 });
 
 test('does not invent historical research hints for unrelated questions', () => {
