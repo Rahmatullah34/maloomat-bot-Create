@@ -14,6 +14,7 @@ const P = require('pino');
 const express = require('express');
 const { rankRelevantSearchResults } = require('./lib/search-relevance');
 const { buildAnswerPlan } = require('./lib/answer-plan');
+const { isTafsirYaseerAuthorshipQuestion, filterTafsirYaseerAuthorSources } = require('./lib/book-source-policy');
 const { splitWhatsAppText } = require('./lib/answer-delivery');
 const {
   buildSearchQueries,
@@ -947,10 +948,18 @@ async function summarizeSourcesInPashto(question, results, localAnswer = '') {
   if (!ENABLE_AI_SUMMARIZATION || !ENABLE_GROUP_QA) return null;
   const answerPlan = buildAnswerPlan(question);
   const suppliedResults = Array.isArray(results) ? results : [];
-  const evidenceResults = answerPlan.category === 'religion'
-    ? filterTrustedReligiousSources(suppliedResults, question)
+  const isSpecificBookAuthorship = isTafsirYaseerAuthorshipQuestion(question);
+  const topicScopedResults = isSpecificBookAuthorship
+    ? filterTafsirYaseerAuthorSources(suppliedResults)
     : suppliedResults;
+  const evidenceResults = answerPlan.category === 'religion'
+    ? filterTrustedReligiousSources(topicScopedResults, question)
+    : topicScopedResults;
   const noReligiousEvidence = answerPlan.category === 'religion' && evidenceResults.length === 0;
+  if (isSpecificBookAuthorship && evidenceResults.length === 0) {
+    console.warn('ℹ️ د تفسیر یسیر د لیکوال پوښتنې لپاره د کتاب او لیکوال دواړه تاییدوونکې سرچینه نشته؛ نوم نه اټکلېږي.');
+    return null;
+  }
   const requiresReligiousEvidence = answerPlan.category === 'religion' &&
     (requiresAuthoritativeReligiousSource(question) || asksForReligiousReferences(question));
 
@@ -1247,9 +1256,12 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
 
   if (shouldSearchInternet && ENABLE_INTERNET_SEARCH) {
     const webResults = await searchInternet(question);
-    const answerableResults = answerPlan.category === 'religion'
-      ? filterTrustedReligiousSources(webResults, question)
+    const topicScopedResults = isTafsirYaseerAuthorshipQuestion(question)
+      ? filterTafsirYaseerAuthorSources(webResults)
       : webResults;
+    const answerableResults = answerPlan.category === 'religion'
+      ? filterTrustedReligiousSources(topicScopedResults, question)
+      : topicScopedResults;
     if (answerableResults.length) {
       const aiSummary = await summarizeSourcesInPashto(question, answerableResults, usableLocalAnswer);
       if (aiSummary) {
@@ -1297,7 +1309,9 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
 
   const aiKeyConfigured = Boolean(readOpenRouterApiKey());
   const isReligiousQuestion = answerPlan.category === 'religion';
-  const fallbackText = isReligiousQuestion
+  const fallbackText = isTafsirYaseerAuthorshipQuestion(question)
+    ? '📚 د «تفسیر یسیر» د لیکوال نوم مې دا ځل په داسې باوري سرچینه کې ونه شو تاییدولای چې همدا کتاب او لیکوال په څرګنده یاد کړي؛ نو د ناسم نوم له اټکل کولو ډډه کوم.'
+    : isReligiousQuestion
     ? '📚 د دې دیني پوښتنې لپاره له باوري، اړوندې دیني یا علمي سرچینې څخه کافي شواهد ترلاسه نه شول. د ناسم آیت، حدیث، روایت، فتوا یا شرعي حکم د جوړولو پر ځای ځواب نه اټکلم. که د قرآن، حدیث، معتبر کتاب یا پېژندل شوې مرجع لینک راولېږئ، د هماغې سرچینې له مخې یې تشریح کوم.'
     : aiKeyConfigured
     ? '📚 دا ځل د پوښتنې لپاره د تایید وړ معلومات نه شول ترلاسه کېدای؛ د انټرنېټ لټون یا د AI ځواب جوړول ناکام شول. لږ وروسته یې بیا وپوښتئ، یا د موضوع رسمي/معتبر لینک راولېږئ. د تخنیکي تشخیص لپاره د SillyDev لاګونه وګورئ.'
