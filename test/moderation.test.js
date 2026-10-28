@@ -16,6 +16,7 @@ const {
   isGroupAllowed,
   isHistoryCleanupEnabled,
   normalizePashto,
+  isGroupRulesCommand,
   containsBadWord,
   LINK_PATTERN,
   isForwardedChannelMessage,
@@ -53,6 +54,17 @@ test('normalizePashto: عربي تورې او نښانې سموي', () => {
   assert.equal(normalizePashto('كتاب يى'), 'کتاب یی');
   assert.equal(normalizePashto('سلام! ؟'), 'سلام');
   assert.equal(normalizePashto(''), '');
+});
+
+test('isGroupRulesCommand: د قوانینو امر په پښتو/عربي لیکدود او نښو کې پېژني', () => {
+  assert.equal(isGroupRulesCommand('قوانین'), true);
+  assert.equal(isGroupRulesCommand('قانون'), true);
+  assert.equal(isGroupRulesCommand('د ګروپ قوانین'), true);
+  assert.equal(isGroupRulesCommand('قوانين'), true); // د عربي «ي» بڼه
+  assert.equal(isGroupRulesCommand('قوانين!'), true);
+  assert.equal(isGroupRulesCommand('rules'), true);
+  assert.equal(isGroupRulesCommand('group rules'), true);
+  assert.equal(isGroupRulesCommand('سلام، څنګه یې؟'), false);
 });
 
 test('containsBadWord: سپکاوی نیسي، عادي کلمې نه', () => {
@@ -308,6 +320,23 @@ test('د پوښتنو ځوابونه، انټرنېټي لټون او AI لنډ�
     'د روغتیا راپور باید د فعالو لټون تنظیماتو مطابق حالت وښيي');
 });
 
+
+test('د قوانینو امر د سپم او نورو moderation فلټرونو تر مخه اداره کېږي', () => {
+  const indexSrc = fs.readFileSync(
+    path.join(__dirname, '..', 'index.js'),
+    'utf8'
+  );
+  const rulesCommandPosition = indexSrc.indexOf('if (isGroupRulesCommand(text))');
+  const burstCheckPosition = indexSrc.indexOf('const burst = recordGroupMessage');
+  const badWordCheckPosition = indexSrc.indexOf('if (containsBadWord(text))');
+  const linkCheckPosition = indexSrc.indexOf('ENABLE_LINK_MODERATION &&');
+
+  assert.ok(rulesCommandPosition >= 0, 'د قوانینو امر باید موجود وي');
+  assert.ok(rulesCommandPosition < burstCheckPosition, 'د قوانینو امر باید د سپم شمېر تر مخه وي');
+  assert.ok(rulesCommandPosition < badWordCheckPosition, 'د قوانینو امر باید د کنځلو فلټر تر مخه وي');
+  assert.ok(rulesCommandPosition < linkCheckPosition, 'د قوانینو امر باید د لینک فلټر تر مخه وي');
+  assert.match(indexSrc, /isGroupRulesCommand\(text\)/);
+});
 
 test('د لینکونو اتومات بندیز فعال دی، خو لایکونه/غبرګونونه اخطار نه اخلي', () => {
   const indexSrc = fs.readFileSync(
