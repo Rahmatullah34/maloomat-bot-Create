@@ -555,6 +555,11 @@ function rememberWikipediaRateLimit(response) {
 
 function simplifyWikipediaSearchQuery(query) {
   const value = String(query || '').trim();
+  // Do not collapse a specific human-creation research query to the generic
+  // Wikipedia article "Quran"; retain the actual question for relevant matches.
+  if (/(?:why did allah create|purpose of human creation|human creation in islam|created mankind|create human beings)/i.test(value)) {
+    return value.length > 120 ? value.slice(0, 120).trim() : value;
+  }
   const shortcuts = [
     [/minor signs of the hour|signs of the day of judgment|signs of the day of judgement/i, 'Signs of the Hour'],
     [/five pillars of islam/i, 'Five Pillars of Islam'],
