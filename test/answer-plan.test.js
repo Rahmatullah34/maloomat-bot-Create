@@ -39,7 +39,7 @@ test('classifies religious questions across Islamic and other faith topics', () 
   ]) {
     const plan = buildAnswerPlan(question);
     assert.equal(plan.category, 'religion', question);
-    assert.match(plan.instructions, /باوري او موضوع پورې تړلې سرچینه/);
+    assert.match(plan.instructions, /باوري علمي\/انسایکلویډیايي سرچینه/);
   }
 });
 
