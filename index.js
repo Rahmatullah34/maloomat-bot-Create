@@ -14,6 +14,7 @@ const P = require('pino');
 const express = require('express');
 const { rankRelevantSearchResults } = require('./lib/search-relevance');
 const { isCryptoEducationQuestion } = require('./lib/crypto-question');
+const { startAutoPublisher, getAutoPublisherStatus } = require('./lib/auto-publisher');
 
 // د نظم ساتنې خالصې کړنې او حالت له جلا ماډول اخیستل کیږي
 // (lib/moderation.js) څو په ازموینو کې و ازمویل شي.
@@ -106,6 +107,7 @@ app.get('/health', (_req, res) => {
     },
     allowedGroups: allowedGroupsCount(),
     historyCleanup: isHistoryCleanupEnabled(),
+    autoPublishing: getAutoPublisherStatus(),
   });
 });
 
@@ -2172,6 +2174,10 @@ async function startBot() {
 // ======================================================
 // 25. د بوټ پیل
 // ======================================================
+
+// د مهالوېش سیستم د اوسني WhatsApp socket callback له لارې اداره کېږي.
+// دا مهال د SillyDev اصلي چلولو چاپېریال کارول کېږي؛ Render ته اړتیا نشته.
+startAutoPublisher(() => currentSocket);
 
 startBot().catch((err) => {
   console.error(
