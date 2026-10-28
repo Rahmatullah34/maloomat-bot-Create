@@ -20,6 +20,29 @@ test('removes unrelated sources for a Pashto question about the human heart', ()
   );
 });
 
+test('rejects generic Quran pages for a Ruku-count question', () => {
+  const results = [
+    {
+      title: 'Quran',
+      url: 'https://en.wikipedia.org/wiki/Quran',
+      snippet: 'The Quran is the central religious text of Islam.',
+    },
+    {
+      title: 'Quran (disambiguation)',
+      url: 'https://en.wikipedia.org/wiki/Quran_(disambiguation)',
+      snippet: 'Quran may refer to several related topics.',
+    },
+    {
+      title: 'List Rukus — Quran Foundation Content API',
+      url: 'https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/list-rukus/',
+      snippet: 'The Quran Foundation Content API lists Rukus and documents numbering up to 558.',
+    },
+  ];
+
+  const filtered = rankRelevantSearchResults('قرآن کریم څو رکوع ګانې لري؟', results);
+  assert.deepEqual(filtered.map(item => item.title), ['List Rukus — Quran Foundation Content API']);
+});
+
 test('matches an English source title to a Pashto topic', () => {
   const results = [
     { title: 'Jainism', url: 'https://en.wikipedia.org/wiki/Jainism', snippet: 'Religion and philosophy.' },
