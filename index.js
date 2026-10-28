@@ -1380,7 +1380,7 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
   const aiKeyConfigured = Boolean(readOpenRouterApiKey());
   const isReligiousQuestion = answerPlan.category === 'religion';
   const fallbackText = requiresFactualEvidence && !isReligiousQuestion
-    ? '📚 دا ځل د دې تاریخي، سیاسي یا علمي پوښتنې لپاره کافي معتبرې سرچینې ونه موندل شوې؛ نو بې‌سرنده ادعا د تایید شوي حقیقت په توګه نه وړاندې کوم. یوه رسمي، پوهنتوني، علمي یا باوري خبري سرچینه شریکه کړئ، یا وروسته بیا هڅه وکړئ.'
+    ? '📚 دا ځل د دې تاریخي، سیاسي یا علمي پوښتنې لپاره کافي معتبرې سرچینې ونه موندل شوې؛ نو بې‌سنده ادعا د تایید شوي حقیقت په توګه نه وړاندې کوم. یوه رسمي، پوهنتوني، علمي یا باوري خبري سرچینه شریکه کړئ، یا وروسته بیا هڅه وکړئ.'
     : isTafsirYaseerAuthorshipQuestion(question)
     ? '📚 د «تفسیر یسیر» د لیکوال نوم مې دا ځل په داسې باوري سرچینه کې ونه شو تاییدولای چې همدا کتاب او لیکوال په څرګنده یاد کړي؛ نو د ناسم نوم له اټکل کولو ډډه کوم.'
     : isReligiousQuestion
