@@ -55,6 +55,14 @@ let whatsappConnectionState = 'unknown';
  // دا بدلونونه د lib/moderation.js د ګروپ مدیریت منطق نه بدلوي.
 const ENABLE_GROUP_QA = true;
 const ENABLE_PRIVATE_QA = true;
+
+// په شخصي چټ کې یوازې دې شمېرې ته ځواب ورکول کېږي.
+// 0707285093 د افغانستان په نړیواله بڼه 93707285093 کېږي.
+const PRIVATE_QA_ALLOWED_NUMBERS = new Set([
+  '0707285093',
+  '707285093',
+  '93707285093',
+]);
 const ENABLE_INTERNET_SEARCH = true;
 const ENABLE_AI_SUMMARIZATION = true;
 
@@ -1796,6 +1804,27 @@ async function startBot() {
                 !ENABLE_PRIVATE_QA ||
                 !/@(?:s\.whatsapp\.net|lid)$/.test(groupJid)
               ) {
+                continue;
+              }
+
+              // شخصي ځوابونه یوازې مجازې شمېرې ته؛ د LID لپاره PN بدیل باید موجود وي.
+              const privateSenderJids = [
+                groupJid,
+                msg.key?.remoteJidAlt,
+                msg.key?.participant,
+                msg.key?.participantAlt,
+              ];
+              const isAuthorizedPrivateSender = privateSenderJids.some((jid) => {
+                if (
+                  typeof jid !== 'string' ||
+                  !/@(?:s\.whatsapp\.net|c\.us)$/.test(jid)
+                ) {
+                  return false;
+                }
+                const digits = jid.split('@')[0].split(':')[0].replace(/\D/g, '');
+                return PRIVATE_QA_ALLOWED_NUMBERS.has(digits);
+              });
+              if (!isAuthorizedPrivateSender) {
                 continue;
               }
 
