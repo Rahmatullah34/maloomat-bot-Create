@@ -22,6 +22,7 @@ test('recognizes health, religion, science, translation, and current topics', ()
   assert.equal(classifyQuestion('د شکر ناروغۍ نښې څه دي؟'), 'health');
   assert.equal(classifyQuestion('د لمانځه فرضونه کوم دي؟'), 'religion');
   assert.equal(classifyQuestion('ربا او دحرمت دلیل مفصل ځواب؟'), 'religion');
+  assert.equal(classifyQuestion('ایمان څه ته وایي؟'), 'religion');
   assert.equal(classifyQuestion('DNA څه شی دی؟'), 'science');
   assert.equal(classifyQuestion('فیسبوک اکاونټ څنګه فعال کړم؟'), 'how_to');
   assert.equal(classifyQuestion('دا انګلیسي متن وژباړه'), 'translation');
@@ -56,6 +57,16 @@ test('adds reliable English research hints for Ahmad Shah Durrani battles', () =
   assert.equal(hints.length, 2);
   assert.match(hints[0], /Ahmad Shah Durrani/);
   assert.match(hints[1], /Panipat 1761/);
+});
+
+test('uses Hadith Jibril research hints for the six articles of faith and resurrection questions', () => {
+  const pillars = getResearchQueryHints('د ایمان شپږ ارکان کوم دي؟');
+  assert.ok(pillars.some(query => /Six articles of faith.*Hadith Jibril.*Sahih Muslim 8a/i.test(query)));
+  assert.ok(pillars.some(query => /Resurrection after death.*Last Day/i.test(query)));
+
+  const seven = getResearchQueryHints('ولې ٧ دي وروسته له مرګه پرژوندایمان؟');
+  assert.ok(seven.some(query => /Six articles of faith.*Hadith Jibril/i.test(query)));
+  assert.ok(seven.some(query => /Resurrection after death.*Last Day/i.test(query)));
 });
 
 test('generates English research queries for common Islamic questions', () => {
