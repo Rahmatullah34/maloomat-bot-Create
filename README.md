@@ -88,7 +88,7 @@
 
 ## د WhatsApp ناستې ذخیره
 
-د WhatsApp د ناستې معلومات د `session_auth_1/` فولډر په محلي فایلونو کې ساتل کېږي. د بوټ کار د اصلي موبایل له انټرنېټ څخه جلا دی، خو د SillyDev د سرور پروسه باید روانه وي او د ناستې فایلونه باید پاتې شي. د `/health` په ځواب کې `whatsapp.connection`، `whatsapp.authSessionSaved`، `whatsapp.lastDisconnectCode` او `whatsapp.sessionResetRequested` وګورئ. که `connection` د `logged_out` حالت وښيي یا د ناستې فایل نه وي، د WhatsApp په موبایل کې Linked Devices پرانیزئ او بوټ بیا ونښلوئ. که `sessionResetRequested: true` وي، د نوي اتصال له بشپړېدو وروسته په SillyDev Environment کې `RESET_WHATSAPP_SESSION` لرې کړئ یا `false` کړئ.
+د WhatsApp د ناستې معلومات د `session_auth_1/` فولډر په محلي فایلونو کې ساتل کېږي. بوټ باید د اصلي موبایل له بندېدو سره هم کار وکړي، خو د SillyDev سرور باید روان وي او د ناستې فایلونه باید پاتې شي. د WhatsApp د رسمي لارښود له مخې، که اصلي موبایل له ۱۴ ورځو زیات WhatsApp ونه کاروي، تړلي وسایل له حسابه وتلای شي؛ نو اصلي WhatsApp لږ تر لږه هر ۱۴ ورځې وکاروئ. د `/health` په ځواب کې `whatsapp.connection`، `whatsapp.authSessionSaved`، `whatsapp.lastDisconnectCode`، `whatsapp.reconnectScheduled` او `whatsapp.sessionResetRequested` وګورئ. که `connection` د `logged_out` حالت وښيي یا `authSessionSaved: false` وي، د WhatsApp په موبایل کې Linked Devices پرانیزئ او بوټ بیا ونښلوئ. که `sessionResetRequested: true` وي، د نوي اتصال له بشپړېدو وروسته په SillyDev Environment کې `RESET_WHATSAPP_SESSION` لرې کړئ یا `false` کړئ.
 
 ## مهم محدودیتونه
 
