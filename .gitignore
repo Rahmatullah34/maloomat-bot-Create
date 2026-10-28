@@ -16,3 +16,6 @@ npm-debug.log*
 # د اتومات معلوماتي خپرولو حالت او موقتي فایلونه
 data/auto-publisher-state.json
 data/auto-publisher-state.json.*.tmp
+
+# Local auto-publisher target/config (keep group and channel identifiers out of public Git)
+auto-publisher-config.json
