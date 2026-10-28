@@ -81,3 +81,9 @@ test('keeps the main topic ahead of incidental religious words', () => {
   assert.equal(classifyQuestion('د احمدشاه بابا مشهورې جګړې کومې وې؟'), 'history');
   assert.equal(classifyQuestion('د لمانځه فرضونه کوم دي؟'), 'religion');
 });
+
+test('generates subject-specific English research hints for beard questions', () => {
+  const hints = getResearchQueryHints('د ږیرې خریل په اسلام کې څه حکم دی؟');
+  assert.ok(hints.some(query => /beard/i.test(query)));
+  assert.ok(hints.some(query => /Bukhari|Muslim|beards/i.test(query)));
+});
