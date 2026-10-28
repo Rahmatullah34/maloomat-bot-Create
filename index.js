@@ -2177,7 +2177,7 @@ async function startBot() {
 
 // د مهالوېش سیستم د اوسني WhatsApp socket callback له لارې اداره کېږي.
 // دا مهال د SillyDev اصلي چلولو چاپېریال کارول کېږي؛ Render ته اړتیا نشته.
-startAutoPublisher(() => currentSocket);
+startAutoPublisher(() => whatsappConnectionState === 'connected' ? currentSocket : null);
 
 startBot().catch((err) => {
   console.error(
