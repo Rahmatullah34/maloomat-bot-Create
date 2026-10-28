@@ -6,6 +6,7 @@ const {
   isTrustedReligiousDomain,
   isTrustedReligiousSource,
   filterTrustedReligiousSources,
+  hasTrustedReligiousReferenceText,
 } = require('../lib/religious-source-policy');
 
 test('accepts established primary-text and academic reference domains', () => {
@@ -18,6 +19,7 @@ test('accepts established primary-text and academic reference domains', () => {
 
 test('does not accept lookalike or unrelated domains', () => {
   assert.equal(isTrustedReligiousDomain('https://sunnah.com.fake-example.org/page'), false);
+  assert.equal(isTrustedReligiousDomain('https://fake.sunnah.com/bukhari:8'), false);
   assert.equal(isTrustedReligiousDomain('https://notquran.com/'), false);
   assert.equal(isTrustedReligiousDomain('javascript:alert(1)'), false);
   assert.equal(isTrustedReligiousDomain('not a URL'), false);
@@ -42,6 +44,12 @@ test('requires a title and actual excerpt text, not only a trusted URL', () => {
     url: 'https://sunnah.com/bukhari:8',
     snippet: 'This is a usable excerpt but the title is not meaningful.',
   }), false);
+});
+
+test('accepts an offline religious answer only when it includes an approved reference link', () => {
+  assert.equal(hasTrustedReligiousReferenceText('حواله: https://sunnah.com/bukhari:8'), true);
+  assert.equal(hasTrustedReligiousReferenceText('حواله: https://random-blog.example/article'), false);
+  assert.equal(hasTrustedReligiousReferenceText('د سرچینې لینک نشته'), false);
 });
 
 test('filters untrusted blogs and empty snippets from religious search results', () => {
