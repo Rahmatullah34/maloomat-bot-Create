@@ -447,8 +447,7 @@ function isSensitiveSafetyRequest(question) {
   const asksTrackingOrHarm =
     /څنګه\s+(?:تعقیب|وڅار|په\s+نښه|ووژنم|زیان\s+ورسوم)|د\s*(?:تعقیب|وژلو|برید|حملې|په\s+نښه\s+کولو)\s*(?:لپاره|طریقه|لار)|په\s+نښه\s+کولو\s+لپاره|پټ\s+تعقیب|how\s+to\s+(?:track|target|attack|kill|doxx)|(?:track|locate|follow)\s+(?:him|her|them|someone|a\s+person)|doxx/iu.test(q);
 
-  return asksPrivateDetails || asksExactPersonLocation || asksTrackingOrHarm;
-}
+  return asksPrivateDetails || asksExactPersonLocation || asksTrackingOrHarm;}
 
 // د ویب لټون لنډمهاله cache د تکراري پوښتنو او غیرضروري غوښتنو مخه نیسي.
 const INTERNET_SEARCH_CACHE = new Map();
@@ -897,8 +896,7 @@ function formatVerifiedSourceLinks(results) {
 }
 
 function formatInternetResults(question, results) {
-  const entries = results.slice(0, 6).map((item, index) => {
-    const details = [
+  const entries = results.slice(0, 6).map((item, index) => {    const details = [
       item.provider ? 'سرچینه: ' + item.provider : '',
       item.publishedAt ? 'نېټه: ' + item.publishedAt : '',
       String(item.snippet || '').slice(0, 650),
@@ -1347,8 +1345,7 @@ async function resolveGroupSender(socket, groupJid, senderIdentifiers) {
   try {
     const metadata = await getGroupMetadataCached(socket, groupJid);
     participants = Array.isArray(metadata?.participants) ? metadata.participants : [];
-  } catch (err) {
-    console.warn('⚠️ د ګروپ د اډمین رول کتنه ناکامه شوه:', err?.message || err);
+  } catch (err) {    console.warn('⚠️ د ګروپ د اډمین رول کتنه ناکامه شوه:', err?.message || err);
   }
 
   const participant = findGroupParticipant(participants, senderIdentifiers);
@@ -1797,8 +1794,7 @@ async function startBot() {
               continue;
             }
 
-            // شخصي چټ جلا اداره کېږي؛ د ګروپ د مدیریت قواعد نه پرې تطبیقېږي.
-            if (!groupJid.endsWith('@g.us')) {
+            // شخصي چټ جلا اداره کېږي؛ د ګروپ د مدیریت قواعد نه پرې تطبیقېږي.            if (!groupJid.endsWith('@g.us')) {
               // یوازې عادي شخصي WhatsApp چټونه ومنه؛ Status، چینل او نور ډولونه بند دي.
               if (
                 !ENABLE_PRIVATE_QA ||
@@ -1814,7 +1810,7 @@ async function startBot() {
                 msg.key?.participant,
                 msg.key?.participantAlt,
               ];
-              const isAuthorizedPrivateSender = privateSenderJids.some((jid) => {
+              const isPermittedPrivatePhoneJid = (jid) => {
                 if (
                   typeof jid !== 'string' ||
                   !/@(?:s\.whatsapp\.net|c\.us)$/.test(jid)
@@ -1823,8 +1819,47 @@ async function startBot() {
                 }
                 const digits = jid.split('@')[0].split(':')[0].replace(/\D/g, '');
                 return PRIVATE_QA_ALLOWED_NUMBERS.has(digits);
-              });
+              };
+
+              let isAuthorizedPrivateSender =
+                privateSenderJids.some(isPermittedPrivatePhoneJid);
+
+              // که WhatsApp د PN بدیل ونه لېږي، د Baileys له محلي LID↔PN نقشې یې پیدا کړه.
+              // دا یوازې د مجازې شمېرې د تایید لپاره کارېږي؛ نامعلوم LID ته اجازه نه ورکول کېږي.
+              if (
+                !isAuthorizedPrivateSender &&
+                typeof socket.signalRepository?.lidMapping?.getPNForLID === 'function'
+              ) {
+                const lidJids = [
+                  ...new Set(
+                    privateSenderJids.filter(
+                      (jid) => typeof jid === 'string' && /@lid$/.test(jid)
+                    )
+                  ),
+                ];
+
+                for (const lidJid of lidJids) {
+                  try {
+                    const mappedPhoneJid =
+                      await socket.signalRepository.lidMapping.getPNForLID(lidJid);
+                    if (isPermittedPrivatePhoneJid(mappedPhoneJid)) {
+                      isAuthorizedPrivateSender = true;
+                      break;
+                    }
+                  } catch (err) {
+                    console.warn(
+                      '⚠️ د شخصي چټ د LID پېژندنې ستونزه:',
+                      err?.message || err
+                    );
+                  }
+                }
+              }
+
               if (!isAuthorizedPrivateSender) {
+                console.log(
+                  '🔒 شخصي پیغام رد شو؛ د مجازې شمېرې پېژندنه ونه شوه (JID ډول: ' +
+                  (groupJid.endsWith('@lid') ? 'LID' : 'PN') + ').'
+                );
                 continue;
               }
 
