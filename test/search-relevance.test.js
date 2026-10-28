@@ -77,3 +77,23 @@ test('crypto question prefers direct crypto titles over adjacent digital-money a
     ['د کريپټو کرنسۍ (ډیجیټلي پیسې) تنظیم'],
   );
 });
+
+
+test('matches Facebook Content Monetization official titles to a Pashto question', () => {
+  const results = [
+    {
+      title: 'Facebook Content Monetization — Meta official guide',
+      url: 'https://about.fb.com/news/2026/03/creator-fast-track-grow-your-audience-earn-money-on-facebook/',
+      snippet: 'Eligible creators can express interest through the Professional Dashboard.',
+    },
+    {
+      title: 'Jainism',
+      url: 'https://example.org/jainism',
+      snippet: 'A religious tradition.',
+    },
+  ];
+
+  const filtered = rankRelevantSearchResults('دفیسبوک مونټایزیشن مکمل طریقه او لارښوون', results);
+
+  assert.deepEqual(filtered.map((item) => item.title), ['Facebook Content Monetization — Meta official guide']);
+});

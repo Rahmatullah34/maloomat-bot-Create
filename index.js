@@ -13,6 +13,12 @@ const {
 const P = require('pino');
 const express = require('express');
 const { rankRelevantSearchResults } = require('./lib/search-relevance');
+const {
+  buildSearchQueries,
+  getCuratedFallbackSources,
+  getSearchPageHint,
+  parseDuckDuckGoResults,
+} = require('./lib/web-search');
 const { isCryptoEducationQuestion } = require('./lib/crypto-question');
 const { startAutoPublisher, getAutoPublisherStatus } = require('./lib/auto-publisher');
 
@@ -456,69 +462,6 @@ function isSensitiveSafetyRequest(question) {
 const INTERNET_SEARCH_CACHE = new Map();
 const INTERNET_SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
 
-function decodeWebText(value) {
-  return String(value || '')
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;|&#x27;/gi, "'")
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&#(x[0-9a-f]+|[0-9]+);/gi, (_m, code) => {
-      const n = /^x/i.test(code) ? parseInt(code.slice(1), 16) : parseInt(code, 10);
-      return Number.isFinite(n) && n >= 0 && n <= 0x10ffff ? String.fromCodePoint(n) : '';
-    })
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function normalizeWebResultUrl(rawUrl) {
-  try {
-    let url = new URL(rawUrl, 'https://html.duckduckgo.com');
-    if ((url.hostname === 'duckduckgo.com' || url.hostname.endsWith('.duckduckgo.com')) &&
-        (url.pathname === '/l/' || url.pathname === '/l')) {
-      const target = url.searchParams.get('uddg');
-      if (target) url = new URL(target);
-    }
-    if (!['http:', 'https:'].includes(url.protocol)) return '';
-    return url.href;
-  } catch {
-    return '';
-  }
-}
-
-function parseDuckDuckGoResults(html) {
-  const results = [];
-  const anchors = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
-  const snippets = [];
-  const snippetRe = /<(?:td|div)[^>]*class=["'][^"']*(?:result-snippet|result__snippet)[^"']*["'][^>]*>([\s\S]*?)<\/(?:td|div)>/gi;
-  let match;
-  while ((match = snippetRe.exec(html)) !== null) {
-    snippets.push(decodeWebText(match[1]));
-  }
-
-  while ((match = anchors.exec(html)) !== null && results.length < 5) {
-    const attrs = match[1];
-    const cls = (attrs.match(/\bclass=["']([^"']*)["']/i) || [])[1] || '';
-    if (!/(?:result-link|result__a)/i.test(cls)) continue;
-    const rawUrl = (attrs.match(/\bhref=["']([^"']+)["']/i) || [])[1];
-    const url = normalizeWebResultUrl(rawUrl || '');
-    const title = decodeWebText(match[2]);
-    if (!url || !title || /duckduckgo\.com/i.test(url)) continue;
-    if (results.some(item => item.url === url)) continue;
-    results.push({
-      title: title.slice(0, 180),
-      url,
-      snippet: (snippets[results.length] || '').slice(0, 700),
-      provider: 'DuckDuckGo',
-    });
-  }
-  return results;
-}
-
 async function searchDuckDuckGo(query) {
   const endpoints = [
     'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(query),
@@ -541,7 +484,9 @@ async function searchDuckDuckGo(query) {
       const results = parseDuckDuckGoResults(html);
       if (results.length) return results.slice(0, 4);
       console.warn(
-        '⚠️ د DuckDuckGo ځواب ترلاسه شو، خو پېژندل شوې پایلې پکې ونه موندل شوې؛ HTML اوږدوالی:',
+        '⚠️ د DuckDuckGo ځواب ترلاسه شو، خو پایلې ونه پېژندل شوې؛ د پاڼې تشخیص:',
+        getSearchPageHint(html),
+        '؛ HTML اوږدوالی:',
         html.length
       );
     } catch (err) {
@@ -671,15 +616,6 @@ function canonicalResultUrl(rawUrl) {
   }
 }
 
-function extractSearchTopic(question) {
-  let topic = String(question || '').trim();
-  // د کارونکي د غوښتنې لارښوونې لرې کړه، څو لټون د موضوع پر نوم وشي،
-  // نه د ټولې اوږدې جملې پر بنسټ.
-  topic = topic.split(/(?:په اړه|په هکله|په باب|معلومات راټول|معلومات راکړه|مفصل تشریح|تشریح کړه|لینکونه هم|سرچینې هم|ولټوه|لټون وکړه|search online|search the web|give me detailed|collect information)/iu)[0];
-  topic = topic.replace(/[،,:;.!؟?]+$/u, '').trim();
-  return topic.length >= 2 ? topic.slice(0, 180) : String(question || '').trim().slice(0, 180);
-}
-
 async function searchInternet(query) {
   const normalized = normalizePashto(query);
   if (!normalized || normalized.length < 2) return [];
@@ -688,8 +624,7 @@ async function searchInternet(query) {
   const cached = INTERNET_SEARCH_CACHE.get(normalized);
   if (cached && now - cached.time < INTERNET_SEARCH_CACHE_TTL_MS) return cached.results;
 
-  const topic = extractSearchTopic(query);
-  const searchQueries = [...new Set([topic, String(query).trim()].filter(Boolean))];
+  const searchQueries = buildSearchQueries(query);
 
   // لومړی د پوښتنې اصلي موضوع لټوو؛ اوږده جمله یوازې د اضافي هڅې لپاره کاروو.
   // سرچینې په موازي ډول لټول کېږي او د یوې سرچینې ناکامي نورې نه بندوي.
@@ -721,14 +656,31 @@ async function searchInternet(query) {
 
   // د لټون ټولې خامې پایلې د کارونکي د موضوع له کلیمو سره پرتله کړه.
   // یوازې اړوندې سرچینې AI ته او د WhatsApp وروستي پیغام ته لېږل کېږي.
-  const unique = rankRelevantSearchResults(query, deduplicated, 10);
+  let unique = rankRelevantSearchResults(query, deduplicated, 10);
+  let usingCuratedFallback = false;
+
+  // کله چې ویب لټون هېڅ اړونده نتیجه ورنه کړي، یوازې د پوښتنو لپاره یو تایید شوی
+  // رسمي Meta لینک ورکوو چې مشخصه، تازه او عامه لارښوونه لري؛ نور موضوعات نه اټکل کېږي.
+  if (!unique.length) {
+    const curated = getCuratedFallbackSources(query);
+    if (curated.length) {
+      unique = curated;
+      usingCuratedFallback = true;
+      console.warn('ℹ️ د عادي ویب لټون پر ځای د Facebook monetization لپاره رسمي Meta fallback کارول کېږي.');
+    }
+  }
 
   if (unique.length) {
     const providerCounts = unique.reduce((counts, item) => {
       counts[item.provider || 'نورې سرچینې'] = (counts[item.provider || 'نورې سرچینې'] || 0) + 1;
       return counts;
     }, {});
-    console.log('🌐 د تړاو له فلټر وروسته د انټرنېټ لټون پایلې:', JSON.stringify(providerCounts));
+    console.log(
+      usingCuratedFallback
+        ? '📚 د پوښتنې لپاره د تایید شوي fallback سرچینې کارول شوې:'
+        : '🌐 د تړاو له فلټر وروسته د انټرنېټ لټون پایلې:',
+      JSON.stringify(providerCounts)
+    );
   } else if (deduplicated.length) {
     console.warn(
       '⚠️ د انټرنېټ لټون ' + deduplicated.length +
@@ -845,41 +797,71 @@ async function summarizeSourcesInPashto(question, results, localAnswer = '') {
     ],
   };
 
-  try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + apiKey,
-        'Content-Type': 'application/json',
-        'X-Title': 'Maloomat AI - Pashto Research',
-      },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(22000),
-    });
-    if (!response.ok) {
-      const detail = await response.text().catch(() => '');
-      console.warn('⚠️ د پښتو لنډیز API ناکام شو:', response.status, detail.slice(0, 250));
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const attemptPayload = attempt === 0
+        ? payload
+        : { ...payload, max_tokens: Math.min(Number(payload.max_tokens) || 900, 900) };
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + apiKey,
+          'Content-Type': 'application/json',
+          'X-Title': 'Maloomat AI - Pashto Research',
+        },
+        body: JSON.stringify(attemptPayload),
+        signal: AbortSignal.timeout(attempt === 0 ? 22000 : 26000),
+      });
+
+      if (!response.ok) {
+        const detail = await response.text().catch(() => '');
+        const retryable = response.status === 429 || response.status >= 500;
+        console.warn(
+          '⚠️ د پښتو لنډیز API ناکام شو؛ HTTP:',
+          response.status,
+          '؛ هڅه:',
+          attempt + 1,
+          detail.slice(0, 250)
+        );
+        if (attempt === 0 && retryable) continue;
+        return null;
+      }
+
+      const data = await response.json();
+      const answer = String(data?.choices?.[0]?.message?.content || '')
+        .trim()
+        // د ماډل له خوا تولید شوي URLونه او جعلي سرچینه-نمبرونه نه خپروو؛ واقعي لینکونه لاندې د لټون له پایلو راځي.
+        .replace(/https?:\/\/[^\s<>()]+/giu, '')
+        .replace(/\[(?:سرچینه|source)\s*\d+\]/giu, '')
+        .trim();
+
+      if (!answer) {
+        console.warn('⚠️ د OpenRouter ځواب تش و؛ هڅه:', attempt + 1);
+        if (attempt === 0) continue;
+        return null;
+      }
+
+      AI_SUMMARY_CACHE.set(cacheKey, { time: now, answer });
+      if (AI_SUMMARY_CACHE.size > 100) {
+        const oldestKey = AI_SUMMARY_CACHE.keys().next().value;
+        if (oldestKey) AI_SUMMARY_CACHE.delete(oldestKey);
+      }
+      return answer.slice(0, 6500);
+    } catch (err) {
+      const errorMessage = String(err?.message || err || '');
+      const retryable = err?.name === 'TimeoutError' ||
+        err?.name === 'AbortError' ||
+        /timeout|aborted|fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN/i.test(errorMessage);
+      console.warn(
+        '⚠️ د پښتو لنډیز API ته اړیکه ناکامه شوه؛ هڅه:',
+        attempt + 1,
+        errorMessage
+      );
+      if (attempt === 0 && retryable) continue;
       return null;
     }
-    const data = await response.json();
-    const answer = String(data?.choices?.[0]?.message?.content || '')
-      .trim()
-      // د ماډل له خوا تولید شوي URLونه او جعلي سرچینه-نمبرونه نه خپروو؛ واقعي لینکونه لاندې د لټون له پایلو راځي.
-      .replace(/https?:\/\/[^\s<>()]+/giu, '')
-      .replace(/\[(?:سرچینه|source)\s*\d+\]/giu, '')
-      .trim();
-    if (!answer) return null;
-
-    AI_SUMMARY_CACHE.set(cacheKey, { time: now, answer });
-    if (AI_SUMMARY_CACHE.size > 100) {
-      const oldestKey = AI_SUMMARY_CACHE.keys().next().value;
-      if (oldestKey) AI_SUMMARY_CACHE.delete(oldestKey);
-    }
-    return answer.slice(0, 6500);
-  } catch (err) {
-    console.warn('⚠️ د پښتو لنډیز API ته اړیکه ناکامه شوه:', err?.message || err);
-    return null;
   }
+  return null;
 }
 
 function formatVerifiedSourceLinks(results) {
