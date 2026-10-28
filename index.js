@@ -659,8 +659,25 @@ async function searchInternet(query) {
   });
 
   // د لټون ټولې خامې پایلې د کارونکي د موضوع له کلیمو سره پرتله کړه.
-  // یوازې اړوندې سرچینې AI ته او د WhatsApp وروستي پیغام ته لېږل کېږي.
-  let unique = rankRelevantSearchResults(query, deduplicated, 10);
+  // دیني پوښتنې په څو انګلیسي/موضوعي لټونونو هم ارزول کېږي، ځکه خام Pashto پوښتنه
+  // کله ناکله د انګلیسي سرچینو له سرلیکونو سره په کلیمو نه نښلي.
+  const isReligiousSearch = buildAnswerPlan(query).category === 'religion';
+  let unique;
+  if (isReligiousSearch) {
+    const rankedReligious = [];
+    const rankedUrls = new Set();
+    for (const searchQuery of searchQueries) {
+      for (const item of rankRelevantSearchResults(searchQuery, deduplicated, 5)) {
+        const key = canonicalResultUrl(item.url);
+        if (!key || rankedUrls.has(key)) continue;
+        rankedUrls.add(key);
+        rankedReligious.push(item);
+      }
+    }
+    unique = rankedReligious.slice(0, 10);
+  } else {
+    unique = rankRelevantSearchResults(query, deduplicated, 10);
+  }
   let usingCuratedFallback = false;
 
   // د احمدشاه بابا په تاریخي پوښتنو کې باوري ثابتې حوالې له لټون سره ضمیمه کړه؛
@@ -775,7 +792,7 @@ async function summarizeSourcesInPashto(question, results, localAnswer = '') {
   const answerPlan = buildAnswerPlan(question);
   const suppliedResults = Array.isArray(results) ? results : [];
   const evidenceResults = answerPlan.category === 'religion'
-    ? filterTrustedReligiousSources(suppliedResults)
+    ? filterTrustedReligiousSources(suppliedResults, question)
     : suppliedResults;
   // د دیني ادعاوو لپاره له باوري سرچینې پرته د AI د حافظې پر بنسټ ځواب نه جوړېږي.
   if (answerPlan.category === 'religion' && evidenceResults.length === 0) {
@@ -1033,7 +1050,7 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
   );
   let usableLocalAnswer = localContextMismatch ? '' : localAnswer;
   if (answerPlan.category === 'religion' && usableLocalAnswer &&
-      !hasTrustedReligiousReferenceText(usableLocalAnswer)) {
+      !hasTrustedReligiousReferenceText(usableLocalAnswer, question)) {
     console.warn('ℹ️ د دیني موضوع لپاره محلي ځواب معتبره سرچینه نه لري؛ دا ځواب نه کارول کېږي.');
     usableLocalAnswer = '';
   }
@@ -1061,7 +1078,7 @@ async function answerWithKnowledge(socket, groupJid, participantJid, question, p
   if (shouldSearchInternet && ENABLE_INTERNET_SEARCH) {
     const webResults = await searchInternet(question);
     const answerableResults = answerPlan.category === 'religion'
-      ? filterTrustedReligiousSources(webResults)
+      ? filterTrustedReligiousSources(webResults, question)
       : webResults;
     if (answerableResults.length) {
       const aiSummary = await summarizeSourcesInPashto(question, answerableResults, usableLocalAnswer);
