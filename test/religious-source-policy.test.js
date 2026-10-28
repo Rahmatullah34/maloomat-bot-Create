@@ -8,6 +8,7 @@ const {
   filterTrustedReligiousSources,
   hasTrustedReligiousReferenceText,
   requiresAuthoritativeReligiousSource,
+  asksForReligiousReferences,
 } = require('../lib/religious-source-policy');
 
 test('accepts established primary-text and academic reference domains', () => {
@@ -118,4 +119,10 @@ test('filters untrusted blogs and empty snippets from religious search results',
     ['Primary hadith text'],
   );
   assert.deepEqual(filterTrustedReligiousSources(null), []);
+});
+
+test('distinguishes explicit source requests from general religious questions', () => {
+  assert.equal(asksForReligiousReferences('د قیامت وړې نښې مفصل او د کتابونو له حوالو سره راکړه؟'), true);
+  assert.equal(asksForReligiousReferences('د اسلام معنا څه ده؟'), false);
+  assert.equal(asksForReligiousReferences('Give me the source references for this claim'), true);
 });
