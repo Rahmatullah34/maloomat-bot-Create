@@ -96,3 +96,12 @@ test('provides historical reference fallbacks when Ahmad Shah searches fail', ()
   assert.ok(results.some((item) => /britannica/i.test(item.provider) && /wikisource\.org/.test(item.url)));
   assert.ok(results.every((item) => item.provider.startsWith('Curated historical reference')));
 });
+
+test('provides a book-specific fallback for Tafsir Yaseer authorship questions', () => {
+  const results = getCuratedFallbackSources('تفسیر یسیر پښتو کې چا لیکلی؟');
+  assert.equal(results.length, 1);
+  assert.match(results[0].title, /تفسير یسیر/);
+  assert.match(results[0].snippet, /لیکوال.*مولوي مراد علي/);
+  assert.match(results[0].url, /pashtonlegacylibrarykandahar\.com/);
+  assert.deepEqual(getCuratedFallbackSources('د زړه دنده څه ده؟'), []);
+});
