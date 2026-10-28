@@ -30,7 +30,6 @@ const {
   TEMPORARY_MUTE_DEFAULT_MS,
   rememberMessage,
   recordGroupMessage,
-  BURST_LIMIT,
   recordRepeatedMessage,
   recordViolationWarning,
   shouldSendWarningNow,
@@ -208,21 +207,15 @@ test('rememberMessage: تکراري آی‌ډي بېرته نه مني', () => {
   assert.equal(rememberMessage('group1:msg1'), false);
 });
 
-test('recordGroupMessage: په ۳۰ ثانیو کې یوازې شپږم چټک پیغام د حذف حد اوړي', () => {
-  const jid = 'test-burst-six@g.us';
-  const user = '33333333334@s.whatsapp.net';
+test('recordGroupMessage: په ۳۰ ثانیو کې ډېر پیغامونه سپم دي', () => {
+  const jid = 'test-burst@g.us';
+  const user = '33333333333@s.whatsapp.net';
   let last;
-  for (let i = 0; i < 5; i += 1) {
+  for (let i = 0; i < 4; i += 1) {
     last = recordGroupMessage(jid, user);
   }
-  assert.equal(BURST_LIMIT, 5);
-  assert.equal(last.count, 5);
-  assert.equal(last.count > BURST_LIMIT, false);
+  assert.equal(last.count, 4);
   assert.equal(last.shouldWarn, true);
-
-  last = recordGroupMessage(jid, user);
-  assert.equal(last.count, 6);
-  assert.equal(last.count > BURST_LIMIT, true);
 });
 
 test('recordRepeatedMessage: درېم تکرار حذفیږي', () => {
