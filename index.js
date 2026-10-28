@@ -116,7 +116,7 @@ app.get('/keepalive', (_req, res) => {
 });
 
 app.listen(
-  Number(process.env.PORT) || 5000,
+  Number(process.env.SERVER_PORT || process.env.PORT) || 5000,
   '0.0.0.0',
   () => {
     console.log('✅ د بوټ د روغتیا HTTP خدمت فعال شو.');
