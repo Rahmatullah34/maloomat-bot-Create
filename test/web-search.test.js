@@ -80,7 +80,7 @@ test('uses short, specific English searches for Ahmad Shah Baba battle questions
 test('provides historical reference fallbacks when Ahmad Shah searches fail', () => {
   const results = getCuratedFallbackSources('د احمدشاه بابا تفصیلي معلومات او مشهورې جګړې');
   assert.equal(results.length, 3);
-  assert.ok(results.some((item) => /iranica/i.test(item.provider) && /iranicaonline\\.org/.test(item.url)));
-  assert.ok(results.some((item) => /britannica/i.test(item.provider) && /wikisource\\.org/.test(item.url)));
+  assert.ok(results.some((item) => /iranica/i.test(item.provider) && /iranicaonline\.org/.test(item.url)));
+  assert.ok(results.some((item) => /britannica/i.test(item.provider) && /wikisource\.org/.test(item.url)));
   assert.ok(results.every((item) => item.provider.startsWith('Curated historical reference')));
 });
