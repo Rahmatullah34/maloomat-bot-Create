@@ -63,6 +63,21 @@ test('builds source-oriented English searches for general Islamic questions', ()
   assert.ok(queries.some(query => /Five Pillars of Islam/i.test(query)));
 });
 
+test('builds Quran-ruku-specific searches and curated sources instead of generic Quran pages', () => {
+  const question = 'قرآن کریم څو رکوع ګانې لري؟';
+  assert.deepEqual(buildSearchQueries(question), [
+    'Quran ruku count 540 558 differences scholarly study',
+    'Quran Foundation API list of all rukus count 558',
+    'مصطلح الركوع في المصاحف 540 558 اختلاف عدد الركوعات',
+  ]);
+
+  const sources = getCuratedFallbackSources(question);
+  assert.equal(sources.length, 2);
+  assert.ok(sources.some(item => /api-docs\.quran\.foundation/.test(item.url) && /558/.test(item.snippet)));
+  assert.ok(sources.some(item => /search\.mandumah\.com/.test(item.url) && /540.*558|558.*540/.test(item.snippet)));
+  assert.ok(sources.every(item => item.provider.startsWith('Curated Quran ruku reference')));
+});
+
 test('provides an official Meta fallback source for Facebook monetization when search fails', () => {
   const results = getCuratedFallbackSources('د فیسبوک مونټایزیشن طریقه څه ده؟');
   assert.equal(results.length, 1);
