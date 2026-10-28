@@ -12,3 +12,7 @@ node_modules/
 *.log
 npm-debug.log*
 .DS_Store
+
+# د اتومات معلوماتي خپرولو حالت او موقتي فایلونه
+data/auto-publisher-state.json
+data/auto-publisher-state.json.*.tmp
