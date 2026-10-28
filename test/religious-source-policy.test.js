@@ -8,6 +8,7 @@ const {
   filterTrustedReligiousSources,
   hasTrustedReligiousReferenceText,
   requiresAuthoritativeReligiousSource,
+  isQuranRukuCountQuestion,
   asksForReligiousReferences,
 } = require('../lib/religious-source-policy');
 
@@ -74,6 +75,36 @@ test('distinguishes general religious background from precise religious claims',
   assert.equal(requiresAuthoritativeReligiousSource('د دې حدیث کره حواله او شمېره راکړه؟'), true);
   assert.equal(requiresAuthoritativeReligiousSource('ایا دا عمل حلال دی که حرام؟'), true);
   assert.equal(requiresAuthoritativeReligiousSource('د قرآن د دې آیت کره متن او شمېره راکړه؟'), true);
+});
+
+test('recognizes Quran ruku-count questions and permits only its targeted references', () => {
+  const question = 'قرآن کریم څو رکوع ګانې لري؟';
+  assert.equal(isQuranRukuCountQuestion(question), true);
+  assert.equal(isQuranRukuCountQuestion('د لمانځه رکوع څنګه ادا کېږي؟'), false);
+  assert.equal(requiresAuthoritativeReligiousSource(question), true);
+
+  const apiSource = {
+    title: 'List Rukus — Quran Foundation Content API',
+    url: 'https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/list-rukus/',
+    snippet: 'The Quran Foundation Content API documents the ruku numbering convention and values from 1 through 558.',
+  };
+  const scholarlySource = {
+    title: 'مصطلح الركوع في المصاحف: مدلوله، نشأته، وأقوال العلماء فيه',
+    url: 'https://search.mandumah.com/Record/771156',
+    snippet: 'A peer-reviewed 2016 research article discusses differing Ruku divisions, including 540 and 558 in different printed mushaf conventions.',
+  };
+  const wiki = {
+    title: 'Quran',
+    url: 'https://en.wikipedia.org/wiki/Quran',
+    snippet: 'The Quran is the central religious text of Islam, believed by Muslims to be a revelation from God.',
+  };
+
+  assert.equal(isTrustedReligiousSource(apiSource, question), true);
+  assert.equal(isTrustedReligiousSource(scholarlySource, question), true);
+  assert.equal(isTrustedReligiousSource(wiki, question), false);
+  assert.equal(hasTrustedReligiousReferenceText(apiSource.url, question), true);
+  assert.equal(hasTrustedReligiousReferenceText(scholarlySource.url, question), true);
+  assert.equal(hasTrustedReligiousReferenceText(wiki.url, question), false);
 });
 
 test('requires authoritative Islamic sources for hadith, citations, and rulings', () => {
