@@ -9,6 +9,7 @@ const {
   isFacebookMonetizationQuestion,
   parseDuckDuckGoResults,
 } = require('../lib/web-search');
+const { filterTrustedReligiousSources } = require('../lib/religious-source-policy');
 
 test('extracts DuckDuckGo result links and decodes HTML text', () => {
   const html = [
@@ -69,6 +70,7 @@ test('builds targeted Pashto research queries and trusted fallbacks for Prophet 
   assert.ok(sources.every(item => /sunnah\.com/.test(item.url)));
   assert.ok(sources.some(item => /Sahih al-Bukhari 1389/.test(item.title)));
   assert.ok(sources.some(item => /Sahih al-Bukhari 1392/.test(item.title)));
+  assert.equal(filterTrustedReligiousSources(sources, question).length, 2);
 });
 
 test('builds targeted Pashto riba queries with Quran and hadith fallbacks', () => {
@@ -82,6 +84,7 @@ test('builds targeted Pashto riba queries with Quran and hadith fallbacks', () =
   assert.ok(sources.some(item => /quran\.com/.test(item.url) && /2:275/.test(item.snippet)));
   assert.ok(sources.some(item => /sunnah\.com\/muslim:1598/.test(item.url)));
   assert.ok(sources.some(item => /islamweb\.net/.test(item.url)));
+  assert.equal(filterTrustedReligiousSources(sources, question).length, 3);
 });
 
 test('builds source-oriented English searches for general Islamic questions', () => {
