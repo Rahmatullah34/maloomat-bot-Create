@@ -162,6 +162,11 @@ test('distinguishes explicit source requests from general religious questions', 
   assert.equal(asksForReligiousReferences('Give me the source references for this claim'), true);
 });
 
+test('requires authoritative sources for specific questions about the articles of faith', () => {
+  assert.equal(requiresAuthoritativeReligiousSource('د ایمان شپږ ارکان کوم دي؟'), true);
+  assert.equal(requiresAuthoritativeReligiousSource('Are seven articles of faith separate from belief in resurrection after death?'), true);
+});
+
 test('requires authoritative sources for Quran longest-word questions and rejects generic Wikipedia pages', () => {
   const question = 'په قرآن کریم کې تر ټولو اوږده کلمه کومه ده؟';
   const quranVerse = {
