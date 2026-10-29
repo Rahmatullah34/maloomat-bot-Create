@@ -119,7 +119,10 @@ test('returns only the sender\'s own private-chat identifier on the explicit myi
 
   assert.equal(h.state.answers.length, 0);
   assert.equal(h.state.sends.length, 1);
-  assert.match(h.state.sends[0].text, new RegExp(senderLid.replace(/[.*+?^${}()|[\]\\]/g, '\\test('answers a private question only when its normalized phone is allowlisted', async () => {')));
+  assert.ok(h.state.sends[0].text.includes(senderLid));
+});
+
+test('answers a private question only when its normalized phone is allowlisted', async () => {')));
 });
 
 test('answers a private question only when its normalized phone is allowlisted', async () => {
