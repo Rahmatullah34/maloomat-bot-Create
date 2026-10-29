@@ -63,6 +63,25 @@ test('does not claim private Q&A is enabled unless an allowlist is configured', 
   assert.equal(allowlisted.privateQuestionAnswersConfigured, true);
 });
 
+test('reports allowlist counts for private Q&A without returning sender identifiers', () => {
+  const configured = buildHealthPayload(makeState({
+    runtimeConfig: {
+      ...makeState().runtimeConfig,
+      security: {
+        privateQaAllowedNumbers: new Set(['15551234567']),
+        privateQaAllowedLids: new Set(['123456789012345', '123456789012346']),
+      },
+    },
+  }));
+  assert.deepEqual(
+    configured.readiness.privateQuestionAnswers.allowlistCounts,
+    { phoneNumbers: 1, lids: 2 },
+  );
+  const output = JSON.stringify(configured);
+  assert.equal(output.includes('15551234567'), false);
+  assert.equal(output.includes('123456789012345'), false);
+});
+
 test('never returns secret values or phone/LID identifiers from its config', () => {
   const state = makeState();
   state.runtimeConfig.security.privateQaAllowedNumbers.add('12025550100');

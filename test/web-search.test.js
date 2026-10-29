@@ -4,12 +4,34 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   buildSearchQueries,
+  extractSearchTopic,
   getCuratedFallbackSources,
   getSearchPageHint,
   isFacebookMonetizationQuestion,
   parseDuckDuckGoResults,
 } = require('../lib/web-search');
 const { filterTrustedReligiousSources } = require('../lib/religious-source-policy');
+
+test('strips common Pashto question and answer-request wording before search', () => {
+  assert.equal(
+    extractSearchTopic('میرویس نیکه څوک و؟ مفصل ځواب راکړه؟'),
+    'میرویس نیکه',
+  );
+  assert.equal(
+    extractSearchTopic('DNA څه شی دی؟ بشپړ معلومات راکړه'),
+    'DNA',
+  );
+  assert.equal(
+    extractSearchTopic('د افغانستان تازه خبرونه څه دي؟'),
+    'د افغانستان تازه خبرونه',
+  );
+});
+
+test('puts a concise subject-first query ahead of the full detailed Pashto prompt', () => {
+  const queries = buildSearchQueries('میرویس نیکه څوک و؟ مفصل ځواب راکړه؟');
+  assert.equal(queries[0], 'میرویس نیکه');
+  assert.ok(queries.length <= 3);
+});
 
 test('extracts DuckDuckGo result links and decodes HTML text', () => {
   const html = [

@@ -98,6 +98,9 @@ test('rejects unauthorized private chats without logging the sender identifier',
   assert.equal(h.state.answers.length, 0);
   assert.equal(h.state.sends.length, 0);
   assert.ok(logLines.some(line => /شخصي پیغام رد شو/.test(line)));
+  assert.ok(logLines.some(line => /د مجازو شمېرو شمېر=0/.test(line)));
+  assert.ok(logLines.some(line => /د مجاز LID شمېر=0/.test(line)));
+  assert.ok(logLines.some(line => /د پیغام د پېژندنې ډول=PN/.test(line)));
   assert.equal(logLines.some(line => line.includes('15551234567@s.whatsapp.net')), false);
 });
 
