@@ -87,3 +87,21 @@ test('does not embed a private phone or LID allowlist in the runtime defaults', 
   assert.equal(config.security.privateQaAllowedLids.size, 0);
   assert.equal(config.security.fullModerationExemptPhoneNumber, '');
 });
+
+test('loads private security settings from the server-side JSON fallback', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'maloomat-private-runtime-'));
+  try {
+    fs.writeFileSync(path.join(dir, 'private-runtime-config.json'), JSON.stringify({
+      PRIVATE_QA_ALLOWED_NUMBERS: '15551234567, 441234567890',
+      PRIVATE_QA_ALLOWED_LIDS: '123456789012345@lid',
+      FULL_MODERATION_EXEMPT_PHONE_NUMBER: '+1 (555) 765-4321',
+    }), 'utf8');
+
+    const config = loadRuntimeConfig(undefined, dir);
+    assert.deepEqual([...config.security.privateQaAllowedNumbers], ['15551234567', '441234567890']);
+    assert.deepEqual([...config.security.privateQaAllowedLids], ['123456789012345']);
+    assert.equal(config.security.fullModerationExemptPhoneNumber, '15557654321');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
