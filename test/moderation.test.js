@@ -5,7 +5,7 @@
 
 process.env.ALLOWED_GROUPS = '11111111111@g.us,22222222222@g.us';
 process.env.ALLOWED_LINK_DOMAINS = 'example.com,bbc.com';
-process.env.ALLOWED_LINK_SENDERS = '77777777777@s.whatsapp.net';
+process.env.ALLOWED_LINK_SENDERS = '77777777777@s.whatsapp.net,2025550100@s.whatsapp.net,12025550100@s.whatsapp.net';
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -257,9 +257,9 @@ test('isLinkPermitted: اجازې لرونکي لینکونه او استوون�
   assert.equal(isLinkPermitted('ګوره https://www.bbc.com/news', '99999999999@s.whatsapp.net'), true);
   // اجازې لرونکی استوونکی (لکه مدیر)
   assert.equal(isLinkPermitted('https://any-site.org/x', '77777777777@s.whatsapp.net'), true);
-  // د بوټ د اډمین شمېرې محلي او نړیوال WhatsApp شکلونه دواړه اجازه لري.
-  assert.equal(isLinkPermitted('https://any-site.org/x', '0707285093@s.whatsapp.net'), true);
-  assert.equal(isLinkPermitted('https://any-site.org/x', '93707285093@s.whatsapp.net'), true);
+  // د محرم ALLOWED_LINK_SENDERS تنظیم له لارې ټاکل شوي استوونکي اجازه لري؛ هیڅ شخصي شمېره په کوډ کې نه ساتل کېږي.
+  assert.equal(isLinkPermitted('https://any-site.org/x', '2025550100@s.whatsapp.net'), true);
+  assert.equal(isLinkPermitted('https://any-site.org/x', '12025550100@s.whatsapp.net'), true);
   // نامجاز لینک او نامجاز استوونکی
   assert.equal(isLinkPermitted('https://spam-site.net/offer', '99999999999@s.whatsapp.net'), false);
   // بې لینکه متن
