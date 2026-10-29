@@ -113,7 +113,7 @@ test('returns only the sender\'s own private-chat identifier on the explicit myi
   await h.handler({
     type: 'notify',
     messages: [message(senderLid, 'myid', {
-      key: { participant: null, participantAlt: undefined, remoteJidAlt: undefined },
+      key: { remoteJid: senderLid, id: 'test-message', participant: null, participantAlt: undefined, remoteJidAlt: undefined, fromMe: false },
     })],
   });
 
