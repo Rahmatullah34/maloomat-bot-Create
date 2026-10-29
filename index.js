@@ -17,6 +17,16 @@ const { runtimeConfig, readOpenRouterApiKey } = require('./lib/runtime-config');
 const { buildHealthPayload } = require('./lib/health');
 const { createAnswerEngine } = require('./lib/answer-engine');
 const { createMessageHandler } = require('./lib/message-handler');
+const { normalizePashto } = require('./lib/moderation');
+const {
+  OFFLINE_KNOWLEDGE,
+  rememberGroupMember,
+  answerIdentityQuestion,
+  answerFromOfflineKnowledge,
+  answerSimpleMathQuestion,
+  answerCommonPashtoQuestion,
+  isSensitiveSafetyRequest,
+} = require('./lib/local-knowledge');
 const {
   searchInternet,
   requestsInternetSearch,
@@ -96,6 +106,38 @@ const WARNING_MUTE_ENABLED = runtimeConfig.warningMute.enabled;
 const WARNING_MUTE_DURATION_MINUTES = runtimeConfig.warningMute.durationMinutes;
 const WARNING_MUTE_DURATION_MS = runtimeConfig.warningMute.durationMs;
 
+// د ځواب منطق د محلي معلوماتو، سرچینو او AI خدماتو ترمنځ همغږي کوي.
+const answerWithKnowledge = createAnswerEngine({
+  ENABLE_GROUP_QA,
+  ENABLE_INTERNET_SEARCH,
+  ENABLE_AI_SUMMARIZATION,
+  looksLikeQuestion,
+  isSensitiveSafetyRequest,
+  safeSend,
+  buildVerifiedQuranLongestWordAnswer,
+  answerSimpleMathQuestion,
+  answerCommonPashtoQuestion,
+  answerIdentityQuestion,
+  buildAnswerPlan,
+  requiresFactualSourceEvidence,
+  answerFromOfflineKnowledge,
+  normalizePashto,
+  hasTrustedReligiousReferenceText,
+  requiresAuthoritativeReligiousSource,
+  asksForReligiousReferences,
+  requestsInternetSearch,
+  isTimeSensitiveQuestion,
+  searchInternet,
+  isTafsirYaseerAuthorshipQuestion,
+  filterTafsirYaseerAuthorSources,
+  filterTrustedReligiousSources,
+  summarizeSourcesInPashto,
+  formatVerifiedSourceLinks,
+  formatInternetResults,
+  readOpenRouterApiKey,
+});
+
+
 const app = express();
 
 app.get('/', (_req, res) => {
@@ -139,18 +181,6 @@ async function getWhatsAppAuthState() {
   prepareAuthSessionForOneTimeReset();
   return useMultiFileAuthState(AUTH_DIR);
 }
-
-// د محلي ځوابونو او د ثابتو معلوماتو زېرمه په lib/local-knowledge.js کې جلا ساتل کېږي.
-const {
-  OFFLINE_KNOWLEDGE,
-  rememberGroupMember,
-  answerIdentityQuestion,
-  answerFromOfflineKnowledge,
-  answerSimpleMathQuestion,
-  answerCommonPashtoQuestion,
-  isSensitiveSafetyRequest,
-} = require('./lib/local-knowledge');
-
 
 // 2. د WhatsApp تنظیمات
 // ======================================================
