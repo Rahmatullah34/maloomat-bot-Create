@@ -90,6 +90,8 @@ test('combines an AI summary with verified links when relevant search results ex
   assert.equal(context.state.summaries, 1);
   assert.match(context.messages[0], /د ازموینې لنډیز/);
   assert.match(context.messages[0], /تایید شوو سرچینو لینکونه/);
+  assert.match(context.messages[0], /د افغان AI ځواب/);
+  assert.doesNotMatch(context.messages[0], /د AI ځواب/);
 });
 
 test('does not invent a precise religious answer when authoritative evidence is unavailable', async () => {
