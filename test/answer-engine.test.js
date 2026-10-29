@@ -6,6 +6,7 @@ const { createAnswerEngine } = require('../lib/answer-engine');
 
 function makeDependencies(overrides = {}) {
   const messages = [];
+  const deliveries = [];
   const state = { searches: 0, summaries: 0 };
   const dependencies = {
     ENABLE_GROUP_QA: true,
@@ -13,8 +14,9 @@ function makeDependencies(overrides = {}) {
     ENABLE_AI_SUMMARIZATION: true,
     looksLikeQuestion: () => true,
     isSensitiveSafetyRequest: () => false,
-    safeSend: async (_socket, _jid, payload) => {
+    safeSend: async (_socket, _jid, payload, options) => {
       messages.push(String(payload?.text || ''));
+      deliveries.push({ payload, options });
       return { key: { id: 'test-message' } };
     },
     buildVerifiedQuranLongestWordAnswer: () => null,
@@ -46,7 +48,7 @@ function makeDependencies(overrides = {}) {
     readOpenRouterApiKey: () => '',
     ...overrides,
   };
-  return { dependencies, messages, state };
+  return { dependencies, messages, deliveries, state };
 }
 
 test('politely declines restricted Taliban-related political questions before local answers, web search, or AI', async () => {
@@ -185,4 +187,27 @@ test('does not invent a precise religious answer when authoritative evidence is 
   assert.equal(handled, true);
   assert.equal(context.state.searches, 1);
   assert.match(context.messages[0], /باوري سرچینه|شواهد|نه اټکلم/);
+});
+
+test('mentions the questioner and quotes the original group message for answer-engine replies', async () => {
+  const context = makeDependencies({
+    answerSimpleMathQuestion: () => 'د ازموینې ځواب دی.',
+  });
+  const answer = createAnswerEngine(context.dependencies);
+  const originalMessage = {
+    key: { remoteJid: '12345@g.us', id: 'original-message', participant: '15551230000@s.whatsapp.net' },
+    message: { conversation: 'دا څو کېږي؟' },
+  };
+  const handled = await answer(
+    {},
+    '12345@g.us',
+    '15551230000@s.whatsapp.net',
+    'دا څو کېږي؟',
+    'ازموینه',
+    { message: originalMessage, mentionJid: '15551230000@s.whatsapp.net' },
+  );
+
+  assert.equal(handled, true);
+  assert.deepEqual(context.deliveries[0].payload.mentions, ['15551230000@s.whatsapp.net']);
+  assert.equal(context.deliveries[0].options.quoted, originalMessage);
 });
