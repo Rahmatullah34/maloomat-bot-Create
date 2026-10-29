@@ -314,7 +314,8 @@ const GROUP_RULES = `📜 *Maloomat AI | معلومات AI — د ګروپ رس�
 async function safeSend(
   socket,
   jid,
-  content
+  content,
+  sendOptions = undefined
 ) {
   try {
     if (!socket || !jid || !content) {
@@ -323,13 +324,17 @@ async function safeSend(
 
     // اوږده عادي متني ځوابونه په جلا WhatsApp پیغامونو وېشه؛ نورې رسنۍ مه تکراروه.
     const canSplitText = typeof content.text === 'string' &&
-      Object.keys(content).length === 1;
+      Object.keys(content).every((key) => key === 'text' || key === 'mentions');
     const messageParts = canSplitText ? splitWhatsAppText(content.text) : [null];
 
     if (canSplitText && messageParts.length > 1) {
       let lastResult = null;
       for (let index = 0; index < messageParts.length; index += 1) {
-        lastResult = await socket.sendMessage(jid, { text: messageParts[index] });
+        const partContent = { ...content, text: messageParts[index] };
+        // یوازې لومړۍ برخه دې د پوښتونکي اصلي پیغام ته Reply وي؛ نورې برخې عادي لېږل کېږي.
+        lastResult = index === 0 && sendOptions
+          ? await socket.sendMessage(jid, partContent, sendOptions)
+          : await socket.sendMessage(jid, partContent);
         if (index < messageParts.length - 1) {
           await new Promise((resolve) => setTimeout(resolve, 350));
         }
@@ -337,7 +342,9 @@ async function safeSend(
       return lastResult;
     }
 
-    return await socket.sendMessage(jid, content);
+    return sendOptions
+      ? await socket.sendMessage(jid, content, sendOptions)
+      : await socket.sendMessage(jid, content);
   } catch (err) {
     console.error(
       '❌ د WhatsApp پیغام لېږلو ستونزه:',

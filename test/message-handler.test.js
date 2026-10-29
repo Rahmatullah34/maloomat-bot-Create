@@ -147,13 +147,16 @@ test('handles group-rules commands before burst, bad-word, and link moderation',
   assert.equal(h.state.answers.length, 0);
 });
 
-test('routes a regular allowed group question through moderation then the answer engine', async () => {
+test('routes a regular allowed group question with its original message and mentionable sender JID', async () => {
   const h = createHarness();
-  await h.handler({ type: 'notify', messages: [message('12345@g.us')] });
+  const original = message('12345@g.us');
+  await h.handler({ type: 'notify', messages: [original] });
   assert.equal(h.state.burstCalls, 1);
   assert.equal(h.state.badWordCalls, 1);
   assert.equal(h.state.answers.length, 1);
   assert.equal(h.state.remembered.length, 1);
+  assert.equal(h.state.answers[0][5].message, original);
+  assert.equal(h.state.answers[0][5].mentionJid, '15551230000@s.whatsapp.net');
 });
 
 test('does not print private identifiers from the message handler source', () => {
