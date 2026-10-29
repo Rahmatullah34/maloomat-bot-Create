@@ -43,7 +43,6 @@ const {
   isGroupAllowed,
   allowedGroupsCount,
   isHistoryCleanupEnabled,
-  normalizePashto,
   hasMatchingPhoneNumber,
   isGroupRulesCommand,
   containsBadWord,
