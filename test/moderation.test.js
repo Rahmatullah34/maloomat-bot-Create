@@ -63,13 +63,13 @@ test('hasMatchingPhoneNumber: د مالک شمېره په محلي/نړیوال 
     '0700000000@s.whatsapp.net',
     '93700000000@s.whatsapp.net',
     '93700000000:4@s.whatsapp.net',
-    '707285093@s.whatsapp.net',
+    '700000000@s.whatsapp.net',
     '+93700000000',
     '0700000000',
   ]) {
     assert.equal(hasMatchingPhoneNumber([identifier], owner), true, identifier);
   }
-  assert.equal(hasMatchingPhoneNumber(['707285093@lid'], owner), false);
+  assert.equal(hasMatchingPhoneNumber(['700000000@lid'], owner), false);
   assert.equal(hasMatchingPhoneNumber(['99999999999@s.whatsapp.net'], owner), false);
 });
 
