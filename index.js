@@ -12,6 +12,7 @@ const {
 
 const P = require('pino');
 const express = require('express');
+const { classifyRemoteJid, shouldHandleNotifyEvent } = require('./lib/message-router');
 const { runtimeConfig, readOpenRouterApiKey } = require('./lib/runtime-config');
 const { buildHealthPayload } = require('./lib/health');
 const { createAnswerEngine } = require('./lib/answer-engine');
@@ -141,7 +142,7 @@ async function getWhatsAppAuthState() {
 }
 
 // ======================================================
-// 1.5 محلي معلوماتي سیستم + د انټرنېټ سرچینو لټون (بې له AI API)
+// 1.5 د محلي معلوماتو او پوښتنو ځانګړنې؛ د لټون/ځواب انجنونه په جلا lib ماډولونو کې دي.
 // ======================================================
 
 // ثابت معلومات د بوټ په کوډ کې ساتل کېږي.
@@ -1246,10 +1247,7 @@ async function startBot() {
 
         for (const msg of messages) {
           try {
-            if (
-              !msg?.message ||
-              msg.key?.fromMe
-            ) {
+            if (!shouldHandleNotifyEvent(event?.type, msg)) {
               continue;
             }
 
@@ -1262,21 +1260,14 @@ async function startBot() {
             const groupJid =
               msg.key?.remoteJid;
 
-            if (
-              !groupJid ||
-              groupJid === 'status@broadcast' ||
-              groupJid.endsWith('@newsletter')
-            ) {
+            const chatType = classifyRemoteJid(groupJid);
+            if (chatType === 'ignore') {
               continue;
             }
 
             // شخصي چټ جلا اداره کېږي؛ د ګروپ د مدیریت قواعد نه پرې تطبیقېږي.
-            if (!groupJid.endsWith('@g.us')) {
-              // یوازې عادي شخصي WhatsApp چټونه ومنه؛ Status، چینل او نور ډولونه بند دي.
-              if (
-                !ENABLE_PRIVATE_QA ||
-                !/@(?:s\.whatsapp\.net|lid)$/.test(groupJid)
-              ) {
+            if (chatType === 'private') {
+              if (!ENABLE_PRIVATE_QA) {
                 continue;
               }
 
@@ -1524,7 +1515,7 @@ async function startBot() {
               isSenderGroupAdmin &&
               /^(?:groupid|group id|group jid|د ګروپ id|د ګروپ jid|ګروپ id|ګروپ jid|ګروپ ایدی|ګروپ آیډي|ګروپ آی ډي)$/iu.test(cleanText)
             ) {
-              console.log('🔐 د اډمین غوښتنه؛ د ګروپ JID: ' + groupJid);
+              console.log('🔐 د اډمین له خوا د ګروپ پېژندونکي غوښتنه وشوه.');
               const privateReply = await safeSend(socket, participantJid, {
                 text:
                   '📌 د دې WhatsApp ګروپ JID:\n' + groupJid + '\n\n' +
