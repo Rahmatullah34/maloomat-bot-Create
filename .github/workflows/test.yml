@@ -20,6 +20,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Check JavaScript syntax
-        run: node --check index.js && node --check lib/moderation.js && node --check lib/auto-publisher.js && node --check lib/answer-plan.js && node --check lib/answer-delivery.js && node --check lib/web-search.js && node --check lib/search-relevance.js && node --check lib/religious-source-policy.js && node --check lib/book-source-policy.js
+        run: |
+          for file in index.js lib/*.js test/*.test.js; do
+            node --check "$file"
+          done
       - name: Run unit and regression tests
         run: npm test
