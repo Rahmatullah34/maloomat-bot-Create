@@ -96,6 +96,32 @@ test('combines an AI summary with verified links when relevant search results ex
   assert.doesNotMatch(context.messages[0], /د AI ځواب/);
 });
 
+test('labels a source-required answer as unverified when no online source was found', async () => {
+  const context = makeDependencies({
+    buildAnswerPlan: () => ({ category: 'history', detailed: true }),
+    requiresFactualSourceEvidence: () => true,
+    readOpenRouterApiKey: () => 'test-key',
+    searchInternet: async () => {
+      context.state.searches += 1;
+      return [];
+    },
+    summarizeSourcesInPashto: async () => 'دا د موضوع عمومي تشریح ده.',
+  });
+  const answer = createAnswerEngine(context.dependencies);
+  const handled = await answer(
+    {},
+    'group@g.us',
+    'sender@s.whatsapp.net',
+    'د یوه تاریخي موضوع عمومي شالید څه دی؟',
+    'member',
+  );
+
+  assert.equal(handled, true);
+  assert.match(context.messages[0], /عمومي تشریح/);
+  assert.match(context.messages[0], /معتبره آنلاین سرچینه په دې ځل ونه موندل شوه/);
+  assert.match(context.messages[0], /د آنلاین تایید شوې حوالې بدیل نه ده/);
+});
+
 test('does not invent a precise religious answer when authoritative evidence is unavailable', async () => {
   const context = makeDependencies({
     buildAnswerPlan: () => ({ category: 'religion', detailed: true }),

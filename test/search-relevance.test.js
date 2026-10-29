@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { rankRelevantSearchResults } = require('../lib/search-relevance');
+const { rankRelevantSearchResults, rankRelevantSearchResultsAcrossQueries } = require('../lib/search-relevance');
 
 test('removes unrelated sources for a Pashto question about the human heart', () => {
   const results = [
@@ -52,6 +52,51 @@ test('matches an English source title to a Pashto topic', () => {
   const filtered = rankRelevantSearchResults('د انسان د زړه دنده څه ده؟', results);
 
   assert.deepEqual(filtered.map(item => item.title), ['Heart']);
+});
+
+test('uses generated English search queries when ranking results for a Pashto question', () => {
+  const question = 'د شوروي اتحاد د سقوط لاملونه څه وو؟';
+  const results = [
+    {
+      title: 'Dissolution of the Soviet Union',
+      url: 'https://www.britannica.com/event/dissolution-of-the-Soviet-Union',
+      snippet: 'The Soviet Union formally dissolved in 1991 after a series of political and economic changes.',
+    },
+    {
+      title: 'Jainism',
+      url: 'https://en.wikipedia.org/wiki/Jainism',
+      snippet: 'A religious tradition and philosophy.',
+    },
+  ];
+
+  // Ranking only against the Pashto wording loses an otherwise relevant English result.
+  assert.deepEqual(rankRelevantSearchResults(question, results), []);
+  assert.deepEqual(
+    rankRelevantSearchResultsAcrossQueries(
+      [question, 'Dissolution of the Soviet Union causes'],
+      results,
+    ).map(item => item.title),
+    ['Dissolution of the Soviet Union'],
+  );
+});
+
+test('merges matching results across several query variants without duplicate links', () => {
+  const shared = {
+    title: 'Dissolution of the Soviet Union',
+    url: 'https://www.britannica.com/event/dissolution-of-the-Soviet-Union',
+    snippet: 'The Soviet Union formally dissolved in 1991.',
+  };
+  const results = [
+    shared,
+    { ...shared, url: shared.url + '#overview' },
+  ];
+
+  const ranked = rankRelevantSearchResultsAcrossQueries(
+    ['Dissolution of the Soviet Union', 'causes of the Soviet Union dissolution'],
+    results,
+  );
+  assert.equal(ranked.length, 1);
+  assert.equal(ranked[0].title, 'Dissolution of the Soviet Union');
 });
 
 test('returns no links when all search results are unrelated', () => {
