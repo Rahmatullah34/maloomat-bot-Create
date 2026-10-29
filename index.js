@@ -485,24 +485,8 @@ const answerWithKnowledge = createAnswerEngine({
 // 2. د WhatsApp تنظیمات
 // ======================================================
 
-// د WhatsApp شمېره د هېواد له کوډ سره ولیکه؛ د پیل + مه کاروه.
-// که WHATSAPP_PHONE په Startup کې نه وي، بوټ یې له whatsapp-phone.txt فایل څخه اخلي.
-// د whatsapp-phone.txt فایل یوازې په سرور کې جوړ کړه؛ GitHub ته یې مه پورته کوه.
-
-function readPhoneFromFile() {
-  try {
-    return fs.readFileSync(
-      path.resolve(process.cwd(), 'whatsapp-phone.txt'),
-      'utf8'
-    ).trim();
-  } catch {
-    return '';
-  }
-}
-
-const PHONE = String(
-  process.env.WHATSAPP_PHONE || readPhoneFromFile() || ''
-).replace(/\D/g, '');
+// د pairing شمېره د lib/runtime-config.js له محرم Environment یا محلي ignored فایل څخه لوستل کېږي.
+const PHONE = runtimeConfig.whatsapp.phone;
 
 // د پخوانۍ ناستې فولډر.
 const AUTH_DIR = path.resolve(
@@ -1032,7 +1016,7 @@ async function startBot() {
             '🛡️ د ګروپ مدیریت فعال دی: کنځل، دیني پارونه، د Status/چینل فارورډونه، چټک او تکراري سپم؛ لینک اخطارونه: ' + (ENABLE_LINK_MODERATION ? 'فعال' : 'بند') + '; ' +
             'د پوښتنو ځوابونه: ' + (ENABLE_GROUP_QA ? 'فعال' : 'موقتي بند') +
             '؛ ویب لټون: ' + (ENABLE_GROUP_QA && ENABLE_INTERNET_SEARCH ? 'فعال' : 'بند') +
-            '؛ شخصي چټ: ' + (ENABLE_PRIVATE_QA && ENABLE_GROUP_QA ? 'فعال' : 'بند') +
+            '؛ شخصي چټ: ' + (ENABLE_PRIVATE_QA && ENABLE_GROUP_QA && (PRIVATE_QA_ALLOWED_NUMBERS.size > 0 || PRIVATE_QA_ALLOWED_LIDS.size > 0) ? 'فعال' : 'بند/اجازه‌لیست تنظیم کړئ') +
             '؛ د محلي معلوماتو شمېر: ' + OFFLINE_KNOWLEDGE.length
           );
 
