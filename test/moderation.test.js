@@ -58,18 +58,18 @@ test('normalizePashto: عربي تورې او نښانې سموي', () => {
 });
 
 test('hasMatchingPhoneNumber: د مالک شمېره په محلي/نړیوال PN بڼه پېژني، LID نه', () => {
-  const owner = '0707285093';
+  const owner = '0700000000';
   for (const identifier of [
-    '0707285093@s.whatsapp.net',
-    '93707285093@s.whatsapp.net',
-    '93707285093:4@s.whatsapp.net',
-    '707285093@s.whatsapp.net',
-    '+93707285093',
-    '0707285093',
+    '0700000000@s.whatsapp.net',
+    '93700000000@s.whatsapp.net',
+    '93700000000:4@s.whatsapp.net',
+    '700000000@s.whatsapp.net',
+    '+93700000000',
+    '0700000000',
   ]) {
     assert.equal(hasMatchingPhoneNumber([identifier], owner), true, identifier);
   }
-  assert.equal(hasMatchingPhoneNumber(['707285093@lid'], owner), false);
+  assert.equal(hasMatchingPhoneNumber(['700000000@lid'], owner), false);
   assert.equal(hasMatchingPhoneNumber(['99999999999@s.whatsapp.net'], owner), false);
 });
 
@@ -270,7 +270,7 @@ test('isGroupAdminSender: د LID، PN، phoneNumber او admin flags بدیلو�
   const participants = [
     {
       id: '987654321@lid',
-      phoneNumber: '93707285093@s.whatsapp.net',
+      phoneNumber: '93700000000@s.whatsapp.net',
       admin: 'superadmin',
     },
     { id: '93700000001@s.whatsapp.net', isAdmin: true },
@@ -279,8 +279,8 @@ test('isGroupAdminSender: د LID، PN، phoneNumber او admin flags بدیلو�
   ];
 
   assert.equal(isGroupAdminSender(participants, ['987654321@lid']), true);
-  assert.equal(isGroupAdminSender(participants, ['0707285093@s.whatsapp.net']), true);
-  assert.equal(isGroupAdminSender(participants, ['93707285093:4@s.whatsapp.net']), true);
+  assert.equal(isGroupAdminSender(participants, ['0700000000@s.whatsapp.net']), true);
+  assert.equal(isGroupAdminSender(participants, ['93700000000:4@s.whatsapp.net']), true);
   assert.equal(isGroupAdminSender(participants, ['93700000001:12@s.whatsapp.net']), true);
   assert.equal(isGroupAdminSender(participants, ['93700000002@s.whatsapp.net']), true);
   assert.equal(isGroupAdminSender(participants, ['123456789@lid']), false);
@@ -291,15 +291,15 @@ test('isGroupAdminSender: د LID، PN، phoneNumber او admin flags بدیلو�
 test('د PN/LID بدیلونه د سپم شمېر او اخطار لپاره یو ثابت کلید ورکوي', () => {
   const participants = [{
     id: '987654321@lid',
-    phoneNumber: '93707285093@s.whatsapp.net',
+    phoneNumber: '93700000000@s.whatsapp.net',
     admin: 'admin',
   }];
 
   const keyFromLid = getCanonicalParticipantIdentifier(participants, ['987654321@lid']);
-  const keyFromPhone = getCanonicalParticipantIdentifier(participants, ['93707285093@s.whatsapp.net']);
+  const keyFromPhone = getCanonicalParticipantIdentifier(participants, ['93700000000@s.whatsapp.net']);
   const keyFromBoth = getCanonicalParticipantIdentifier(participants, [
     '987654321@lid',
-    '93707285093@s.whatsapp.net',
+    '93700000000@s.whatsapp.net',
   ]);
 
   assert.equal(keyFromLid, keyFromPhone);
@@ -308,18 +308,15 @@ test('د PN/LID بدیلونه د سپم شمېر او اخطار لپاره ی�
   assert.equal(isGroupAdminParticipant(findGroupParticipant(participants, ['987654321@lid'])), true);
 });
 test('تایید شوی اډمین د چټک او تکراري سپم له اخطار/حذف څخه معاف دی', () => {
-  const indexSrc = fs.readFileSync(
-    path.join(__dirname, '..', 'index.js'),
-    'utf8'
-  );
+  const indexSrc = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
+  const handlerSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'message-handler.js'), 'utf8');
   assert.match(indexSrc, /async function resolveGroupSender\s*\(/,
     'اډمین باید د WhatsApp د ګروپ metadata له مخې وپېژندل شي');
-  assert.match(indexSrc, /if\s*\(!isSenderGroupAdmin && !isFullModerationExempt\)\s*\{\s*const burst = recordGroupMessage/,
+  assert.match(handlerSrc, /if\s*\(!isSenderGroupAdmin && !isFullModerationExempt\)\s*\{\s*const burst = recordGroupMessage/,
     'د چټک سپم حد باید یوازې پر عادي غړو تطبیق شي');
-  assert.match(indexSrc, /if\s*\(!isSenderGroupAdmin && !isFullModerationExempt\)\s*\{\s*const repeated = recordRepeatedMessage/,
+  assert.match(handlerSrc, /if\s*\(!isSenderGroupAdmin && !isFullModerationExempt\)\s*\{\s*const repeated = recordRepeatedMessage/,
     'د تکراري سپم حذف باید یوازې پر عادي غړو تطبیق شي');
 });
-
 test('د پوښتنو ځوابونه، انټرنېټي لټون او AI لنډیز د مرکزي تنظیماتو له مخې فعال دي', () => {
   const { loadRuntimeConfig } = require('../lib/runtime-config');
   const { buildHealthPayload } = require('../lib/health');
@@ -342,27 +339,21 @@ test('د پوښتنو ځوابونه، انټرنېټي لټون او AI لنډ�
 
 
 test('د قوانینو امر د سپم او نورو moderation فلټرونو تر مخه اداره کېږي', () => {
-  const indexSrc = fs.readFileSync(
-    path.join(__dirname, '..', 'index.js'),
-    'utf8'
-  );
-  const rulesCommandPosition = indexSrc.indexOf('if (isGroupRulesCommand(text))');
-  const burstCheckPosition = indexSrc.indexOf('const burst = recordGroupMessage');
-  const badWordCheckPosition = indexSrc.indexOf('containsBadWord(text)', rulesCommandPosition);
-  const linkCheckPosition = indexSrc.indexOf('LINK_PATTERN.test(text)', rulesCommandPosition);
+  const handlerSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'message-handler.js'), 'utf8');
+  const rulesCommandPosition = handlerSrc.indexOf('if (isGroupRulesCommand(text))');
+  const burstCheckPosition = handlerSrc.indexOf('const burst = recordGroupMessage');
+  const badWordCheckPosition = handlerSrc.indexOf('containsBadWord(text)', rulesCommandPosition);
+  const linkCheckPosition = handlerSrc.indexOf('LINK_PATTERN.test(text)', rulesCommandPosition);
 
   assert.ok(rulesCommandPosition >= 0, 'د قوانینو امر باید موجود وي');
   assert.ok(rulesCommandPosition < burstCheckPosition, 'د قوانینو امر باید د سپم شمېر تر مخه وي');
   assert.ok(rulesCommandPosition < badWordCheckPosition, 'د قوانینو امر باید د کنځلو فلټر تر مخه وي');
   assert.ok(rulesCommandPosition < linkCheckPosition, 'د قوانینو امر باید د لینک فلټر تر مخه وي');
-  assert.match(indexSrc, /isGroupRulesCommand\(text\)/);
+  assert.match(handlerSrc, /isGroupRulesCommand\(text\)/);
 });
-
 test('د نظم د معافیت شمېره له محرمو تنظیماتو لوستل کېږي', () => {
-  const indexSrc = fs.readFileSync(
-    path.join(__dirname, '..', 'index.js'),
-    'utf8'
-  );
+  const indexSrc = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
+  const handlerSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'message-handler.js'), 'utf8');
   const { loadRuntimeConfig } = require('../lib/runtime-config');
   const configured = loadRuntimeConfig({ FULL_MODERATION_EXEMPT_PHONE_NUMBER: '+1 (202) 555-0100' });
   assert.equal(configured.security.fullModerationExemptPhoneNumber, '12025550100');
@@ -370,25 +361,18 @@ test('د نظم د معافیت شمېره له محرمو تنظیماتو لو
 
   assert.match(indexSrc, /runtimeConfig\.security\.fullModerationExemptPhoneNumber/);
   assert.match(indexSrc, /function isFullModerationExemptSender\(senderIdentifiers\)/);
-  assert.match(indexSrc, /!isFullModerationExempt\s*\?\s*getTemporaryMuteStatus/);
-  assert.match(indexSrc, /if \(statusShare && !isFullModerationExempt\)/);
-  assert.match(indexSrc, /if \(channelForward && !isFullModerationExempt\)/);
-  assert.match(indexSrc, /if \(!isSenderGroupAdmin && !isFullModerationExempt\) \{\s*const burst = recordGroupMessage/);
-  assert.match(indexSrc, /if \(!isFullModerationExempt && containsBadWord\(text\)\)/);
-  assert.match(indexSrc, /ENABLE_LINK_MODERATION &&\s*!isFullModerationExempt &&\s*LINK_PATTERN\.test\(text\)/);
-  assert.match(indexSrc, /if \(!isSenderGroupAdmin && !isFullModerationExempt\) \{\s*const repeated = recordRepeatedMessage/);
+  assert.match(handlerSrc, /!isFullModerationExempt\s*\?\s*getTemporaryMuteStatus/);
+  assert.match(handlerSrc, /if \(statusShare && !isFullModerationExempt\)/);
+  assert.match(handlerSrc, /if \(channelForward && !isFullModerationExempt\)/);
+  assert.match(handlerSrc, /if \(!isSenderGroupAdmin && !isFullModerationExempt\) \{\s*const burst = recordGroupMessage/);
+  assert.match(handlerSrc, /if \(!isFullModerationExempt && containsBadWord\(text\)\)/);
+  assert.match(handlerSrc, /ENABLE_LINK_MODERATION &&\s*!isFullModerationExempt &&\s*LINK_PATTERN\.test\(text\)/);
+  assert.match(handlerSrc, /if \(!isSenderGroupAdmin && !isFullModerationExempt\) \{\s*const repeated = recordRepeatedMessage/);
   assert.match(indexSrc, /if \(historySenderIsExempt\) continue/);
 });
-
 test('د لینکونو بندیز د مرکزي تنظیماتو له مخې فعال دی؛ شخصي استثنا په کوډ کې نه ده لیکل شوې', () => {
-  const indexSrc = fs.readFileSync(
-    path.join(__dirname, '..', 'index.js'),
-    'utf8'
-  );
-  const moderationSrc = fs.readFileSync(
-    path.join(__dirname, '..', 'lib', 'moderation.js'),
-    'utf8'
-  );
+  const handlerSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'message-handler.js'), 'utf8');
+  const moderationSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'moderation.js'), 'utf8');
   const { loadRuntimeConfig } = require('../lib/runtime-config');
   const { buildHealthPayload } = require('../lib/health');
 
@@ -396,14 +380,14 @@ test('د لینکونو بندیز د مرکزي تنظیماتو له مخې ف
   assert.equal(config.features.linkModeration, true);
   assert.equal(buildHealthPayload({ runtimeConfig: config }).moderation.links, true);
   assert.doesNotMatch(moderationSrc, /DEFAULT_ALLOWED_LINK_SENDERS/);
-  assert.match(indexSrc, /const hasLink = ENABLE_LINK_MODERATION && LINK_PATTERN\.test\(text\)/);
-  assert.match(indexSrc, /ENABLE_LINK_MODERATION\s*&&\s*LINK_PATTERN\.test\(text\)/);
-  assert.match(indexSrc, /containsBadWord\(text\)/);
-  assert.match(indexSrc, /recordRepeatedMessage\(groupJid, stableParticipantJid, text\)/);
-  assert.match(indexSrc, /if \(isReactionMessage\(msg\.message\)\)/,
+  assert.match(handlerSrc, /ENABLE_LINK_MODERATION/);
+  assert.match(handlerSrc, /LINK_PATTERN\.test\(text\)/);
+  assert.match(handlerSrc, /isLinkPermittedForSender/);
+  assert.match(handlerSrc, /containsBadWord\(text\)/);
+  assert.match(handlerSrc, /recordRepeatedMessage\(groupJid, stableParticipantJid, text\)/);
+  assert.match(handlerSrc, /if \(isReactionMessage\(msg\.message\)\)/,
     'د WhatsApp لایکونه باید د عادي ګروپي نظم او اخطارونو له شمېر څخه وایستل شي');
 });
-
 test('WhatsApp connection settings keep a live socket and expose session diagnostics', () => {
   const indexSrc = fs.readFileSync(
     path.join(__dirname, '..', 'index.js'),
