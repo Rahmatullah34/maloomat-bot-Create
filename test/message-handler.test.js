@@ -101,6 +101,27 @@ test('rejects unauthorized private chats without logging the sender identifier',
   assert.equal(logLines.some(line => line.includes('15551234567@s.whatsapp.net')), false);
 });
 
+test('returns only the sender\'s own private-chat identifier on the explicit myid command', async () => {
+  const senderLid = '123456789012345@lid';
+  const h = createHarness({
+    classifyRemoteJid: () => 'private',
+    PRIVATE_QA_ALLOWED_NUMBERS: new Set(),
+    PRIVATE_QA_ALLOWED_LIDS: new Set(),
+    extractText: () => 'myid',
+  });
+
+  await h.handler({
+    type: 'notify',
+    messages: [message(senderLid, 'myid', {
+      key: { participant: null, participantAlt: undefined, remoteJidAlt: undefined },
+    })],
+  });
+
+  assert.equal(h.state.answers.length, 0);
+  assert.equal(h.state.sends.length, 1);
+  assert.match(h.state.sends[0].text, new RegExp(senderLid.replace(/[.*+?^${}()|[\]\\]/g, '\\test('answers a private question only when its normalized phone is allowlisted', async () => {')));
+});
+
 test('answers a private question only when its normalized phone is allowlisted', async () => {
   const h = createHarness({
     classifyRemoteJid: () => 'private',
