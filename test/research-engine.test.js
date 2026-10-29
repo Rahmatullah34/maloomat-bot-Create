@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { canonicalResultUrl } = require('../lib/research-engine');
+const { canonicalResultUrl, canUseUnverifiedGeneralKnowledgeFallback } = require('../lib/research-engine');
 
 test('canonicalizes web links and removes common tracking parameters', () => {
   assert.equal(
@@ -16,3 +16,26 @@ test('rejects non-web protocols and malformed URLs from source-link handling', (
   assert.equal(canonicalResultUrl('data:text/plain,hello'), '');
   assert.equal(canonicalResultUrl('not a url'), '');
 });
+
+test('allows a cautious general-knowledge fallback for stable topics when search evidence is missing', () => {
+  assert.equal(
+    canUseUnverifiedGeneralKnowledgeFallback('د سړې جګړې تاریخ څه و؟'),
+    true,
+  );
+  assert.equal(
+    canUseUnverifiedGeneralKnowledgeFallback('What is political propaganda?'),
+    true,
+  );
+});
+
+test('does not use a general-knowledge fallback for current updates or explicit source requests', () => {
+  assert.equal(
+    canUseUnverifiedGeneralKnowledgeFallback('د افغانستان تازه خبرونه څه دي؟'),
+    false,
+  );
+  assert.equal(
+    canUseUnverifiedGeneralKnowledgeFallback('د سړې جګړې سرچینې او حوالې راکړه؟'),
+    false,
+  );
+});
+
