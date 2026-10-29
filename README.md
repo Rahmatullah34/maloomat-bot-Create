@@ -14,7 +14,11 @@
 - `ENABLE_HISTORY_CLEANUP` — که `false` وي، د WhatsApp له همغږي شوي پخواني تاریخ څخه Status/چینل فارورډونه او نامجاز لینکونه نه حذفېږي.
 - `WARNING_MUTE_ENABLED` — د درېیم اخطار وروسته د لنډمهاله محدودیت فعالول؛ ډیفالټ: `true`، د بندولو لپاره `false`.
 - `WARNING_MUTE_DURATION_MINUTES` — د محدودیت موده په دقیقو کې؛ ډیفالټ: `120` (دوه ساعته)، اعظمي `1440` دقیقې.
-- `RESET_WHATSAPP_SESSION`، `WHATSAPP_PHONE`، `OPENROUTER_API_KEY` — د اړتیا له مخې تنظیم کړئ.
+- `RESET_WHATSAPP_SESSION`، `WHATSAPP_PHONE`، `OPENROUTER_API_KEY` — د اړتیا له مخې تنظیم کړئ؛ API key یوازې په SillyDev Startup/Secrets یا په سرور کې د `OPENROUTER_API_KEY` په محلي، ignored فایل کې وساتئ.
+- `PRIVATE_QA_ALLOWED_NUMBERS` — د شخصي پوښتنو لپاره اجازه لرونکې شمېرې، د کامې په وسیله جلا او د هېواد له کوډ سره؛ واقعي ارزښتونه په SillyDev کې وساتئ، په GitHub کې یې مه لیکئ.
+- `PRIVATE_QA_ALLOWED_LIDS` — اختیاري، دقیق WhatsApp LID پېژندونکي؛ د کامې په وسیله جلا، یوازې په محرم سرور تنظیماتو کې.
+- `FULL_MODERATION_EXEMPT_PHONE_NUMBER` — اختیاري د مدیر/مالک د نظم له قواعدو د معافیت شمېره؛ که تنظیم نه وي، هېڅوک په دې ځانګړي استثنا نه معاف کېږي.
+- `ENABLE_GROUP_QA`، `ENABLE_PRIVATE_QA`، `ENABLE_INTERNET_SEARCH`، `ENABLE_AI_SUMMARIZATION`، `ENABLE_LINK_MODERATION` — د اړوندو ځانګړنو د فعال/بندولو لپاره؛ ډیفالټ ارزښتونه `true` دي.
 - `OPENROUTER_MODEL` — اختیاري؛ ډیفالټ: `openai/gpt-6-luna`.
 - `AI_MAX_OUTPUT_TOKENS` — د AI د ځواب اعظمي اوږدوالی؛ ډیفالټ `1400` دی؛ له `500` تر `2000` پورې ارزښت منل کېږي. لوړ حد د اوږد ځواب امکان زیاتوي، خو دقت نه تضمینوي.
 
@@ -33,6 +37,12 @@
 - د AI یا لټون د ناکامۍ په صورت کې بوټ نه تایید شوي حقایق نه جوړوي؛ د سرچینو اقتباسونه، موجود محلي معلومات یا د بیا هڅې روښانه لار ښيي.
 
 د اړوندو برخو ازموینې په `npm test` سره اجرا کېږي؛ د دې ازموینو لپاره ژوندی WhatsApp اتصال ته اړتیا نشته.
+
+## د محرمو تنظیماتو مهمه یادونه
+
+د شخصي چټ د اجازه‌لیست او د مدیر د معافیت پېژندونکي نور د عامه سرچینې کوډ کې نه ساتل کېږي. له همدې امله، د پخواني چلند د دوام لپاره `PRIVATE_QA_ALLOWED_NUMBERS`، که اړتیا وي `PRIVATE_QA_ALLOWED_LIDS`، او `FULL_MODERATION_EXEMPT_PHONE_NUMBER` په SillyDev کې تنظیم کړئ. که د شخصي چټ اجازه‌لیست تش وي، بوټ شخصي معلوماتي پوښتنې ردوي؛ که د معافیت شمېره تشه وي، د چا د معافیت اټکل نه کوي. دا د خوندي ډیفالټ چلند برخه ده.
+
+د `OPENROUTER_API_KEY` د سرور محلي فایل په `.gitignore` کې هم شامل دی. د API کیلي، WhatsApp pairing code، ناستې فایلونه او د شخصي پېژندونکو لېست په عامه کوډ یا لاګونو کې مه شریکوئ.
 
 ## د اتومات معلوماتي خپرولو سیستم
 
