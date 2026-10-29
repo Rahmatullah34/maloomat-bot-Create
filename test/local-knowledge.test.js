@@ -28,7 +28,7 @@ test('answers a crypto-definition question from the local entry without external
 test('returns the fixed five-pillars answer for the matching common question', () => {
   const answer = answerCommonPashtoQuestion('اسلام څو بناوې لري؟');
   assert.match(answer || '', /پنځه بناوې/);
-  assert.match(answer || '', /sunnah.com/muslim:8a/);
+  assert.match(answer || '', /sunnah\.com\/muslim:8a/);
 });
 
 test('preserves the simple calculator and sensitive-location guard', () => {
