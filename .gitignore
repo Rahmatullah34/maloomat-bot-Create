@@ -21,3 +21,6 @@ data/auto-publisher-state.json.*.tmp
 
 # Local auto-publisher target/config (keep group and channel identifiers out of public Git)
 auto-publisher-config.json
+
+# Private moderation and personal-Q&A settings; never commit actual values
+private-runtime-config.json
