@@ -209,5 +209,6 @@ test('mentions the questioner and quotes the original group message for answer-e
 
   assert.equal(handled, true);
   assert.deepEqual(context.deliveries[0].payload.mentions, ['15551230000@s.whatsapp.net']);
+  assert.match(context.deliveries[0].payload.text, /^@15551230000\s/);
   assert.equal(context.deliveries[0].options.quoted, originalMessage);
 });
