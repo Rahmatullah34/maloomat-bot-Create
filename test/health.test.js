@@ -64,10 +64,10 @@ test('does not claim private Q&A is enabled unless an allowlist is configured', 
 });
 
 test('never returns secret values or phone/LID identifiers from its config', () => {
-  const config = makeState().runtimeConfig;
-  config.security.privateQaAllowedNumbers.add('12025550100');
-  config.security.privateQaAllowedLids.add('123456789012345');
-  const output = JSON.stringify(buildHealthPayload(makeState()));
+  const state = makeState();
+  state.runtimeConfig.security.privateQaAllowedNumbers.add('12025550100');
+  state.runtimeConfig.security.privateQaAllowedLids.add('123456789012345');
+  const output = JSON.stringify(buildHealthPayload(state));
   assert.equal(output.includes('12025550100'), false);
   assert.equal(output.includes('123456789012345'), false);
   assert.equal(output.includes('local-secret'), false);
