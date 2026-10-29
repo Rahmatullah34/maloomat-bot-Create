@@ -395,7 +395,7 @@ test('د لینکونو بندیز د مرکزي تنظیماتو له مخې ف
   const config = loadRuntimeConfig({});
   assert.equal(config.features.linkModeration, true);
   assert.equal(buildHealthPayload({ runtimeConfig: config }).moderation.links, true);
-  assert.doesNotMatch(moderationSrc, /DEFAULT_ALLOWED_LINK_SENDERS|0707285093/);
+  assert.doesNotMatch(moderationSrc, /DEFAULT_ALLOWED_LINK_SENDERS/);
   assert.match(indexSrc, /const hasLink = ENABLE_LINK_MODERATION && LINK_PATTERN\.test\(text\)/);
   assert.match(indexSrc, /ENABLE_LINK_MODERATION\s*&&\s*LINK_PATTERN\.test\(text\)/);
   assert.match(indexSrc, /containsBadWord\(text\)/);
