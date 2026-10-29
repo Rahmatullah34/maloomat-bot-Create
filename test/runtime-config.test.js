@@ -12,6 +12,7 @@ const {
   normalizePhoneNumber,
   normalizeLid,
   readOpenRouterApiKey,
+  readWhatsAppPhone,
 } = require('../lib/runtime-config');
 
 test('parses common boolean forms and uses the fallback for invalid values', () => {
@@ -64,6 +65,17 @@ test('uses the environment API key first and can read a locally ignored key file
     assert.equal(readOpenRouterApiKey({ OPENROUTER_API_KEY: ' env-secret ' }, dir), 'env-secret');
     assert.equal(readOpenRouterApiKey({}, dir), 'local-secret');
     assert.equal(readOpenRouterApiKey({}, path.join(dir, 'missing')), '');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('normalizes the WhatsApp pairing phone and preserves the local-file fallback', () => {
+  assert.equal(readWhatsAppPhone({ WHATSAPP_PHONE: '+1 (202) 555-0100' }, '/missing'), '12025550100');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'maloomat-phone-'));
+  try {
+    fs.writeFileSync(path.join(dir, 'whatsapp-phone.txt'), '+44 1234 567890\n', 'utf8');
+    assert.equal(readWhatsAppPhone({}, dir), '441234567890');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
