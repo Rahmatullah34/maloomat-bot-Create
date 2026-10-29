@@ -73,6 +73,20 @@ test('does not block unrelated religious, science, or school questions', () => {
   }
 });
 
+test('recognizes additional common political terms and leadership spellings', () => {
+  const blockedQuestions = [
+    'د سرپرست حکومت په اړه معلومات راکړه؟',
+    'د امارت چارواکي څوک دي؟',
+    'د طالبانو د مشرتابه په اړه تشریح راکړه؟',
+    'د ملا هبت الله په اړه معلومات راکړه؟',
+    'Tell me about Taliban leadership',
+    'Explain the caretaker government of Afghanistan',
+  ];
+  for (const question of blockedQuestions) {
+    assert.equal(isRestrictedPoliticalTopic(question), true, question);
+  }
+});
+
 test('normalizes Arabic-script letter variants and spacing', () => {
   assert.equal(
     normalizePoliticalTopicText('امارت اسلامی'),
