@@ -320,21 +320,24 @@ test('تایید شوی اډمین د چټک او تکراري سپم له اخ�
     'د تکراري سپم حذف باید یوازې پر عادي غړو تطبیق شي');
 });
 
-test('د پوښتنو ځوابونه، انټرنېټي لټون او AI لنډیز فعال دي', () => {
-  const indexSrc = fs.readFileSync(
-    path.join(__dirname, '..', 'index.js'),
-    'utf8'
-  );
-  assert.match(indexSrc, /ENABLE_GROUP_QA\s*=\s*true/,
-    'د ګروپ پوښتنو او ځوابونو برخه باید فعاله وي');
-  assert.match(indexSrc, /ENABLE_PRIVATE_QA\s*=\s*true/,
-    'د شخصي پیغامونو پوښتنې او ځوابونه باید فعال وي');
-  assert.match(indexSrc, /ENABLE_INTERNET_SEARCH\s*=\s*true/,
-    'انټرنېټي لټون باید فعال وي');
-  assert.match(indexSrc, /ENABLE_AI_SUMMARIZATION\s*=\s*true/,
-    'د AI لنډیز باید فعال وي');
-  assert.match(indexSrc, /webSearch:\s*ENABLE_GROUP_QA\s*&&\s*ENABLE_INTERNET_SEARCH/,
-    'د روغتیا راپور باید د فعالو لټون تنظیماتو مطابق حالت وښيي');
+test('د پوښتنو ځوابونه، انټرنېټي لټون او AI لنډیز د مرکزي تنظیماتو له مخې فعال دي', () => {
+  const { loadRuntimeConfig } = require('../lib/runtime-config');
+  const { buildHealthPayload } = require('../lib/health');
+  const config = loadRuntimeConfig({});
+  assert.equal(config.features.groupQA, true);
+  assert.equal(config.features.privateQA, true);
+  assert.equal(config.features.internetSearch, true);
+  assert.equal(config.features.aiSummarization, true);
+  assert.equal(config.features.linkModeration, true);
+
+  const health = buildHealthPayload({
+    runtimeConfig: config,
+    whatsappConnectionState: 'connected',
+    authSessionSaved: true,
+    aiKeyConfigured: true,
+  });
+  assert.equal(health.webSearch, true);
+  assert.equal(health.aiSummarization, true);
 });
 
 
@@ -355,12 +358,17 @@ test('د قوانینو امر د سپم او نورو moderation فلټرونو
   assert.match(indexSrc, /isGroupRulesCommand\(text\)/);
 });
 
-test('0707285093 د ګروپ له ټولو اتومات moderation څخه معاف دی', () => {
+test('د نظم د معافیت شمېره له محرمو تنظیماتو لوستل کېږي', () => {
   const indexSrc = fs.readFileSync(
     path.join(__dirname, '..', 'index.js'),
     'utf8'
   );
-  assert.match(indexSrc, /const FULL_MODERATION_EXEMPT_PHONE_NUMBER = '0707285093'/);
+  const { loadRuntimeConfig } = require('../lib/runtime-config');
+  const configured = loadRuntimeConfig({ FULL_MODERATION_EXEMPT_PHONE_NUMBER: '+1 (202) 555-0100' });
+  assert.equal(configured.security.fullModerationExemptPhoneNumber, '12025550100');
+  assert.equal(loadRuntimeConfig({}).security.fullModerationExemptPhoneNumber, '');
+
+  assert.match(indexSrc, /runtimeConfig\.security\.fullModerationExemptPhoneNumber/);
   assert.match(indexSrc, /function isFullModerationExemptSender\(senderIdentifiers\)/);
   assert.match(indexSrc, /!isFullModerationExempt\s*\?\s*getTemporaryMuteStatus/);
   assert.match(indexSrc, /if \(statusShare && !isFullModerationExempt\)/);
@@ -372,14 +380,22 @@ test('0707285093 د ګروپ له ټولو اتومات moderation څخه معا
   assert.match(indexSrc, /if \(historySenderIsExempt\) continue/);
 });
 
-test('د لینکونو اتومات بندیز فعال دی، خو لایکونه/غبرګونونه اخطار نه اخلي', () => {
+test('د لینکونو بندیز د مرکزي تنظیماتو له مخې فعال دی؛ شخصي استثنا په کوډ کې نه ده لیکل شوې', () => {
   const indexSrc = fs.readFileSync(
     path.join(__dirname, '..', 'index.js'),
     'utf8'
   );
+  const moderationSrc = fs.readFileSync(
+    path.join(__dirname, '..', 'lib', 'moderation.js'),
+    'utf8'
+  );
+  const { loadRuntimeConfig } = require('../lib/runtime-config');
+  const { buildHealthPayload } = require('../lib/health');
 
-  assert.match(indexSrc, /const ENABLE_LINK_MODERATION = true/);
-  assert.match(indexSrc, /links:\s*ENABLE_LINK_MODERATION/);
+  const config = loadRuntimeConfig({});
+  assert.equal(config.features.linkModeration, true);
+  assert.equal(buildHealthPayload({ runtimeConfig: config }).moderation.links, true);
+  assert.doesNotMatch(moderationSrc, /DEFAULT_ALLOWED_LINK_SENDERS|0707285093/);
   assert.match(indexSrc, /const hasLink = ENABLE_LINK_MODERATION && LINK_PATTERN\.test\(text\)/);
   assert.match(indexSrc, /ENABLE_LINK_MODERATION\s*&&\s*LINK_PATTERN\.test\(text\)/);
   assert.match(indexSrc, /containsBadWord\(text\)/);
@@ -394,11 +410,17 @@ test('WhatsApp connection settings keep a live socket and expose session diagnos
     'utf8'
   );
 
+  const healthSrc = fs.readFileSync(
+    path.join(__dirname, '..', 'lib', 'health.js'),
+    'utf8'
+  );
   assert.match(indexSrc, /keepAliveIntervalMs:\s*20_000/);
   assert.match(indexSrc, /connectTimeoutMs:\s*60_000/);
   assert.match(indexSrc, /defaultQueryTimeoutMs:\s*60_000/);
   assert.match(indexSrc, /saveCreds\(\)\.catch/);
-  assert.match(indexSrc, /lastDisconnectCode/);
+  assert.match(indexSrc, /whatsappLastDisconnectCode/);
   assert.match(indexSrc, /authSessionSaved:\s*fs\.existsSync/);
   assert.match(indexSrc, /sessionResetRequested/);
+  assert.match(healthSrc, /whatsappLastDisconnectCode/);
+  assert.match(healthSrc, /authSessionSaved/);
 });
