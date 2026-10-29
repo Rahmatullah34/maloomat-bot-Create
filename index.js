@@ -11,6 +11,8 @@ const {
 } = require('@whiskeysockets/baileys');
 
 const P = require('pino');
+const { installSensitiveLogRedaction } = require('./lib/safe-console');
+installSensitiveLogRedaction();
 const express = require('express');
 const { classifyRemoteJid, shouldHandleNotifyEvent } = require('./lib/message-router');
 const { runtimeConfig, readOpenRouterApiKey } = require('./lib/runtime-config');
