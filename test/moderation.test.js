@@ -58,14 +58,14 @@ test('normalizePashto: عربي تورې او نښانې سموي', () => {
 });
 
 test('hasMatchingPhoneNumber: د مالک شمېره په محلي/نړیوال PN بڼه پېژني، LID نه', () => {
-  const owner = '0707285093';
+  const owner = '0700000000';
   for (const identifier of [
-    '0707285093@s.whatsapp.net',
-    '93707285093@s.whatsapp.net',
-    '93707285093:4@s.whatsapp.net',
+    '0700000000@s.whatsapp.net',
+    '93700000000@s.whatsapp.net',
+    '93700000000:4@s.whatsapp.net',
     '707285093@s.whatsapp.net',
-    '+93707285093',
-    '0707285093',
+    '+93700000000',
+    '0700000000',
   ]) {
     assert.equal(hasMatchingPhoneNumber([identifier], owner), true, identifier);
   }
@@ -270,7 +270,7 @@ test('isGroupAdminSender: د LID، PN، phoneNumber او admin flags بدیلو�
   const participants = [
     {
       id: '987654321@lid',
-      phoneNumber: '93707285093@s.whatsapp.net',
+      phoneNumber: '93700000000@s.whatsapp.net',
       admin: 'superadmin',
     },
     { id: '93700000001@s.whatsapp.net', isAdmin: true },
@@ -279,8 +279,8 @@ test('isGroupAdminSender: د LID، PN، phoneNumber او admin flags بدیلو�
   ];
 
   assert.equal(isGroupAdminSender(participants, ['987654321@lid']), true);
-  assert.equal(isGroupAdminSender(participants, ['0707285093@s.whatsapp.net']), true);
-  assert.equal(isGroupAdminSender(participants, ['93707285093:4@s.whatsapp.net']), true);
+  assert.equal(isGroupAdminSender(participants, ['0700000000@s.whatsapp.net']), true);
+  assert.equal(isGroupAdminSender(participants, ['93700000000:4@s.whatsapp.net']), true);
   assert.equal(isGroupAdminSender(participants, ['93700000001:12@s.whatsapp.net']), true);
   assert.equal(isGroupAdminSender(participants, ['93700000002@s.whatsapp.net']), true);
   assert.equal(isGroupAdminSender(participants, ['123456789@lid']), false);
@@ -291,15 +291,15 @@ test('isGroupAdminSender: د LID، PN، phoneNumber او admin flags بدیلو�
 test('د PN/LID بدیلونه د سپم شمېر او اخطار لپاره یو ثابت کلید ورکوي', () => {
   const participants = [{
     id: '987654321@lid',
-    phoneNumber: '93707285093@s.whatsapp.net',
+    phoneNumber: '93700000000@s.whatsapp.net',
     admin: 'admin',
   }];
 
   const keyFromLid = getCanonicalParticipantIdentifier(participants, ['987654321@lid']);
-  const keyFromPhone = getCanonicalParticipantIdentifier(participants, ['93707285093@s.whatsapp.net']);
+  const keyFromPhone = getCanonicalParticipantIdentifier(participants, ['93700000000@s.whatsapp.net']);
   const keyFromBoth = getCanonicalParticipantIdentifier(participants, [
     '987654321@lid',
-    '93707285093@s.whatsapp.net',
+    '93700000000@s.whatsapp.net',
   ]);
 
   assert.equal(keyFromLid, keyFromPhone);
