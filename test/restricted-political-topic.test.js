@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const {
   normalizePoliticalTopicText,
   isRestrictedPoliticalTopic,
+  isNewsOrMediaRequest,
   RESTRICTED_POLITICAL_REPLY,
 } = require('../lib/restricted-political-topic');
 
@@ -27,6 +28,36 @@ test('recognizes English spellings used in political questions', () => {
   assert.equal(isRestrictedPoliticalTopic('What is the Taliban government doing?'), true);
   assert.equal(isRestrictedPoliticalTopic('Explain the Islamic Emirate of Afghanistan'), true);
   assert.equal(isRestrictedPoliticalTopic('Who is Haibatullah Akhundzada?'), true);
+});
+
+test('allows news and media-report requests about otherwise restricted political topics', () => {
+  const allowedNewsRequests = [
+    'د طالبانو تازه خبرونه راکړه؟',
+    'د اسلامي امارت په اړه رسنۍ څه وايي؟',
+    'د طالبانو د حکومت رسنیز راپورونه راکړه؟',
+    'د امارت د چارواکو په اړه د خبرونو سرټکي څه دي؟',
+    'طالبانو په اړه تازه راپورونه په رسنیو کې څه دي؟',
+    'Latest news about the Taliban',
+    'What are media reports saying about the Islamic Emirate?',
+    'Find recent news articles about the Taliban government',
+    'Breaking news: Taliban government announcement',
+  ];
+  for (const question of allowedNewsRequests) {
+    assert.equal(isNewsOrMediaRequest(question), true, question);
+    assert.equal(isRestrictedPoliticalTopic(question), false, question);
+  }
+});
+
+test('continues to restrict direct political explanations even when news terms are absent', () => {
+  const blockedQuestions = [
+    'طالبان څوک دي؟',
+    'د طالبانو سیاسي پالیسي څه ده؟',
+    'د اسلامي امارت د مشر په اړه معلومات راکړه؟',
+    'Explain the Taliban government structure',
+  ];
+  for (const question of blockedQuestions) {
+    assert.equal(isRestrictedPoliticalTopic(question), true, question);
+  }
 });
 
 test('does not block unrelated religious, science, or school questions', () => {
