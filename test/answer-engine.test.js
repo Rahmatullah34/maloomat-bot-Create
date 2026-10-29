@@ -49,6 +49,54 @@ function makeDependencies(overrides = {}) {
   return { dependencies, messages, state };
 }
 
+test('politely declines restricted Taliban-related political questions before local answers, web search, or AI', async () => {
+  const context = makeDependencies({
+    readOpenRouterApiKey: () => 'test-key',
+    answerFromOfflineKnowledge: () => 'دا باید د محلي پوهې له لارې ځواب نه شي.',
+    searchInternet: async () => {
+      context.state.searches += 1;
+      return [{ title: 'Should not be searched', url: 'https://example.org', snippet: 'blocked topic' }];
+    },
+    summarizeSourcesInPashto: async () => {
+      context.state.summaries += 1;
+      return 'دا باید د AI ځواب نه وي.';
+    },
+  });
+  const answer = createAnswerEngine(context.dependencies);
+  const handled = await answer(
+    {},
+    'group@g.us',
+    'sender@s.whatsapp.net',
+    'د اسلامي امارت سیاسي پالیسي څه ده؟',
+    'member',
+  );
+
+  assert.equal(handled, true);
+  assert.equal(context.state.searches, 0);
+  assert.equal(context.state.summaries, 0);
+  assert.equal(context.messages.length, 1);
+  assert.match(context.messages[0], /بښنه غواړم/);
+  assert.match(context.messages[0], /معلومات فعلاً زموږ په خدمت کې نشته/);
+  assert.doesNotMatch(context.messages[0], /AI ځواب|سرچینې|طالبان/);
+});
+
+test('does not block an unrelated Islamic question in the answer engine', async () => {
+  const context = makeDependencies({
+    answerFromOfflineKnowledge: () => 'د اسلام پنځه بناوې شهادت، لمونځ، روژه، زکات او حج دي.',
+  });
+  const answer = createAnswerEngine(context.dependencies);
+  const handled = await answer(
+    {},
+    'group@g.us',
+    'sender@s.whatsapp.net',
+    'د اسلام پنځه بناوې څه دي؟',
+    'member',
+  );
+  assert.equal(handled, true);
+  assert.match(context.messages[0], /شهادت|بناوې/);
+  assert.doesNotMatch(context.messages[0], /معلومات فعلاً زموږ په خدمت کې نشته/);
+});
+
 test('stops sensitive person-location or harm requests before web search', async () => {
   const context = makeDependencies({ isSensitiveSafetyRequest: () => true });
   const answer = createAnswerEngine(context.dependencies);
