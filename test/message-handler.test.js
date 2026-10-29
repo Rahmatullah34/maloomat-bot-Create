@@ -122,9 +122,6 @@ test('returns only the sender\'s own private-chat identifier on the explicit myi
   assert.ok(h.state.sends[0].text.includes(senderLid));
 });
 
-test('answers a private question only when its normalized phone is allowlisted', async () => {')));
-});
-
 test('answers a private question only when its normalized phone is allowlisted', async () => {
   const h = createHarness({
     classifyRemoteJid: () => 'private',
