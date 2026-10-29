@@ -91,6 +91,8 @@ test('combines an AI summary with verified links when relevant search results ex
   assert.match(context.messages[0], /د ازموینې لنډیز/);
   assert.match(context.messages[0], /تایید شوو سرچینو لینکونه/);
   assert.match(context.messages[0], /د افغان AI ځواب/);
+  assert.match(context.messages[0], /🗺️/);
+  assert.doesNotMatch(context.messages[0], /🇦🇫/);
   assert.doesNotMatch(context.messages[0], /د AI ځواب/);
 });
 
