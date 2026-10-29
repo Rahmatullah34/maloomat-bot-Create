@@ -6,6 +6,8 @@ whatsapp-phone.txt
 # چاپېریال او رازونه
 .env
 .env.*
+OPENROUTER_API_KEY
+OPENROUTER_API_KEY.*
 
 # نور
 node_modules/
