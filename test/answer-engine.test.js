@@ -189,6 +189,21 @@ test('does not invent a precise religious answer when authoritative evidence is 
   assert.match(context.messages[0], /باوري سرچینه|شواهد|نه اټکلم/);
 });
 
+test('removes Markdown-only markers from WhatsApp answer text', async () => {
+  const context = makeDependencies({
+    answerFromOfflineKnowledge: () => '## لومړی درس\\n\\n### مهمې جملې\\n*Hello!* — سلام\\n**My name is Ahmad.** — زما نوم احمد دی.\\n- لومړۍ جمله',
+  });
+  const answer = createAnswerEngine(context.dependencies);
+  const handled = await answer({}, 'group@g.us', 'sender@s.whatsapp.net', 'درس راته تشریح کړه؟', 'member');
+
+  assert.equal(handled, true);
+  assert.match(context.messages[0], /لومړی درس/);
+  assert.match(context.messages[0], /Hello!/);
+  assert.match(context.messages[0], /My name is Ahmad\\./);
+  assert.match(context.messages[0], /• لومړۍ جمله/);
+  assert.doesNotMatch(context.messages[0], /#{1,6}|\\*{1,2}|__/);
+});
+
 test('mentions the questioner and quotes the original group message for answer-engine replies', async () => {
   const context = makeDependencies({
     answerSimpleMathQuestion: () => 'د ازموینې ځواب دی.',
