@@ -191,13 +191,13 @@ test('does not invent a precise religious answer when authoritative evidence is 
 
 test('formats Markdown emitted in answers using WhatsApp text syntax', async () => {
   const context = makeDependencies({
-    answerSimpleMathQuestion: () => '## د حساب ځواب\\n\\n**پایله: ۴**\\n- لومړی ټکی',
+    answerSimpleMathQuestion: () => '## د حساب ځواب\n\n**پایله: ۴**\n- لومړی ټکی',
   });
   const answer = createAnswerEngine(context.dependencies);
   const handled = await answer({}, 'group@g.us', 'sender@s.whatsapp.net', '۲ جمع ۲ څو کېږي؟', 'member');
 
   assert.equal(handled, true);
-  assert.equal(context.messages[0], 'د حساب ځواب\\n\\n*پایله: ۴*\\n• لومړی ټکی');
+  assert.equal(context.messages[0], 'د حساب ځواب\n\n*پایله: ۴*\n• لومړی ټکی');
 });
 
 test('mentions the questioner and quotes the original group message for answer-engine replies', async () => {
