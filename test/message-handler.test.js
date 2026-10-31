@@ -11,6 +11,7 @@ function createHarness(overrides = {}) {
     sends: [],
     answers: [],
     cvMessages: [],
+    innovationMessages: [],
     deletions: [],
     remembered: [],
     burstCalls: 0,
@@ -30,6 +31,7 @@ function createHarness(overrides = {}) {
     safeSend: async (_socket, jid, payload) => { state.sends.push({ jid, text: payload?.text || '' }); return true; },
     answerWithKnowledge: async (...args) => { state.answers.push(args); return true; },
     handlePrivateCvMessage: async (args) => { state.cvMessages.push(args); return true; },
+    handlePrivateInnovationMessage: async (args) => { state.innovationMessages.push(args); return true; },
     isGroupAllowed: () => true,
     isForwardedChannelMessage: () => false,
     isWhatsAppStatusShare: () => false,
@@ -127,7 +129,7 @@ test('does not expose private identifiers through non-CV commands from an unauth
   assert.equal(h.state.sends.length, 0);
 });
 
-test('routes an authorized private message only to the private career service', async () => {
+test('routes authorized private messages only to the CV service, never innovation services', async () => {
   const h = createHarness({
     classifyRemoteJid: () => 'private',
     PRIVATE_QA_ALLOWED_NUMBERS: new Set(['15551234567']),
@@ -138,7 +140,33 @@ test('routes an authorized private message only to the private career service', 
   assert.equal(h.state.cvMessages.length, 1);
   assert.equal(h.state.cvMessages[0].jid, '15551234567@s.whatsapp.net');
   assert.equal(h.state.cvMessages[0].text, 'دا ازمویښتي پوښتنه ده؟');
+  assert.equal(h.state.innovationMessages.length, 0);
   assert.equal(h.state.burstCalls, 0);
+});
+
+
+test('default private route starts the CV service and rejects other private services', async () => {
+  const h = createHarness({
+    classifyRemoteJid: () => 'private',
+    PRIVATE_QA_ALLOWED_NUMBERS: new Set(['15551234567']),
+    extractText: () => 'CV',
+  });
+  delete h.dependencies.handlePrivateCvMessage;
+  h.handler = createMessageHandler(h.dependencies);
+  await h.handler({ type: 'notify', messages: [message('15551234567@s.whatsapp.net')] });
+  assert.equal(h.state.cvMessages.length, 0);
+  assert.match(h.state.sends.at(-1).text, /۱۰ لنډې پوښتنې/);
+
+  const blocked = createHarness({
+    classifyRemoteJid: () => 'private',
+    PRIVATE_QA_ALLOWED_NUMBERS: new Set(['15551234568']),
+    extractText: () => 'SERVICES',
+  });
+  delete blocked.dependencies.handlePrivateCvMessage;
+  blocked.handler = createMessageHandler(blocked.dependencies);
+  await blocked.handler({ type: 'notify', messages: [message('15551234568@s.whatsapp.net')] });
+  assert.match(blocked.state.sends.at(-1).text, /یوازې د انګلیسي CV/);
+  assert.equal(blocked.state.innovationMessages.length, 0);
 });
 
 test('handles group-rules commands before burst, bad-word, and link moderation', async () => {
