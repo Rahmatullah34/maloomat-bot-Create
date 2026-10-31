@@ -127,7 +127,7 @@ test('does not expose private identifiers through non-CV commands from an unauth
   assert.equal(h.state.sends.length, 0);
 });
 
-test('routes an authorized private message only to the English CV service', async () => {
+test('routes an authorized private message only to the private career service', async () => {
   const h = createHarness({
     classifyRemoteJid: () => 'private',
     PRIVATE_QA_ALLOWED_NUMBERS: new Set(['15551234567']),
