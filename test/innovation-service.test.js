@@ -65,7 +65,7 @@ test('quiz flow generates five questions and grades the learner response', async
   await h.send('2');
   assert.match(h.sent.at(-1).text, /امتحان/);
   await h.send('د ریاضي کسرونه');
-  assert.match(h.sent.at(-1).text, /پوښتنه ۱/);
+  assert.match(h.sent.at(-1).text, /پوښتنه 1/);
   await h.send('1-A, 2-A, 3-B, 4-A, 5-A');
   assert.match(h.sent.at(-1).text, /د ازموینې پایله: 4\/5/);
 });
