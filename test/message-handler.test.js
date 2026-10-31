@@ -10,6 +10,7 @@ function createHarness(overrides = {}) {
   const state = {
     sends: [],
     answers: [],
+    cvMessages: [],
     deletions: [],
     remembered: [],
     burstCalls: 0,
@@ -28,6 +29,7 @@ function createHarness(overrides = {}) {
     extractText: () => 'د زړه دنده څه ده؟',
     safeSend: async (_socket, jid, payload) => { state.sends.push({ jid, text: payload?.text || '' }); return true; },
     answerWithKnowledge: async (...args) => { state.answers.push(args); return true; },
+    handlePrivateCvMessage: async (args) => { state.cvMessages.push(args); return true; },
     isGroupAllowed: () => true,
     isForwardedChannelMessage: () => false,
     isWhatsAppStatusShare: () => false,
@@ -104,7 +106,7 @@ test('rejects unauthorized private chats without logging the sender identifier',
   assert.equal(logLines.some(line => line.includes('15551234567@s.whatsapp.net')), false);
 });
 
-test('returns only the sender\'s own private-chat identifier on the explicit myid command', async () => {
+test('does not expose private identifiers through non-CV commands from an unauthorized sender', async () => {
   const senderLid = '123456789012345@lid';
   const h = createHarness({
     classifyRemoteJid: () => 'private',
@@ -121,19 +123,21 @@ test('returns only the sender\'s own private-chat identifier on the explicit myi
   });
 
   assert.equal(h.state.answers.length, 0);
-  assert.equal(h.state.sends.length, 1);
-  assert.ok(h.state.sends[0].text.includes(senderLid));
+  assert.equal(h.state.cvMessages.length, 0);
+  assert.equal(h.state.sends.length, 0);
 });
 
-test('answers a private question only when its normalized phone is allowlisted', async () => {
+test('routes an authorized private message only to the English CV service', async () => {
   const h = createHarness({
     classifyRemoteJid: () => 'private',
     PRIVATE_QA_ALLOWED_NUMBERS: new Set(['15551234567']),
     extractText: () => 'دا ازمویښتي پوښتنه ده؟',
   });
   await h.handler({ type: 'notify', messages: [message('15551234567@s.whatsapp.net')] });
-  assert.equal(h.state.answers.length, 1);
-  assert.equal(h.state.answers[0][3], 'دا ازمویښتي پوښتنه ده؟');
+  assert.equal(h.state.answers.length, 0);
+  assert.equal(h.state.cvMessages.length, 1);
+  assert.equal(h.state.cvMessages[0].jid, '15551234567@s.whatsapp.net');
+  assert.equal(h.state.cvMessages[0].text, 'دا ازمویښتي پوښتنه ده؟');
   assert.equal(h.state.burstCalls, 0);
 });
 
