@@ -8,6 +8,7 @@ const {
   isStartCommand,
   makePdfFilename,
   normalizeDigits,
+  translateCvToEnglish,
 } = require('../lib/cv-service');
 
 const sample = {
@@ -56,10 +57,10 @@ test('collects the CV step by step and sends a PDF without answering general que
   const jid = '15551234567@s.whatsapp.net';
 
   await service.handlePrivateCvMessage({ socket, jid, text: 'سلام', safeSend });
-  assert.match(sent.at(-1).payload.text, /۱۰ لنډې پوښتنې/);
+  assert.match(sent.at(-1).payload.text, /د پیل لپاره CV ولیکه/);
 
   await service.handlePrivateCvMessage({ socket, jid, text: 'CV', safeSend });
-  assert.match(sent.at(-1).payload.text, /انګلیسي CV جوړولو خدمت/);
+  assert.match(sent.at(-1).payload.text, /۱۰ لنډې پوښتنې/);
 
   const answers = [
     sample.fullName,
@@ -160,6 +161,52 @@ test('accepts Pashto CV answers and sends an English PDF after translation', asy
   assert.doesNotMatch(pdfText, /[\u0600-\u06FF]/);
 });
 
+test('translates multilingual CV values while preserving email and phone', async () => {
+  let requestUrl = '';
+  let requestBody;
+  const source = {
+    fullName: 'رحمت الله',
+    role: 'ښوونکی',
+    email: 'rahmat@example.com',
+    phone: '+937000000000',
+    location: 'کابل، افغانستان',
+    summary: 'زه ښوونکی یم.',
+    skills: 'تدریس',
+    experience: 'پنځه کاله تجربه',
+    education: 'د دولسم ټولګي فارغ',
+    otherDetails: '',
+  };
+  const translated = {
+    fullName: 'Rahmatullah',
+    role: 'Teacher',
+    location: 'Kabul, Afghanistan',
+    summary: 'I am a teacher.',
+    skills: 'Teaching',
+    experience: 'Five years of experience',
+    education: 'High school graduate',
+    otherDetails: '',
+  };
+  const result = await translateCvToEnglish(source, {
+    apiKey: 'test-api-key',
+    model: 'test-model',
+    fetchImpl: async (url, options) => {
+      requestUrl = url;
+      requestBody = JSON.parse(options.body);
+      return {
+        ok: true,
+        json: async () => ({ choices: [{ message: { content: JSON.stringify(translated) } }] }),
+      };
+    },
+  });
+  assert.equal(requestUrl, 'https://openrouter.ai/api/v1/chat/completions');
+  assert.equal(requestBody.model, 'test-model');
+  assert.equal(result.fullName, 'Rahmatullah');
+  assert.equal(result.role, 'Teacher');
+  assert.equal(result.email, source.email);
+  assert.equal(result.phone, source.phone);
+  assert.equal(result.location, 'Kabul, Afghanistan');
+});
+
 test('cancel removes the active CV session', async () => {
   const service = createCvService();
   const sent = [];
@@ -169,7 +216,7 @@ test('cancel removes the active CV session', async () => {
   await service.handlePrivateCvMessage({ ...args, text: 'CANCEL' });
   assert.match(sent.at(-1).text, /لغوه شو/);
   await service.handlePrivateCvMessage({ ...args, text: 'Alex Example' });
-  assert.match(sent.at(-1).text, /دندې لپاره/);
+  assert.match(sent.at(-1).text, /یوازې د انګلیسي CV/);
 });
 
 test('normalizes Pashto and Arabic phone digits into ASCII digits', () => {
