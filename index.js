@@ -8,6 +8,7 @@ const {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
+  downloadMediaMessage,
 } = require('@whiskeysockets/baileys');
 
 const P = require('pino');
@@ -19,6 +20,7 @@ const { runtimeConfig, readOpenRouterApiKey } = require('./lib/runtime-config');
 const { buildHealthPayload } = require('./lib/health');
 const { createAnswerEngine } = require('./lib/answer-engine');
 const { createMessageHandler } = require('./lib/message-handler');
+const { createGroupChallengeService } = require('./lib/group-challenge');
 const { normalizePashto } = require('./lib/moderation');
 const {
   OFFLINE_KNOWLEDGE,
@@ -90,6 +92,8 @@ let whatsappLastDisconnectAt = null;
 // ======================================================
 
 // د ټولو Runtime تنظیماتو سرچینه: lib/runtime-config.js.
+const groupChallengeService = createGroupChallengeService();
+
 const ENABLE_GROUP_QA = runtimeConfig.features.groupQA;
 const ENABLE_PRIVATE_QA = runtimeConfig.features.privateQA;
 const ENABLE_INTERNET_SEARCH = runtimeConfig.features.internetSearch;
@@ -953,6 +957,8 @@ async function startBot() {
       extractText,
       safeSend,
       answerWithKnowledge,
+      downloadMediaMessage,
+      handleGroupChallengeMessage: groupChallengeService.handleGroupChallengeMessage,
       isGroupAllowed,
       isForwardedChannelMessage,
       isWhatsAppStatusShare,
