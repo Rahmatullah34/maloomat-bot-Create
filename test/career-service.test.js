@@ -73,13 +73,15 @@ test('shows the private employment menu and starts the existing CV flow', async 
 });
 
 test('collects cover-letter details in native language and retries without asking again', async () => {
+  let generationCalls = 0;
+  const hCalls = [];
   const h = harness({
-    generateCoverLetter: async (data, count) => {
+    generateCoverLetter: async (data) => {
+      generationCalls += 1;
       hCalls.push({ ...data });
-      return count === 1 ? null : 'Dear Hiring Manager,\n\nI am applying for this role. My education and relevant skills are described accurately in this letter. I would welcome an interview.\n\nSincerely,\nApplicant';
+      return generationCalls === 1 ? null : 'Dear Hiring Manager,\n\nI am applying for this role. My education and relevant skills are described accurately in this letter. I would welcome an interview.\n\nSincerely,\nApplicant';
     },
   });
-  const hCalls = [];
 
   await h.send('COVER LETTER');
   await h.send('د ښوونکي دنده، د ABC ښوونځی');
@@ -92,6 +94,7 @@ test('collects cover-letter details in native language and retries without askin
   await h.send('RETRY');
   assert.match(h.sends.at(-1).payload.text, /English Cover Letter/);
   assert.equal(hCalls.length, 2);
+  assert.equal(generationCalls, 2);
   assert.equal(hCalls[0].candidate, hCalls[1].candidate);
 });
 
@@ -157,5 +160,5 @@ test('CANCEL ends any career flow and returns the user to the menu state', async
   await h.send('CANCEL');
   assert.match(h.sends.at(-1).payload.text, /لغوه شو/);
   await h.send('hello');
-  assert.match(h.sends.at(-1).payload.text, /CV پلس/);
+  assert.match(h.sends.at(-1).payload.text, /۱، ۲ یا ۳/);
 });
