@@ -317,12 +317,12 @@ test('تایید شوی اډمین د چټک او تکراري سپم له اخ�
   assert.match(handlerSrc, /if\s*\(!isSenderGroupAdmin && !isFullModerationExempt\)\s*\{\s*const repeated = recordRepeatedMessage/,
     'د تکراري سپم حذف باید یوازې پر عادي غړو تطبیق شي');
 });
-test('د پوښتنو ځوابونه، انټرنېټي لټون او AI لنډیز د مرکزي تنظیماتو له مخې فعال دي', () => {
+test('د ګروپي پوښتنو ځوابونه، انټرنېټي لټون او AI لنډیز د مرکزي تنظیماتو له مخې فعال دي', () => {
   const { loadRuntimeConfig } = require('../lib/runtime-config');
   const { buildHealthPayload } = require('../lib/health');
   const config = loadRuntimeConfig({});
   assert.equal(config.features.groupQA, true);
-  assert.equal(config.features.privateQA, true);
+  assert.equal(config.features.privateQA, undefined);
   assert.equal(config.features.internetSearch, true);
   assert.equal(config.features.aiSummarization, true);
   assert.equal(config.features.linkModeration, true);
