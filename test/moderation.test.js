@@ -171,7 +171,7 @@ test('looksLikeQuestion: clear questions and information requests do not need a 
   assert.equal(looksLikeQuestion('how does it work?'), true);
   assert.equal(looksLikeQuestion('دا څه دی?'), true);
   assert.equal(looksLikeQuestion('د انسان د زړه دنده څه ده'), true);
-  assert.equal(looksLikeQuestion('افغانستان څو ولسوالۍ لري'), true);
+  assert.equal(looksLikeQuestion('افغانستان څو ولسوالۍ لري'), true);\n  assert.equal(looksLikeQuestion('A51 5G موبایل په څوده'), true);
   assert.equal(looksLikeQuestion('څنګه کار کوي'), true);
   assert.equal(looksLikeQuestion('کله چې نبي کریم ﷺ جهاد ته تلو، زغره یې چا جوړه کړې وه'), true);
   assert.equal(looksLikeQuestion('د زغرې په اړه معلومات راکړه'), true);
