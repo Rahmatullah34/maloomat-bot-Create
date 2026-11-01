@@ -98,8 +98,7 @@ const ENABLE_PRIVATE_QA = runtimeConfig.features.privateQA;
 const ENABLE_INTERNET_SEARCH = runtimeConfig.features.internetSearch;
 const ENABLE_AI_SUMMARIZATION = runtimeConfig.features.aiSummarization;
 const ENABLE_LINK_MODERATION = runtimeConfig.features.linkModeration;
-const PRIVATE_QA_ALLOWED_NUMBERS = runtimeConfig.security.privateQaAllowedNumbers;
-const PRIVATE_QA_ALLOWED_LIDS = runtimeConfig.security.privateQaAllowedLids;
+const PRIVATE_FULL_SERVICES_ALLOWED_LIDS = runtimeConfig.security.privateFullServicesAllowedLids;
 const PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS = runtimeConfig.security.privateFullServicesAllowedNumbers;
 const FULL_MODERATION_EXEMPT_PHONE_NUMBERS = runtimeConfig.security.fullModerationExemptPhoneNumbers;
 
@@ -730,11 +729,10 @@ async function startBot() {
             '🛡️ د ګروپ مدیریت فعال دی: کنځل، دیني پارونه، د Status/چینل فارورډونه، چټک او تکراري سپم؛ لینک اخطارونه: ' + (ENABLE_LINK_MODERATION ? 'فعال' : 'بند') + '; ' +
             'د پوښتنو ځوابونه: ' + (ENABLE_GROUP_QA ? 'فعال' : 'موقتي بند') +
             '؛ ویب لټون: ' + (ENABLE_GROUP_QA && ENABLE_INTERNET_SEARCH ? 'فعال' : 'بند') +
-            '؛ شخصي چټ: ' + (ENABLE_PRIVATE_QA && ENABLE_GROUP_QA && (PRIVATE_QA_ALLOWED_NUMBERS.size > 0 || PRIVATE_QA_ALLOWED_LIDS.size > 0 || PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS.size > 0) ? 'فعال' : 'بند/اجازه‌لیست تنظیم کړئ') +
+            '؛ شخصي چټ: ' + (ENABLE_PRIVATE_QA && ENABLE_GROUP_QA && (PRIVATE_FULL_SERVICES_ALLOWED_LIDS.size > 0 || PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS.size > 0) ? 'فعال' : 'بند/اجازه‌لیست تنظیم کړئ') +
             '؛ د محلي معلوماتو شمېر: ' + OFFLINE_KNOWLEDGE.length +
-            '؛ د CV مجازې شخصي شمېرې: ' + PRIVATE_QA_ALLOWED_NUMBERS.size +
             '؛ د بشپړو شخصي خدمتونو مجازې شمېرې: ' + PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS.size +
-            '؛ د مجاز LID پېژندپاڼو شمېر: ' + PRIVATE_QA_ALLOWED_LIDS.size +
+            '؛ د بشپړو شخصي خدمتونو مجاز LID پېژندپاڼو شمېر: ' + PRIVATE_FULL_SERVICES_ALLOWED_LIDS.size +
             '؛ د ګروپ له ټولو نظم ساتنیزو قواعدو معاف شمېرې: ' + FULL_MODERATION_EXEMPT_PHONE_NUMBERS.size
           );
 
@@ -956,8 +954,7 @@ async function startBot() {
       classifyRemoteJid,
       isReactionMessage,
       ENABLE_PRIVATE_QA,
-      PRIVATE_QA_ALLOWED_NUMBERS,
-      PRIVATE_QA_ALLOWED_LIDS,
+      PRIVATE_FULL_SERVICES_ALLOWED_LIDS,
       PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS,
       rememberMessage,
       extractText,
