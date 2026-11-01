@@ -317,6 +317,21 @@ test('تایید شوی اډمین د چټک او تکراري سپم له اخ�
   assert.match(handlerSrc, /if\s*\(!isSenderGroupAdmin && !isFullModerationExempt\)\s*\{\s*const repeated = recordRepeatedMessage/,
     'د تکراري سپم حذف باید یوازې پر عادي غړو تطبیق شي');
 });
+test('هره سرغړونه د ۳۰ ثانییز اخطار throttle سربېره ثبتېږي', () => {
+  const indexSrc = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
+  const start = indexSrc.indexOf('async function deleteGroupMessage');
+  const end = indexSrc.indexOf('const GROUP_METADATA_CACHE_TTL_MS', start);
+  const section = indexSrc.slice(start, end);
+  const recordPosition = section.indexOf('const warningCount = recordViolationWarning');
+  const throttlePosition = section.indexOf('if (!shouldSendWarningNow(jid, offenderJid))');
+  assert.ok(recordPosition >= 0, 'هره سرغړونه باید د اخطار په شمېر کې ثبت شي');
+  assert.ok(throttlePosition > recordPosition, 'د اخطار throttle باید د سرغړونې تر ثبت وروسته وي');
+  assert.match(section, /warningCount >= 3 && WARNING_MUTE_ENABLED/,
+    'درېیمه سرغړونه باید د لنډمهاله محدودیت شرط پوره کړي');
+  assert.match(section, /د ګروپ اخطار ونه لېږل شو/,
+    'د اخطار د لېږلو ناکامي باید په لاګ کې ښکاره شي');
+});
+
 test('د پوښتنو ځوابونه، انټرنېټي لټون او AI لنډیز د مرکزي تنظیماتو له مخې فعال دي', () => {
   const { loadRuntimeConfig } = require('../lib/runtime-config');
   const { buildHealthPayload } = require('../lib/health');
