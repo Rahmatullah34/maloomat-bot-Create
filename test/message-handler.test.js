@@ -133,24 +133,21 @@ test('does not expose private identifiers through non-CV commands from an unauth
   assert.equal(h.state.sends.length, 0);
 });
 
-test('routes authorized private messages only to the CV service, never innovation services', async () => {
+test('authorized non-full private accounts cannot access a CV route or any private service', async () => {
   const h = createHarness({
     classifyRemoteJid: () => 'private',
     PRIVATE_QA_ALLOWED_NUMBERS: new Set(['15551234567']),
-    extractText: () => 'دا ازمویښتي پوښتنه ده؟',
+    extractText: () => 'CV',
   });
   await h.handler({ type: 'notify', messages: [message('15551234567@s.whatsapp.net')] });
   assert.equal(h.state.answers.length, 0);
-  assert.equal(h.state.cvMessages.length, 1);
-  assert.equal(h.state.cvMessages[0].jid, '15551234567@s.whatsapp.net');
-  assert.equal(h.state.cvMessages[0].text, 'دا ازمویښتي پوښتنه ده؟');
+  assert.equal(h.state.cvMessages.length, 0);
   assert.equal(h.state.innovationMessages.length, 0);
   assert.equal(h.state.careerMessages.length, 0);
-  assert.equal(h.state.burstCalls, 0);
+  assert.match(h.state.sends.at(-1).text, /CV خدمت حذف شوی/);
 });
 
-
-test('default private route starts the CV service and rejects other private services', async () => {
+test('the default private route never starts a CV session', async () => {
   const h = createHarness({
     classifyRemoteJid: () => 'private',
     PRIVATE_QA_ALLOWED_NUMBERS: new Set(['15551234567']),
@@ -160,7 +157,8 @@ test('default private route starts the CV service and rejects other private serv
   h.handler = createMessageHandler(h.dependencies);
   await h.handler({ type: 'notify', messages: [message('15551234567@s.whatsapp.net')] });
   assert.equal(h.state.cvMessages.length, 0);
-  assert.match(h.state.sends.at(-1).text, /۱۰ لنډې پوښتنې/);
+  assert.doesNotMatch(h.state.sends.at(-1).text, /۱۰ لنډې پوښتنې|انګلیسي CV جوړولو/);
+  assert.match(h.state.sends.at(-1).text, /CV خدمت حذف شوی/);
 
   const blocked = createHarness({
     classifyRemoteJid: () => 'private',
@@ -170,7 +168,7 @@ test('default private route starts the CV service and rejects other private serv
   delete blocked.dependencies.handlePrivateCvMessage;
   blocked.handler = createMessageHandler(blocked.dependencies);
   await blocked.handler({ type: 'notify', messages: [message('15551234568@s.whatsapp.net')] });
-  assert.match(blocked.state.sends.at(-1).text, /یوازې د انګلیسي CV/);
+  assert.match(blocked.state.sends.at(-1).text, /CV خدمت حذف شوی/);
   assert.equal(blocked.state.innovationMessages.length, 0);
 });
 
@@ -261,7 +259,7 @@ test('full-services allowlist enables general private AI questions for the owner
   assert.equal(h.state.cvMessages.length, 0);
 });
 
-test('full-services allowlist permits private voice notes while CV-only senders are told to use CV', async () => {
+test('full-services allowlist permits private voice notes while non-full-service senders are denied', async () => {
   const voiceMessage = {
     ...message('93700000001@s.whatsapp.net', ''),
     message: { audioMessage: { mimetype: 'audio/ogg' } },
@@ -287,7 +285,7 @@ test('full-services allowlist permits private voice notes while CV-only senders 
   await restricted.handler({ type: 'notify', messages: [restrictedVoice] });
   assert.equal(restricted.state.innovationMessages.length, 0);
   assert.equal(restricted.state.cvMessages.length, 0);
-  assert.match(restricted.state.sends.at(-1).text, /یوازې د CV خدمت/);
+  assert.match(restricted.state.sends.at(-1).text, /CV خدمت حذف شوی/);
 });
 
 test('allows the configured moderation-exempt owner to start a group challenge', async () => {
