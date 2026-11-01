@@ -234,6 +234,20 @@ test('full-services allowlist permits private voice notes while CV-only senders 
   assert.match(restricted.state.sends.at(-1).text, /یوازې د CV خدمت/);
 });
 
+test('allows the configured moderation-exempt owner to start a group challenge', async () => {
+  let challengeArgs;
+  const h = createHarness({
+    isFullModerationExemptSender: () => true,
+    handleGroupChallengeMessage: async (args) => {
+      challengeArgs = args;
+      return false;
+    },
+  });
+  await h.handler({ type: 'notify', messages: [message('12345@g.us')] });
+  assert.ok(challengeArgs);
+  assert.equal(challengeArgs.isAdmin, true);
+});
+
 test('handles group-rules commands before burst, bad-word, and link moderation', async () => {
   const h = createHarness({ isGroupRulesCommand: () => true, extractText: () => 'قوانین' });
   await h.handler({ type: 'notify', messages: [message('12345@g.us')] });
