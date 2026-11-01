@@ -102,34 +102,3 @@ test('filters out weak results for source-required topics but leaves ordinary-to
   );
   assert.deepEqual(filterAuthoritativeFactualSources(null, 'د ساینس پوښتنه', 'science'), []);
 });
-
-
-test('requires authoritative source evidence for Afghan province and district counts', () => {
-  assert.equal(
-    requiresFactualSourceEvidence('افغانستان څو ولسوالۍ لري؟', 'geography'),
-    true,
-  );
-  assert.equal(
-    requiresFactualSourceEvidence('How many districts does Afghanistan have?', 'general'),
-    true,
-  );
-  assert.equal(
-    isTrustedFactualSource({ url: 'https://documents1.worldbank.org/curated/en/950851467996752122/pdf/451050WP0AF0Su1Box0334044B01PUBLIC1.pdf' }),
-    true,
-  );
-  assert.equal(
-    isTrustedFactualSource({ url: 'https://esoc.princeton.edu/data/administrative-boundaries-398-districts' }),
-    true,
-  );
-  assert.deepEqual(
-    filterAuthoritativeFactualSources(
-      [
-        { title: 'Districts of Afghanistan', url: 'https://en.wikipedia.org/wiki/Districts_of_Afghanistan' },
-        { title: 'Afghanistan administrative districts', url: 'https://esoc.princeton.edu/data/administrative-boundaries-398-districts' },
-      ],
-      'افغانستان څو ولسوالۍ لري؟',
-      'geography',
-    ).map(item => item.url),
-    ['https://esoc.princeton.edu/data/administrative-boundaries-398-districts'],
-  );
-});

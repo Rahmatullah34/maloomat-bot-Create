@@ -25,7 +25,6 @@ test('reads only supported private settings from the server-side JSON file', () 
     FULL_MODERATION_EXEMPT_PHONE_NUMBER: '15557654321',
     ALLOWED_LINK_SENDERS: '15551234567,15557654321',
     PRIVATE_QA_ALLOWED_LIDS: '123456789012345@lid',
-    PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: '0093700000001',
     UNRECOGNIZED_SETTING: 'must-not-be-loaded',
   }));
 
@@ -35,7 +34,6 @@ test('reads only supported private settings from the server-side JSON file', () 
       FULL_MODERATION_EXEMPT_PHONE_NUMBER: '15557654321',
       ALLOWED_LINK_SENDERS: '15551234567,15557654321',
       PRIVATE_QA_ALLOWED_LIDS: '123456789012345@lid',
-      PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: '0093700000001',
     });
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });

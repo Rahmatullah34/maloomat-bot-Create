@@ -10,8 +10,6 @@ function createHarness(overrides = {}) {
   const state = {
     sends: [],
     answers: [],
-    careerMessages: [],
-    innovationMessages: [],
     deletions: [],
     remembered: [],
     burstCalls: 0,
@@ -24,14 +22,12 @@ function createHarness(overrides = {}) {
     classifyRemoteJid: jid => String(jid || '').endsWith('@g.us') ? 'group' : 'private',
     isReactionMessage: () => false,
     ENABLE_PRIVATE_QA: true,
-    PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: new Set(),
+    PRIVATE_QA_ALLOWED_NUMBERS: new Set(),
+    PRIVATE_QA_ALLOWED_LIDS: new Set(),
     rememberMessage: () => true,
     extractText: () => 'د زړه دنده څه ده؟',
     safeSend: async (_socket, jid, payload) => { state.sends.push({ jid, text: payload?.text || '' }); return true; },
     answerWithKnowledge: async (...args) => { state.answers.push(args); return true; },
-    handlePrivateCareerMessage: async (args) => { state.careerMessages.push(args); return true; },
-    handlePrivateInnovationMessage: async (args) => { state.innovationMessages.push(args); return true; },
-    downloadMediaMessage: async () => Buffer.from('test-audio'),
     isGroupAllowed: () => true,
     isForwardedChannelMessage: () => false,
     isWhatsAppStatusShare: () => false,
@@ -88,6 +84,8 @@ test('ignores WhatsApp reactions before moderation or Q&A', async () => {
 test('rejects unauthorized private chats without logging the sender identifier', async () => {
   const h = createHarness({
     classifyRemoteJid: () => 'private',
+    PRIVATE_QA_ALLOWED_NUMBERS: new Set(),
+    PRIVATE_QA_ALLOWED_LIDS: new Set(),
   });
   const savedLog = console.log;
   const logLines = [];
@@ -100,16 +98,18 @@ test('rejects unauthorized private chats without logging the sender identifier',
   assert.equal(h.state.answers.length, 0);
   assert.equal(h.state.sends.length, 0);
   assert.ok(logLines.some(line => /شخصي پیغام رد شو/.test(line)));
-  assert.ok(logLines.some(line => /د بشپړو شخصي خدمتونو مجازې شمېرې=0/.test(line)));
-  assert.ok(logLines.some(line => /د بشپړو شخصي خدمتونو مجاز LID=0/.test(line)));
+  assert.ok(logLines.some(line => /د مجازو شمېرو شمېر=0/.test(line)));
+  assert.ok(logLines.some(line => /د مجاز LID شمېر=0/.test(line)));
   assert.ok(logLines.some(line => /د پیغام د پېژندنې ډول=PN/.test(line)));
   assert.equal(logLines.some(line => line.includes('15551234567@s.whatsapp.net')), false);
 });
 
-test('does not expose private identifiers through non-CV commands from an unauthorized sender', async () => {
+test('returns only the sender\'s own private-chat identifier on the explicit myid command', async () => {
   const senderLid = '123456789012345@lid';
   const h = createHarness({
     classifyRemoteJid: () => 'private',
+    PRIVATE_QA_ALLOWED_NUMBERS: new Set(),
+    PRIVATE_QA_ALLOWED_LIDS: new Set(),
     extractText: () => 'myid',
   });
 
@@ -121,156 +121,20 @@ test('does not expose private identifiers through non-CV commands from an unauth
   });
 
   assert.equal(h.state.answers.length, 0);
-  assert.equal(h.state.sends.length, 0);
+  assert.equal(h.state.sends.length, 1);
+  assert.ok(h.state.sends[0].text.includes(senderLid));
 });
 
-test('legacy CV-only private permissions no longer grant access to the deleted service', async () => {
+test('answers a private question only when its normalized phone is allowlisted', async () => {
   const h = createHarness({
     classifyRemoteJid: () => 'private',
-    extractText: () => 'CV',
-  });
-  await h.handler({ type: 'notify', messages: [message('15551234567@s.whatsapp.net')] });
-  assert.equal(h.state.answers.length, 0);
-  assert.equal(h.state.innovationMessages.length, 0);
-  assert.equal(h.state.careerMessages.length, 0);
-  assert.equal(h.state.sends.length, 0);
-});
-
-test('the CV keyword does not start a CV workflow on a full-services private account', async () => {
-  const h = createHarness({
-    classifyRemoteJid: () => 'private',
-    PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: new Set(['15551234567']),
-    extractText: () => 'CV',
-    handlePrivateInnovationMessage: async () => false,
-    handlePrivateCareerMessage: async () => false,
-    answerWithKnowledge: async (...args) => { h.state.answers.push(args); return false; },
+    PRIVATE_QA_ALLOWED_NUMBERS: new Set(['15551234567']),
+    extractText: () => 'دا ازمویښتي پوښتنه ده؟',
   });
   await h.handler({ type: 'notify', messages: [message('15551234567@s.whatsapp.net')] });
   assert.equal(h.state.answers.length, 1);
-  assert.equal(h.state.innovationMessages.length, 0);
-  assert.equal(h.state.careerMessages.length, 0);
-  assert.match(h.state.sends.at(-1).text, /پوښتنه یا غوښتنه/);
-  assert.doesNotMatch(h.state.sends.at(-1).text, /۱۰ لنډې پوښتنې|انګلیسي CV جوړولو/);
-});
-
-test('full-services allowlist restores the innovation and career routes for that number only', async () => {
-  const h = createHarness({
-    classifyRemoteJid: () => 'private',
-    PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: new Set(['93700000001']),
-    extractText: () => 'SERVICES',
-    handlePrivateInnovationMessage: async (args) => {
-      hState.innovationMessages.push(args);
-      return true;
-    },
-  });
-  const hState = h.state;
-  await h.handler({ type: 'notify', messages: [message('93700000001@s.whatsapp.net')] });
-  assert.equal(h.state.innovationMessages.length, 1);
-  assert.equal(h.state.careerMessages.length, 0);
-  assert.equal(h.state.innovationMessages[0].text, 'SERVICES');
-
-  const career = createHarness({
-    classifyRemoteJid: () => 'private',
-    PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: new Set(['93700000001']),
-    extractText: () => 'CAREER',
-    handlePrivateInnovationMessage: async () => false,
-  });
-  await career.handler({ type: 'notify', messages: [message('93700000001@s.whatsapp.net')] });
-  assert.equal(career.state.careerMessages.length, 1);
-});
-
-test('an allowlisted LID upgrades to full private services when Baileys maps it to the owner phone number', async () => {
-  const senderLid = '195953604702223@lid';
-  const socket = {
-    ev: {},
-    signalRepository: {
-      lidMapping: {
-        getPNForLID: async (jid) => {
-          assert.equal(jid, senderLid);
-          return '93700000001@s.whatsapp.net';
-        },
-      },
-    },
-  };
-  const h = createHarness({
-    socket,
-    classifyRemoteJid: () => 'private',
-    PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: new Set(['93700000001']),
-    extractText: () => 'SERVICES',
-  });
-
-  await h.handler({
-    type: 'notify',
-    messages: [message(senderLid, 'SERVICES', {
-      key: {
-        remoteJid: senderLid,
-        participant: null,
-        remoteJidAlt: null,
-        participantAlt: null,
-      },
-    })],
-  });
-
-  assert.equal(h.state.innovationMessages.length, 1);
-  assert.equal(h.state.innovationMessages[0].text, 'SERVICES');
-  assert.equal(h.state.careerMessages.length, 0);
-  assert.equal(h.state.answers.length, 0);
-});
-
-test('full-services allowlist enables general private AI questions for the owner only', async () => {
-  const h = createHarness({
-    classifyRemoteJid: () => 'private',
-    PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: new Set(['93700000001']),
-    extractText: () => 'د افغانستان پلازمېنه کوم ښار دی؟',
-    handlePrivateInnovationMessage: async () => false,
-    handlePrivateCareerMessage: async () => false,
-  });
-  await h.handler({ type: 'notify', messages: [message('93700000001@s.whatsapp.net')] });
-  assert.equal(h.state.answers.length, 1);
-  assert.equal(h.state.answers[0][1], '93700000001@s.whatsapp.net');
-  assert.equal(h.state.answers[0][2], '93700000001@s.whatsapp.net');
-  assert.equal(h.state.answers[0][3], 'د افغانستان پلازمېنه کوم ښار دی؟');
-});
-
-test('full-services allowlist permits private voice notes while non-full-service senders are denied', async () => {
-  const voiceMessage = {
-    ...message('93700000001@s.whatsapp.net', ''),
-    message: { audioMessage: { mimetype: 'audio/ogg' } },
-  };
-  const full = createHarness({
-    classifyRemoteJid: () => 'private',
-    PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: new Set(['93700000001']),
-    extractText: () => '',
-  });
-  await full.handler({ type: 'notify', messages: [voiceMessage] });
-  assert.equal(full.state.innovationMessages.length, 1);
-  assert.equal(full.state.innovationMessages[0].mediaMessage, voiceMessage);
-
-  const restricted = createHarness({
-    classifyRemoteJid: () => 'private',
-    extractText: () => '',
-  });
-  const restrictedVoice = {
-    ...message('93700000002@s.whatsapp.net', ''),
-    message: { audioMessage: { mimetype: 'audio/ogg' } },
-  };
-  await restricted.handler({ type: 'notify', messages: [restrictedVoice] });
-  assert.equal(restricted.state.innovationMessages.length, 0);
-  assert.equal(restricted.state.sends.length, 0);
-});
-
-test('allows the configured moderation-exempt owner to start a group challenge', async () => {
-  let challengeArgs;
-  const h = createHarness({
-    isFullModerationExemptSender: () => true,
-    handleGroupChallengeMessage: async (args) => {
-      challengeArgs = args;
-      return false;
-    },
-  });
-  await h.handler({ type: 'notify', messages: [message('12345@g.us')] });
-  assert.ok(challengeArgs);
-  assert.equal(challengeArgs.isAdmin, true);
+  assert.equal(h.state.answers[0][3], 'دا ازمویښتي پوښتنه ده؟');
+  assert.equal(h.state.burstCalls, 0);
 });
 
 test('handles group-rules commands before burst, bad-word, and link moderation', async () => {

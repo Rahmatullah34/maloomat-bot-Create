@@ -8,7 +8,6 @@ const {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
-  downloadMediaMessage,
 } = require('@whiskeysockets/baileys');
 
 const P = require('pino');
@@ -20,7 +19,6 @@ const { runtimeConfig, readOpenRouterApiKey } = require('./lib/runtime-config');
 const { buildHealthPayload } = require('./lib/health');
 const { createAnswerEngine } = require('./lib/answer-engine');
 const { createMessageHandler } = require('./lib/message-handler');
-const { createGroupChallengeService } = require('./lib/group-challenge');
 const { normalizePashto } = require('./lib/moderation');
 const {
   OFFLINE_KNOWLEDGE,
@@ -79,6 +77,7 @@ const {
   findGroupParticipant,
   isGroupAdminParticipant,
   getCanonicalParticipantIdentifier,
+  isGroupAdminSender,
 } = require('./lib/moderation');
 
 // د WhatsApp د اتصال ریښتیایي حالت؛ د /health په ځواب کې ښودل کیږي.
@@ -91,20 +90,18 @@ let whatsappLastDisconnectAt = null;
 // ======================================================
 
 // د ټولو Runtime تنظیماتو سرچینه: lib/runtime-config.js.
-const groupChallengeService = createGroupChallengeService();
-
 const ENABLE_GROUP_QA = runtimeConfig.features.groupQA;
 const ENABLE_PRIVATE_QA = runtimeConfig.features.privateQA;
 const ENABLE_INTERNET_SEARCH = runtimeConfig.features.internetSearch;
 const ENABLE_AI_SUMMARIZATION = runtimeConfig.features.aiSummarization;
 const ENABLE_LINK_MODERATION = runtimeConfig.features.linkModeration;
-const PRIVATE_FULL_SERVICES_ALLOWED_LIDS = runtimeConfig.security.privateFullServicesAllowedLids;
-const PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS = runtimeConfig.security.privateFullServicesAllowedNumbers;
-const FULL_MODERATION_EXEMPT_PHONE_NUMBERS = runtimeConfig.security.fullModerationExemptPhoneNumbers;
+const PRIVATE_QA_ALLOWED_NUMBERS = runtimeConfig.security.privateQaAllowedNumbers;
+const PRIVATE_QA_ALLOWED_LIDS = runtimeConfig.security.privateQaAllowedLids;
+const FULL_MODERATION_EXEMPT_PHONE_NUMBER = runtimeConfig.security.fullModerationExemptPhoneNumber;
 
 function isFullModerationExemptSender(senderIdentifiers) {
-  return FULL_MODERATION_EXEMPT_PHONE_NUMBERS.size > 0 &&
-    hasMatchingPhoneNumber(senderIdentifiers, [...FULL_MODERATION_EXEMPT_PHONE_NUMBERS]);
+  return Boolean(FULL_MODERATION_EXEMPT_PHONE_NUMBER) &&
+    hasMatchingPhoneNumber(senderIdentifiers, FULL_MODERATION_EXEMPT_PHONE_NUMBER);
 }
 
 const WARNING_MUTE_ENABLED = runtimeConfig.warningMute.enabled;
@@ -404,21 +401,16 @@ async function deleteGroupMessage(
       participantName ||
       'unknown';
 
-    // هره سرغړونه باید ثبت شي؛ د ۳۰ ثانیو throttle یوازې د اخطار د متن تکرار محدودوي.
-    // پخوانی ترتیب د throttle له امله پرله‌پسې سرغړونې نه ثبتولې او درې اخطارونه نه بشپړېدل.
+    // شریک throttle: که دې غړي ته په وروستيو ۳۰ ثانیو کې اخطار استول شوی وي،
+    // نوی اخطار نه استوي — دې سره د بوټ اخطارونه پخپله سپم نه کیږي.
+    if (!shouldSendWarningNow(jid, offenderJid)) {
+      return;
+    }
+
     const warningCount = recordViolationWarning(jid, offenderJid);
     if (warningCount >= 3 && WARNING_MUTE_ENABLED) {
       setTemporaryMute(jid, offenderJid, WARNING_MUTE_DURATION_MS);
     }
-
-    const warningCooldownPassed = shouldSendWarningNow(jid, offenderJid);
-    if (!warningCooldownPassed && warningCount < 3) {
-      console.log(
-        'ℹ️ سرغړونه ثبت شوه؛ د اخطار د تکرار ۳۰ ثانییز محدودیت فعال دی؛ د سرغړونو شمېر=' + warningCount
-      );
-      return;
-    }
-
     const statusText = deleted
       ? 'د پیغام د حذف غوښتنه واستول شوه.'
       : 'د پیغام حذف تایید نه شو؛ د بوټ د مدیر اجازه او د اتصال حالت وګوره.';
@@ -431,7 +423,7 @@ async function deleteGroupMessage(
         : '\n\n⛔ دا په تېرو ۲۴ ساعتونو کې درېیم یا ورپسې اخطار دی. د ګروپ مدیر دې موضوع وڅېړي.')
       : '\n\n📌 اخطار: ' + warningCount + ' له ۳ څخه. مهرباني وکړئ قوانین مراعات کړئ.';
 
-    const warningResult = await safeSend(socket, jid, {
+    await safeSend(socket, jid, {
       text:
         `⚠️ محترم ${participantName} جانه!\n\n` +
         `${reason}\n` +
@@ -439,11 +431,6 @@ async function deleteGroupMessage(
         escalationText +
         '\n🤝 د بیا تکرار په صورت کې به د ګروپ مدیر ته د اقدام سپارښتنه وشي.',
     });
-    if (warningResult) {
-      console.log('✅ د ګروپ اخطار واستول شو؛ د سرغړونو شمېر=' + warningCount);
-    } else {
-      console.error('❌ د ګروپ اخطار ونه لېږل شو؛ د WhatsApp د لېږلو خطا پورته وګوره.');
-    }
   }
 }
 
@@ -516,17 +503,26 @@ async function resolveGroupSender(socket, groupJid, senderIdentifiers) {
   };
 }
 
-// د لینک اجازه یوازې د ALLOWED_LINK_SENDERS او ALLOWED_LINK_DOMAINS له مخې ټاکل کېږي؛ د اډمین رول ځانګړې اجازه نه ده.
-async function isLinkPermittedForSender(_socket, _groupJid, text, senderIdentifiers) {
+// د لینک اجازه: لومړی د شمېرې/اجازه لرونکي ډومېن لېست وګوره، بیا د ګروپ رول.
+// د اډمینانو د لینکونو او سپم معافیت لپاره هماغه cache شوی metadata شریکېږي.
+async function isLinkPermittedForSender(socket, groupJid, text, senderIdentifiers) {
   const senders = [...new Set(
     (Array.isArray(senderIdentifiers) ? senderIdentifiers : [])
       .map((value) => String(value || '').trim())
       .filter(Boolean)
   )];
 
-  // د ګروپ اډمین کېدل پخپله د لینک اجازه نه ده؛ یوازې د ALLOWED_LINK_SENDERS
-  // یا ALLOWED_LINK_DOMAINS له واضح اجازې سره لینک منل کېږي.
-  return senders.some((sender) => isLinkPermitted(text, sender));
+  if (senders.some((sender) => isLinkPermitted(text, sender))) {
+    return true;
+  }
+
+  try {
+    const metadata = await getGroupMetadataCached(socket, groupJid);
+    return isGroupAdminSender(metadata?.participants, senders);
+  } catch (err) {
+    console.error('⚠️ د لینک د اډمین اجازې کتنه ناکامه شوه:', err?.message || err);
+    return false;
+  }
 }
 
 // ======================================================
@@ -729,11 +725,8 @@ async function startBot() {
             '🛡️ د ګروپ مدیریت فعال دی: کنځل، دیني پارونه، د Status/چینل فارورډونه، چټک او تکراري سپم؛ لینک اخطارونه: ' + (ENABLE_LINK_MODERATION ? 'فعال' : 'بند') + '; ' +
             'د پوښتنو ځوابونه: ' + (ENABLE_GROUP_QA ? 'فعال' : 'موقتي بند') +
             '؛ ویب لټون: ' + (ENABLE_GROUP_QA && ENABLE_INTERNET_SEARCH ? 'فعال' : 'بند') +
-            '؛ شخصي چټ: ' + (ENABLE_PRIVATE_QA && ENABLE_GROUP_QA && (PRIVATE_FULL_SERVICES_ALLOWED_LIDS.size > 0 || PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS.size > 0) ? 'فعال' : 'بند/اجازه‌لیست تنظیم کړئ') +
-            '؛ د محلي معلوماتو شمېر: ' + OFFLINE_KNOWLEDGE.length +
-            '؛ د بشپړو شخصي خدمتونو مجازې شمېرې: ' + PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS.size +
-            '؛ د بشپړو شخصي خدمتونو مجاز LID پېژندپاڼو شمېر: ' + PRIVATE_FULL_SERVICES_ALLOWED_LIDS.size +
-            '؛ د ګروپ له ټولو نظم ساتنیزو قواعدو معاف شمېرې: ' + FULL_MODERATION_EXEMPT_PHONE_NUMBERS.size
+            '؛ شخصي چټ: ' + (ENABLE_PRIVATE_QA && ENABLE_GROUP_QA && (PRIVATE_QA_ALLOWED_NUMBERS.size > 0 || PRIVATE_QA_ALLOWED_LIDS.size > 0) ? 'فعال' : 'بند/اجازه‌لیست تنظیم کړئ') +
+            '؛ د محلي معلوماتو شمېر: ' + OFFLINE_KNOWLEDGE.length
           );
 
           if (pairingTimer) {
@@ -954,14 +947,12 @@ async function startBot() {
       classifyRemoteJid,
       isReactionMessage,
       ENABLE_PRIVATE_QA,
-      PRIVATE_FULL_SERVICES_ALLOWED_LIDS,
-      PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS,
+      PRIVATE_QA_ALLOWED_NUMBERS,
+      PRIVATE_QA_ALLOWED_LIDS,
       rememberMessage,
       extractText,
       safeSend,
       answerWithKnowledge,
-      downloadMediaMessage,
-      handleGroupChallengeMessage: groupChallengeService.handleGroupChallengeMessage,
       isGroupAllowed,
       isForwardedChannelMessage,
       isWhatsAppStatusShare,

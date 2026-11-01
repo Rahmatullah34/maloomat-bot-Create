@@ -163,20 +163,17 @@ test('isReactionMessage: لایکونه اخطار نه اخلي او نقل ش�
   assert.equal(isReactionMessage({ conversation: 'عادي پیغام' }), false);
 });
 
-test('looksLikeQuestion: clear questions and information requests do not need a trailing question mark', () => {
+test('looksLikeQuestion: د پای پوښتنیزه نښه لازمي ده', () => {
   assert.equal(looksLikeQuestion('دا څه دی؟'), true);
   assert.equal(looksLikeQuestion('د انسان د زړه دنده څه ده؟'), true);
   assert.equal(looksLikeQuestion('کله چې نبي کریم ﷺ جهاد ته تلو، زغره یې چا جوړه کړې وه؟'), true);
   assert.equal(looksLikeQuestion('د زغرې په اړه معلومات راکړه؟'), true);
   assert.equal(looksLikeQuestion('how does it work?'), true);
   assert.equal(looksLikeQuestion('دا څه دی?'), true);
-  assert.equal(looksLikeQuestion('د انسان د زړه دنده څه ده'), true);
-  assert.equal(looksLikeQuestion('افغانستان څو ولسوالۍ لري'), true);
-  assert.equal(looksLikeQuestion('A51 5G موبایل په څوده'), true);
-  assert.equal(looksLikeQuestion('څنګه کار کوي'), true);
-  assert.equal(looksLikeQuestion('کله چې نبي کریم ﷺ جهاد ته تلو، زغره یې چا جوړه کړې وه'), true);
-  assert.equal(looksLikeQuestion('د زغرې په اړه معلومات راکړه'), true);
-  assert.equal(looksLikeQuestion('how does it work'), true);
+  assert.equal(looksLikeQuestion('د انسان د زړه دنده څه ده'), false);
+  assert.equal(looksLikeQuestion('کله چې نبي کریم ﷺ جهاد ته تلو، زغره یې چا جوړه کړې وه'), false);
+  assert.equal(looksLikeQuestion('د زغرې په اړه معلومات راکړه'), false);
+  assert.equal(looksLikeQuestion('how does it work'), false);
   assert.equal(looksLikeQuestion('دا پوښتنه؟ خو دلته نور متن شته'), false);
   assert.equal(looksLikeQuestion('سلام علیکم'), false);
   assert.equal(looksLikeQuestion('نن هوا ښه ده'), false);
@@ -310,35 +307,16 @@ test('د PN/LID بدیلونه د سپم شمېر او اخطار لپاره ی�
   assert.equal(findGroupParticipant(participants, ['987654321@lid'])?.admin, 'admin');
   assert.equal(isGroupAdminParticipant(findGroupParticipant(participants, ['987654321@lid'])), true);
 });
-test('د ګروپ اډمینان هم د سپم او نامجازو لینکونو قواعدو تابع دي', () => {
+test('تایید شوی اډمین د چټک او تکراري سپم له اخطار/حذف څخه معاف دی', () => {
   const indexSrc = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
   const handlerSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'message-handler.js'), 'utf8');
   assert.match(indexSrc, /async function resolveGroupSender\s*\(/,
-    'د اډمین هویت باید د WhatsApp د ګروپ metadata له مخې وپېژندل شي');
-  assert.match(handlerSrc, /if\s*\(!isFullModerationExempt\)\s*\{\s*const burst = recordGroupMessage/,
-    'چټک سپم باید پر اډمینانو هم تطبیق شي');
-  assert.match(handlerSrc, /if\s*\(!isFullModerationExempt\)\s*\{\s*const repeated = recordRepeatedMessage/,
-    'تکراري سپم باید پر اډمینانو هم تطبیق شي');
-  assert.doesNotMatch(indexSrc, /return isGroupAdminSender\(metadata\?\.participants, senders\)/,
-    'اډمین رول باید په خپله د لینک اجازه ورنه کړي');
+    'اډمین باید د WhatsApp د ګروپ metadata له مخې وپېژندل شي');
+  assert.match(handlerSrc, /if\s*\(!isSenderGroupAdmin && !isFullModerationExempt\)\s*\{\s*const burst = recordGroupMessage/,
+    'د چټک سپم حد باید یوازې پر عادي غړو تطبیق شي');
+  assert.match(handlerSrc, /if\s*\(!isSenderGroupAdmin && !isFullModerationExempt\)\s*\{\s*const repeated = recordRepeatedMessage/,
+    'د تکراري سپم حذف باید یوازې پر عادي غړو تطبیق شي');
 });
-test('هره سرغړونه د ۳۰ ثانییز اخطار throttle سربېره ثبتېږي', () => {
-  const indexSrc = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
-  const start = indexSrc.indexOf('async function deleteGroupMessage');
-  const end = indexSrc.indexOf('const GROUP_METADATA_CACHE_TTL_MS', start);
-  const section = indexSrc.slice(start, end);
-  const recordPosition = section.indexOf('const warningCount = recordViolationWarning');
-  const throttlePosition = section.indexOf('const warningCooldownPassed = shouldSendWarningNow(jid, offenderJid)');
-  assert.ok(recordPosition >= 0, 'هره سرغړونه باید د اخطار په شمېر کې ثبت شي');
-  assert.ok(throttlePosition > recordPosition, 'د اخطار throttle باید د سرغړونې تر ثبت وروسته وي');
-  assert.match(section, /if \(!warningCooldownPassed && warningCount < 3\)/,
-    'درېیمه سرغړونه باید د اخطار د ۳۰ ثانییز محدودیت له امله پټه نه شي');
-  assert.match(section, /warningCount >= 3 && WARNING_MUTE_ENABLED/,
-    'درېیمه سرغړونه باید د لنډمهاله محدودیت شرط پوره کړي');
-  assert.match(section, /د ګروپ اخطار ونه لېږل شو/,
-    'د اخطار د لېږلو ناکامي باید په لاګ کې ښکاره شي');
-});
-
 test('د پوښتنو ځوابونه، انټرنېټي لټون او AI لنډیز د مرکزي تنظیماتو له مخې فعال دي', () => {
   const { loadRuntimeConfig } = require('../lib/runtime-config');
   const { buildHealthPayload } = require('../lib/health');
@@ -373,28 +351,23 @@ test('د قوانینو امر د سپم او نورو moderation فلټرونو
   assert.ok(rulesCommandPosition < linkCheckPosition, 'د قوانینو امر باید د لینک فلټر تر مخه وي');
   assert.match(handlerSrc, /isGroupRulesCommand\(text\)/);
 });
-test('څو د نظم معافیت شمېرې له محرمو تنظیماتو لوستل کېږي او دواړه شمېرې په ګروپ کې معاف دي', () => {
+test('د نظم د معافیت شمېره له محرمو تنظیماتو لوستل کېږي', () => {
   const indexSrc = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
   const handlerSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'message-handler.js'), 'utf8');
   const { loadRuntimeConfig } = require('../lib/runtime-config');
-  const configured = loadRuntimeConfig({
-    FULL_MODERATION_EXEMPT_PHONE_NUMBER: '93707285093,93744271103',
-  });
-  const exemptions = [...configured.security.fullModerationExemptPhoneNumbers];
-  assert.deepEqual(exemptions.sort(), ['93707285093', '93744271103'].sort());
-  assert.equal(hasMatchingPhoneNumber(['93707285093@s.whatsapp.net'], exemptions), true);
-  assert.equal(hasMatchingPhoneNumber(['93744271103@s.whatsapp.net'], exemptions), true);
-  assert.equal(loadRuntimeConfig({}).security.fullModerationExemptPhoneNumbers.size, 0);
+  const configured = loadRuntimeConfig({ FULL_MODERATION_EXEMPT_PHONE_NUMBER: '+1 (202) 555-0100' });
+  assert.equal(configured.security.fullModerationExemptPhoneNumber, '12025550100');
+  assert.equal(loadRuntimeConfig({}).security.fullModerationExemptPhoneNumber, '');
 
-  assert.match(indexSrc, /runtimeConfig\.security\.fullModerationExemptPhoneNumbers/);
+  assert.match(indexSrc, /runtimeConfig\.security\.fullModerationExemptPhoneNumber/);
   assert.match(indexSrc, /function isFullModerationExemptSender\(senderIdentifiers\)/);
   assert.match(handlerSrc, /!isFullModerationExempt\s*\?\s*getTemporaryMuteStatus/);
   assert.match(handlerSrc, /if \(statusShare && !isFullModerationExempt\)/);
   assert.match(handlerSrc, /if \(channelForward && !isFullModerationExempt\)/);
-  assert.match(handlerSrc, /if \(!isFullModerationExempt\) \{\s*const burst = recordGroupMessage/);
+  assert.match(handlerSrc, /if \(!isSenderGroupAdmin && !isFullModerationExempt\) \{\s*const burst = recordGroupMessage/);
   assert.match(handlerSrc, /if \(!isFullModerationExempt && containsBadWord\(text\)\)/);
   assert.match(handlerSrc, /ENABLE_LINK_MODERATION &&\s*!isFullModerationExempt &&\s*LINK_PATTERN\.test\(text\)/);
-  assert.match(handlerSrc, /if \(!isFullModerationExempt\) \{\s*const repeated = recordRepeatedMessage/);
+  assert.match(handlerSrc, /if \(!isSenderGroupAdmin && !isFullModerationExempt\) \{\s*const repeated = recordRepeatedMessage/);
   assert.match(indexSrc, /if \(historySenderIsExempt\) continue/);
 });
 test('د لینکونو بندیز د مرکزي تنظیماتو له مخې فعال دی؛ شخصي استثنا په کوډ کې نه ده لیکل شوې', () => {

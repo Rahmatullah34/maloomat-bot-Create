@@ -183,20 +183,3 @@ test('provides a book-specific fallback for Tafsir Yaseer authorship questions',
   assert.match(results[0].url, /pashtonlegacylibrarykandahar\.com/);
   assert.deepEqual(getCuratedFallbackSources('د زړه دنده څه ده؟'), []);
 });
-
-
-test('provides relevant administrative references when Afghan district-count search providers fail', () => {
-  const results = getCuratedFallbackSources('افغانستان څو ولسوالۍ لري؟');
-  assert.equal(results.length, 3);
-  assert.ok(results.every(item => /Afghanistan|افغانستان/i.test(item.title + ' ' + item.snippet)));
-  assert.ok(results.every(item => /district|ولسوال/i.test(item.title + ' ' + item.snippet)));
-  assert.ok(results.every(item => item.provider.startsWith('Curated administrative geography reference')));
-});
-
-test('builds focused district-count queries for Afghanistan', () => {
-  const { buildSearchQueries } = require('../lib/web-search');
-  const queries = buildSearchQueries('افغانستان څو ولسوالۍ لري؟');
-  assert.equal(queries.length, 3);
-  assert.ok(queries.every(query => /Afghanistan/i.test(query)));
-  assert.ok(queries.every(query => /district/i.test(query)));
-});

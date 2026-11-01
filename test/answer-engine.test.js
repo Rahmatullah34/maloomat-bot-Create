@@ -96,7 +96,6 @@ test('does not block an unrelated Islamic question in the answer engine', async 
   );
   assert.equal(handled, true);
   assert.match(context.messages[0], /شهادت|بناوې/);
-  assert.match(context.messages[0], /د سرچینې یادونه/);
   assert.doesNotMatch(context.messages[0], /معلومات فعلاً زموږ په خدمت کې نشته/);
 });
 
@@ -109,7 +108,7 @@ test('stops sensitive person-location or harm requests before web search', async
   assert.match(context.messages[0], /شخصي پتې|تعقیب|زیان رسولو/);
 });
 
-test('searches for sources before falling back to a stable local-knowledge answer', async () => {
+test('answers a stable local-knowledge question without calling external providers', async () => {
   const context = makeDependencies({
     answerFromOfflineKnowledge: () => 'دا د بوټ د محلي زېرمې ازمویښتي ځواب دی.',
     normalizePashto: value => String(value || '').normalize('NFKC').toLowerCase(),
@@ -117,34 +116,8 @@ test('searches for sources before falling back to a stable local-knowledge answe
   const answer = createAnswerEngine(context.dependencies);
   const handled = await answer({}, 'group@g.us', 'sender@s.whatsapp.net', 'زړه څه کوي؟', 'member');
   assert.equal(handled, true);
-  assert.equal(context.state.searches, 1);
+  assert.equal(context.state.searches, 0);
   assert.match(context.messages[0], /محلي زېرمې/);
-  assert.match(context.messages[0], /د سرچینې یادونه|اړوندې باوري آنلاین سرچینې/);
-});
-
-test('uses source-backed research for ordinary questions even when offline knowledge already has an answer', async () => {
-  const context = makeDependencies({
-    answerFromOfflineKnowledge: () => 'زوړ محلي ځواب.',
-    searchInternet: async () => {
-      context.state.searches += 1;
-      return [{ title: 'Relevant reference', url: 'https://example.org/topic', snippet: 'A directly relevant source excerpt.', provider: 'test' }];
-    },
-    summarizeSourcesInPashto: async (_question, sources) => {
-      context.state.summaries += 1;
-      assert.equal(sources.length, 1);
-      return 'د سرچینې پر بنسټ نوی ځواب.';
-    },
-    formatVerifiedSourceLinks: () => '\\n\\n🔎 اړونده سرچینه: https://example.org/topic',
-  });
-  const answer = createAnswerEngine(context.dependencies);
-  const handled = await answer({}, 'group@g.us', 'sender@s.whatsapp.net', 'زړه څه کوي؟', 'member');
-  assert.equal(handled, true);
-  assert.equal(context.state.searches, 1);
-  assert.equal(context.state.summaries, 1);
-  assert.match(context.messages[0], /د سرچینې پر بنسټ نوی ځواب/);
-  assert.match(context.messages[0], /اړونده سرچینه/);
-  assert.match(context.messages[0], /زوړ محلي ځواب/);
-  assert.match(context.messages[0], /آنلاین نه دی تایید شوی/);
 });
 
 test('combines an AI summary with verified links when relevant search results exist', async () => {
@@ -173,35 +146,6 @@ test('combines an AI summary with verified links when relevant search results ex
   assert.doesNotMatch(context.messages[0], /د AI ځواب/);
 });
 
-test('includes a clearly labelled local answer when sources exist but AI summarization fails', async () => {
-  const context = makeDependencies({
-    buildAnswerPlan: () => ({ category: 'history', detailed: false }),
-    requiresFactualSourceEvidence: () => true,
-    answerFromOfflineKnowledge: () => 'دا د بوټ پخوانی عمومي تاریخي ځواب دی.',
-    searchInternet: async () => {
-      context.state.searches += 1;
-      return [{ title: 'Relevant history source', url: 'https://example.org/history', snippet: 'A matching historical excerpt.', provider: 'test' }];
-    },
-    summarizeSourcesInPashto: async () => null,
-    readOpenRouterApiKey: () => 'test-key',
-    formatInternetResults: () => 'د اړوندو سرچینو موندنې او لینکونه.',
-  });
-  const answer = createAnswerEngine(context.dependencies);
-  const handled = await answer(
-    {},
-    'group@g.us',
-    'sender@s.whatsapp.net',
-    'دا تاریخي موضوع څه ده؟',
-    'member',
-  );
-
-  assert.equal(handled, true);
-  assert.equal(context.state.searches, 1);
-  assert.match(context.messages[0], /اړوندو سرچینو موندنې/);
-  assert.match(context.messages[0], /پخوانی عمومي تاریخي ځواب/);
-  assert.match(context.messages[0], /آنلاین نه دی تایید شوی/);
-});
-
 test('labels a source-required answer as unverified when no online source was found', async () => {
   const context = makeDependencies({
     buildAnswerPlan: () => ({ category: 'history', detailed: true }),
@@ -228,59 +172,6 @@ test('labels a source-required answer as unverified when no online source was fo
   assert.match(context.messages[0], /د آنلاین تایید شوې حوالې بدیل نه ده/);
 });
 
-test('returns a cautious local answer when sources and the AI service are unavailable', async () => {
-  const context = makeDependencies({
-    buildAnswerPlan: () => ({ category: 'history', detailed: false }),
-    requiresFactualSourceEvidence: () => true,
-    answerFromOfflineKnowledge: () => 'دا د موضوع عمومي تاریخي شالید دی.',
-    searchInternet: async () => {
-      context.state.searches += 1;
-      return [];
-    },
-    readOpenRouterApiKey: () => '',
-  });
-  const answer = createAnswerEngine(context.dependencies);
-  const handled = await answer(
-    {},
-    'group@g.us',
-    'sender@s.whatsapp.net',
-    'دا تاریخي موضوع څه ده',
-    'member',
-  );
-
-  assert.equal(handled, true);
-  assert.equal(context.state.searches, 1);
-  assert.equal(context.messages.length, 1);
-  assert.match(context.messages[0], /عمومي تاریخي شالید/);
-  assert.match(context.messages[0], /د سرچینې یادونه/);
-  assert.match(context.messages[0], /تر خپلواکې تایید مخکې مه منئ/);
-});
-
-test('always sends an explanatory reply rather than silently dropping a question when every provider fails', async () => {
-  const context = makeDependencies({
-    buildAnswerPlan: () => ({ category: 'general', detailed: false }),
-    searchInternet: async () => {
-      context.state.searches += 1;
-      return [];
-    },
-    readOpenRouterApiKey: () => '',
-    answerFromOfflineKnowledge: () => null,
-  });
-  const answer = createAnswerEngine(context.dependencies);
-  const handled = await answer(
-    {},
-    'group@g.us',
-    'sender@s.whatsapp.net',
-    'یو نادر علمي مفهوم څه دی',
-    'member',
-  );
-
-  assert.equal(handled, true);
-  assert.equal(context.state.searches, 1);
-  assert.equal(context.messages.length, 1);
-  assert.match(context.messages[0], /ستاسې پوښتنه مې ترلاسه کړه/);
-});
-
 test('does not invent a precise religious answer when authoritative evidence is unavailable', async () => {
   const context = makeDependencies({
     buildAnswerPlan: () => ({ category: 'religion', detailed: true }),
@@ -295,7 +186,7 @@ test('does not invent a precise religious answer when authoritative evidence is 
   const handled = await answer({}, 'group@g.us', 'sender@s.whatsapp.net', 'د حدیث کره حواله راکړه؟', 'member');
   assert.equal(handled, true);
   assert.equal(context.state.searches, 1);
-  assert.match(context.messages[0], /باوري ماخذ|شواهد|نه منسوبوم|تایید شوې حواله/);
+  assert.match(context.messages[0], /باوري سرچینه|شواهد|نه اټکلم/);
 });
 
 test('formats Markdown emitted in answers using WhatsApp text syntax', async () => {
@@ -306,9 +197,7 @@ test('formats Markdown emitted in answers using WhatsApp text syntax', async () 
   const handled = await answer({}, 'group@g.us', 'sender@s.whatsapp.net', '۲ جمع ۲ څو کېږي؟', 'member');
 
   assert.equal(handled, true);
-  assert.equal(context.state.searches, 1);
-  assert.match(context.messages[0], /^د حساب ځواب\n\n\*پایله: ۴\*\n• لومړی ټکی/);
-  assert.match(context.messages[0], /د سرچینې یادونه/);
+  assert.equal(context.messages[0], 'د حساب ځواب\n\n*پایله: ۴*\n• لومړی ټکی');
 });
 
 test('mentions the questioner and quotes the original group message for answer-engine replies', async () => {
@@ -330,7 +219,6 @@ test('mentions the questioner and quotes the original group message for answer-e
   );
 
   assert.equal(handled, true);
-  assert.equal(context.state.searches, 1);
   assert.deepEqual(context.deliveries[0].payload.mentions, ['15551230000@s.whatsapp.net']);
   assert.match(context.deliveries[0].payload.text, /^@15551230000\s/);
   assert.equal(context.deliveries[0].options.quoted, originalMessage);

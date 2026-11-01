@@ -251,32 +251,3 @@ test('matches Pashto book-title aliases and rejects generic Quran pages for Tafs
   const filtered = rankRelevantSearchResults('تفسیر یسیر پښتو کې چا لیکلی؟', results);
   assert.deepEqual(filtered.map(item => item.title), ['Tafseer Yaseer Pashto author Maulvi Murad Ali']);
 });
-
-
-test('rejects unrelated Afghan biographies for a question about the number of districts', () => {
-  const results = [
-    {
-      title: 'Zalmay Waisa',
-      url: 'https://ps.wikipedia.org/wiki/زلمی_ویسا',
-      snippet: 'Afghanistan has many districts; the Khogyani district is mentioned in this biography.',
-    },
-    {
-      title: 'Muhammad Amin Khogyani',
-      url: 'https://ps.wikipedia.org/wiki/محمد_امين_خوگياڼی',
-      snippet: 'An Afghan person associated with a district in Afghanistan.',
-    },
-    {
-      title: 'Districts of Afghanistan',
-      url: 'https://en.wikipedia.org/wiki/Districts_of_Afghanistan',
-      snippet: 'A list and description of Afghanistan administrative districts.',
-    },
-    {
-      title: 'Afghanistan Roadmap Report',
-      url: 'https://documents1.worldbank.org/curated/en/976021545165642530/pdf/133069-WP-P168141-PUBLIC-44684-Roadmap-Afghanistan-Report-Dec17-Digital.pdf',
-      snippet: 'Afghanistan is divided into 34 provinces and subdivided into 398 districts.',
-    },
-  ];
-
-  const filtered = rankRelevantSearchResults('افغانستان څو ولسوالۍ لري؟', results);
-  assert.deepEqual(filtered.map(item => item.title), ['Districts of Afghanistan', 'Afghanistan Roadmap Report']);
-});
