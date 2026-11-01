@@ -731,7 +731,10 @@ async function startBot() {
             'د پوښتنو ځوابونه: ' + (ENABLE_GROUP_QA ? 'فعال' : 'موقتي بند') +
             '؛ ویب لټون: ' + (ENABLE_GROUP_QA && ENABLE_INTERNET_SEARCH ? 'فعال' : 'بند') +
             '؛ شخصي چټ: ' + (ENABLE_PRIVATE_QA && ENABLE_GROUP_QA && (PRIVATE_QA_ALLOWED_NUMBERS.size > 0 || PRIVATE_QA_ALLOWED_LIDS.size > 0 || PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS.size > 0) ? 'فعال' : 'بند/اجازه‌لیست تنظیم کړئ') +
-            '؛ د محلي معلوماتو شمېر: ' + OFFLINE_KNOWLEDGE.length
+            '؛ د محلي معلوماتو شمېر: ' + OFFLINE_KNOWLEDGE.length +
+            '؛ د CV مجازې شخصي شمېرې: ' + PRIVATE_QA_ALLOWED_NUMBERS.size +
+            '؛ د بشپړو شخصي خدمتونو مجازې شمېرې: ' + PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS.size +
+            '؛ د مجاز LID پېژندپاڼو شمېر: ' + PRIVATE_QA_ALLOWED_LIDS.size
           );
 
           if (pairingTimer) {
