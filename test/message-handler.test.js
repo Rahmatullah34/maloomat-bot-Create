@@ -11,6 +11,7 @@ function createHarness(overrides = {}) {
     sends: [],
     answers: [],
     cvMessages: [],
+    careerMessages: [],
     innovationMessages: [],
     deletions: [],
     remembered: [],
@@ -26,12 +27,15 @@ function createHarness(overrides = {}) {
     ENABLE_PRIVATE_QA: true,
     PRIVATE_QA_ALLOWED_NUMBERS: new Set(),
     PRIVATE_QA_ALLOWED_LIDS: new Set(),
+    PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: new Set(),
     rememberMessage: () => true,
     extractText: () => 'د زړه دنده څه ده؟',
     safeSend: async (_socket, jid, payload) => { state.sends.push({ jid, text: payload?.text || '' }); return true; },
     answerWithKnowledge: async (...args) => { state.answers.push(args); return true; },
     handlePrivateCvMessage: async (args) => { state.cvMessages.push(args); return true; },
+    handlePrivateCareerMessage: async (args) => { state.careerMessages.push(args); return true; },
     handlePrivateInnovationMessage: async (args) => { state.innovationMessages.push(args); return true; },
+    downloadMediaMessage: async () => Buffer.from('test-audio'),
     isGroupAllowed: () => true,
     isForwardedChannelMessage: () => false,
     isWhatsAppStatusShare: () => false,
@@ -141,6 +145,7 @@ test('routes authorized private messages only to the CV service, never innovatio
   assert.equal(h.state.cvMessages[0].jid, '15551234567@s.whatsapp.net');
   assert.equal(h.state.cvMessages[0].text, 'دا ازمویښتي پوښتنه ده؟');
   assert.equal(h.state.innovationMessages.length, 0);
+  assert.equal(h.state.careerMessages.length, 0);
   assert.equal(h.state.burstCalls, 0);
 });
 
@@ -167,6 +172,66 @@ test('default private route starts the CV service and rejects other private serv
   await blocked.handler({ type: 'notify', messages: [message('15551234568@s.whatsapp.net')] });
   assert.match(blocked.state.sends.at(-1).text, /یوازې د انګلیسي CV/);
   assert.equal(blocked.state.innovationMessages.length, 0);
+});
+
+
+test('full-services allowlist restores the innovation and career routes for that number only', async () => {
+  const h = createHarness({
+    classifyRemoteJid: () => 'private',
+    PRIVATE_QA_ALLOWED_NUMBERS: new Set(),
+    PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: new Set(['93700000001']),
+    extractText: () => 'SERVICES',
+    handlePrivateInnovationMessage: async (args) => {
+      hState.innovationMessages.push(args);
+      return true;
+    },
+  });
+  const hState = h.state;
+  await h.handler({ type: 'notify', messages: [message('93700000001@s.whatsapp.net')] });
+  assert.equal(h.state.innovationMessages.length, 1);
+  assert.equal(h.state.cvMessages.length, 0);
+  assert.equal(h.state.careerMessages.length, 0);
+  assert.equal(h.state.innovationMessages[0].text, 'SERVICES');
+
+  const career = createHarness({
+    classifyRemoteJid: () => 'private',
+    PRIVATE_QA_ALLOWED_NUMBERS: new Set(),
+    PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: new Set(['93700000001']),
+    extractText: () => 'CAREER',
+    handlePrivateInnovationMessage: async () => false,
+  });
+  await career.handler({ type: 'notify', messages: [message('93700000001@s.whatsapp.net')] });
+  assert.equal(career.state.careerMessages.length, 1);
+  assert.equal(career.state.cvMessages.length, 0);
+});
+
+test('full-services allowlist permits private voice notes while CV-only senders are told to use CV', async () => {
+  const voiceMessage = {
+    ...message('93700000001@s.whatsapp.net', ''),
+    message: { audioMessage: { mimetype: 'audio/ogg' } },
+  };
+  const full = createHarness({
+    classifyRemoteJid: () => 'private',
+    PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: new Set(['93700000001']),
+    extractText: () => '',
+  });
+  await full.handler({ type: 'notify', messages: [voiceMessage] });
+  assert.equal(full.state.innovationMessages.length, 1);
+  assert.equal(full.state.innovationMessages[0].mediaMessage, voiceMessage);
+
+  const restricted = createHarness({
+    classifyRemoteJid: () => 'private',
+    PRIVATE_QA_ALLOWED_NUMBERS: new Set(['93700000002']),
+    extractText: () => '',
+  });
+  const restrictedVoice = {
+    ...message('93700000002@s.whatsapp.net', ''),
+    message: { audioMessage: { mimetype: 'audio/ogg' } },
+  };
+  await restricted.handler({ type: 'notify', messages: [restrictedVoice] });
+  assert.equal(restricted.state.innovationMessages.length, 0);
+  assert.equal(restricted.state.cvMessages.length, 0);
+  assert.match(restricted.state.sends.at(-1).text, /یوازې د CV خدمت/);
 });
 
 test('handles group-rules commands before burst, bad-word, and link moderation', async () => {
