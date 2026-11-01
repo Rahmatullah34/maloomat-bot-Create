@@ -42,6 +42,7 @@ test('loads feature flags, bounded limits, and private allowlists from environme
     SERVER_PORT: '8088',
     PRIVATE_QA_ALLOWED_NUMBERS: '+1 (202) 555-0100, 0044123456789, bad',
     PRIVATE_QA_ALLOWED_LIDS: '123456789012345, 998877665544332@lid',
+    PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: '0093700000001, +1 (202) 555-0101',
     FULL_MODERATION_EXEMPT_PHONE_NUMBER: '+1 (202) 555-0100',
   });
 
@@ -53,8 +54,9 @@ test('loads feature flags, bounded limits, and private allowlists from environme
   assert.equal(config.warningMute.durationMinutes, 1440);
   assert.equal(config.ai.maxOutputTokens, 2600);
   assert.equal(config.serverPort, 8088);
-  assert.deepEqual([...config.security.privateQaAllowedNumbers], ['12025550100', '0044123456789']);
+  assert.deepEqual([...config.security.privateQaAllowedNumbers], ['12025550100', '44123456789']);
   assert.deepEqual([...config.security.privateQaAllowedLids], ['123456789012345', '998877665544332']);
+  assert.deepEqual([...config.security.privateFullServicesAllowedNumbers], ['93700000001', '12025550101']);
   assert.equal(config.security.fullModerationExemptPhoneNumber, '12025550100');
 });
 
@@ -85,6 +87,7 @@ test('does not embed a private phone or LID allowlist in the runtime defaults', 
   const config = loadRuntimeConfig({});
   assert.equal(config.security.privateQaAllowedNumbers.size, 0);
   assert.equal(config.security.privateQaAllowedLids.size, 0);
+  assert.equal(config.security.privateFullServicesAllowedNumbers.size, 0);
   assert.equal(config.security.fullModerationExemptPhoneNumber, '');
 });
 
