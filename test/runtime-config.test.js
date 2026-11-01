@@ -9,6 +9,8 @@ const {
   loadRuntimeConfig,
   parseBoolean,
   parseBoundedInteger,
+  normalizePhoneNumber,
+  normalizeLid,
   readOpenRouterApiKey,
   readWhatsAppPhone,
 } = require('../lib/runtime-config');
@@ -28,36 +30,34 @@ test('bounds integer configuration instead of accepting invalid or unsafe values
   assert.equal(parseBoundedInteger('not-a-number', 120, 1, 1440), 120);
 });
 
-test('loads group, internet search, AI and moderation settings without private chat configuration', () => {
+test('loads feature flags, bounded limits, and private allowlists from environment values', () => {
   const config = loadRuntimeConfig({
     ENABLE_GROUP_QA: 'false',
+    ENABLE_PRIVATE_QA: 'true',
     ENABLE_INTERNET_SEARCH: 'off',
     ENABLE_AI_SUMMARIZATION: '1',
     ENABLE_LINK_MODERATION: 'yes',
     WARNING_MUTE_DURATION_MINUTES: '1800',
     AI_MAX_OUTPUT_TOKENS: '2600',
     SERVER_PORT: '8088',
+    PRIVATE_QA_ALLOWED_NUMBERS: '+1 (202) 555-0100, 0044123456789, bad',
+    PRIVATE_QA_ALLOWED_LIDS: '123456789012345, 998877665544332@lid',
+    PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: '0093700000001, +1 (202) 555-0101',
     FULL_MODERATION_EXEMPT_PHONE_NUMBER: '+1 (202) 555-0100',
   });
 
   assert.equal(config.features.groupQA, false);
-  assert.equal(config.features.privateQA, undefined);
+  assert.equal(config.features.privateQA, true);
   assert.equal(config.features.internetSearch, false);
   assert.equal(config.features.aiSummarization, true);
   assert.equal(config.features.linkModeration, true);
   assert.equal(config.warningMute.durationMinutes, 1440);
   assert.equal(config.ai.maxOutputTokens, 2600);
   assert.equal(config.serverPort, 8088);
-  assert.deepEqual(Object.keys(config.security), ['fullModerationExemptPhoneNumber']);
+  assert.deepEqual([...config.security.privateQaAllowedNumbers], ['12025550100', '44123456789']);
+  assert.deepEqual([...config.security.privateQaAllowedLids], ['123456789012345', '998877665544332']);
+  assert.deepEqual([...config.security.privateFullServicesAllowedNumbers], ['93700000001', '12025550101']);
   assert.equal(config.security.fullModerationExemptPhoneNumber, '12025550100');
-});
-
-test('does not embed personal phone or LID allowlists in runtime config', () => {
-  const config = loadRuntimeConfig({});
-  assert.equal(config.security.privateQaAllowedNumbers, undefined);
-  assert.equal(config.security.privateQaAllowedLids, undefined);
-  assert.equal(config.security.privateFullServicesAllowedNumbers, undefined);
-  assert.equal(config.features.privateQA, undefined);
 });
 
 test('uses the environment API key first and can read a locally ignored key file', () => {
@@ -78,6 +78,32 @@ test('normalizes the WhatsApp pairing phone and preserves the local-file fallbac
   try {
     fs.writeFileSync(path.join(dir, 'whatsapp-phone.txt'), '+44 1234 567890\n', 'utf8');
     assert.equal(readWhatsAppPhone({}, dir), '441234567890');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('does not embed a private phone or LID allowlist in the runtime defaults', () => {
+  const config = loadRuntimeConfig({});
+  assert.equal(config.security.privateQaAllowedNumbers.size, 0);
+  assert.equal(config.security.privateQaAllowedLids.size, 0);
+  assert.equal(config.security.privateFullServicesAllowedNumbers.size, 0);
+  assert.equal(config.security.fullModerationExemptPhoneNumber, '');
+});
+
+test('loads private security settings from the server-side JSON fallback', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'maloomat-private-runtime-'));
+  try {
+    fs.writeFileSync(path.join(dir, 'private-runtime-config.json'), JSON.stringify({
+      PRIVATE_QA_ALLOWED_NUMBERS: '15551234567, 441234567890',
+      PRIVATE_QA_ALLOWED_LIDS: '123456789012345@lid',
+      FULL_MODERATION_EXEMPT_PHONE_NUMBER: '+1 (555) 765-4321',
+    }), 'utf8');
+
+    const config = loadRuntimeConfig(undefined, dir);
+    assert.deepEqual([...config.security.privateQaAllowedNumbers], ['15551234567', '441234567890']);
+    assert.deepEqual([...config.security.privateQaAllowedLids], ['123456789012345']);
+    assert.equal(config.security.fullModerationExemptPhoneNumber, '15557654321');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
