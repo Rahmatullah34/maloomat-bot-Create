@@ -413,7 +413,8 @@ async function deleteGroupMessage(
       setTemporaryMute(jid, offenderJid, WARNING_MUTE_DURATION_MS);
     }
 
-    if (!shouldSendWarningNow(jid, offenderJid)) {
+    const warningCooldownPassed = shouldSendWarningNow(jid, offenderJid);
+    if (!warningCooldownPassed && warningCount < 3) {
       console.log(
         'ℹ️ سرغړونه ثبت شوه؛ د اخطار د تکرار ۳۰ ثانییز محدودیت فعال دی؛ د سرغړونو شمېر=' + warningCount
       );
