@@ -520,24 +520,16 @@ async function resolveGroupSender(socket, groupJid, senderIdentifiers) {
 
 // د لینک اجازه: لومړی د شمېرې/اجازه لرونکي ډومېن لېست وګوره، بیا د ګروپ رول.
 // د اډمینانو د لینکونو او سپم معافیت لپاره هماغه cache شوی metadata شریکېږي.
-async function isLinkPermittedForSender(socket, groupJid, text, senderIdentifiers) {
+async function isLinkPermittedForSender(_socket, _groupJid, text, senderIdentifiers) {
   const senders = [...new Set(
     (Array.isArray(senderIdentifiers) ? senderIdentifiers : [])
       .map((value) => String(value || '').trim())
       .filter(Boolean)
   )];
 
-  if (senders.some((sender) => isLinkPermitted(text, sender))) {
-    return true;
-  }
-
-  try {
-    const metadata = await getGroupMetadataCached(socket, groupJid);
-    return isGroupAdminSender(metadata?.participants, senders);
-  } catch (err) {
-    console.error('⚠️ د لینک د اډمین اجازې کتنه ناکامه شوه:', err?.message || err);
-    return false;
-  }
+  // د ګروپ اډمین کېدل پخپله د لینک اجازه نه ده؛ یوازې د ALLOWED_LINK_SENDERS
+  // یا ALLOWED_LINK_DOMAINS له واضح اجازې سره لینک منل کېږي.
+  return senders.some((sender) => isLinkPermitted(text, sender));
 }
 
 // ======================================================
