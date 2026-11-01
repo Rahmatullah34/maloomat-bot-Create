@@ -55,7 +55,7 @@ test('loads feature flags, bounded limits, and private allowlists from environme
   assert.equal(config.serverPort, 8088);
   assert.deepEqual([...config.security.privateFullServicesAllowedLids], ['123456789012345', '998877665544332']);
   assert.deepEqual([...config.security.privateFullServicesAllowedNumbers], ['93700000001', '12025550101']);
-  assert.equal(config.security.fullModerationExemptPhoneNumber, '12025550100');
+  assert.deepEqual([...config.security.fullModerationExemptPhoneNumbers], ['12025550100']);
 });
 
 test('uses the environment API key first and can read a locally ignored key file', () => {
@@ -85,7 +85,7 @@ test('does not embed a private phone or LID allowlist in the runtime defaults', 
   const config = loadRuntimeConfig({});
   assert.equal(config.security.privateFullServicesAllowedLids.size, 0);
   assert.equal(config.security.privateFullServicesAllowedNumbers.size, 0);
-  assert.equal(config.security.fullModerationExemptPhoneNumber, '');
+  assert.equal(config.security.fullModerationExemptPhoneNumbers.size, 0);
 });
 
 test('loads private security settings from the server-side JSON fallback', () => {
@@ -98,7 +98,7 @@ test('loads private security settings from the server-side JSON fallback', () =>
 
     const config = loadRuntimeConfig(undefined, dir);
     assert.deepEqual([...config.security.privateFullServicesAllowedLids], ['123456789012345']);
-    assert.equal(config.security.fullModerationExemptPhoneNumber, '15557654321');
+    assert.deepEqual([...config.security.fullModerationExemptPhoneNumbers], ['15557654321']);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
