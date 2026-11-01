@@ -370,29 +370,29 @@ test('د قوانینو امر د سپم او نورو moderation فلټرونو
   assert.ok(rulesCommandPosition < linkCheckPosition, 'د قوانینو امر باید د لینک فلټر تر مخه وي');
   assert.match(handlerSrc, /isGroupRulesCommand\(text\)/);
 });
-test('څو د نظم معافیت شمېرې له محرمو تنظیماتو لوستل کېږي', () => {
+test('څو د نظم معافیت شمېرې له محرمو تنظیماتو لوستل کېږي او دواړه شمېرې په ګروپ کې معاف دي', () => {
   const indexSrc = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
   const handlerSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'message-handler.js'), 'utf8');
   const { loadRuntimeConfig } = require('../lib/runtime-config');
   const configured = loadRuntimeConfig({
     FULL_MODERATION_EXEMPT_PHONE_NUMBER: '93707285093,93744271103',
   });
-  assert.deepEqual(
-    [...configured.security.fullModerationExemptPhoneNumbers].sort(),
-    ['93707285093', '93744271103'].sort()
-  );
+  const exemptions = [...configured.security.fullModerationExemptPhoneNumbers];
+  assert.deepEqual(exemptions.sort(), ['93707285093', '93744271103'].sort());
+  assert.equal(hasMatchingPhoneNumber(['93707285093@s.whatsapp.net'], exemptions), true);
+  assert.equal(hasMatchingPhoneNumber(['93744271103@s.whatsapp.net'], exemptions), true);
   assert.equal(loadRuntimeConfig({}).security.fullModerationExemptPhoneNumbers.size, 0);
 
-  assert.match(indexSrc, /runtimeConfig\\.security\\.fullModerationExemptPhoneNumbers/);
-  assert.match(indexSrc, /function isFullModerationExemptSender\\(senderIdentifiers\\)/);
-  assert.match(handlerSrc, /!isFullModerationExempt\\s*\\?\\s*getTemporaryMuteStatus/);
-  assert.match(handlerSrc, /if \\(statusShare && !isFullModerationExempt\\)/);
-  assert.match(handlerSrc, /if \\(channelForward && !isFullModerationExempt\\)/);
-  assert.match(handlerSrc, /if \\(!isSenderGroupAdmin && !isFullModerationExempt\\) \\{\\s*const burst = recordGroupMessage/);
-  assert.match(handlerSrc, /if \\(!isFullModerationExempt && containsBadWord\\(text\\)\\)/);
-  assert.match(handlerSrc, /ENABLE_LINK_MODERATION &&\\s*!isFullModerationExempt &&\\s*LINK_PATTERN\\.test\\(text\\)/);
-  assert.match(handlerSrc, /if \\(!isSenderGroupAdmin && !isFullModerationExempt\\) \\{\\s*const repeated = recordRepeatedMessage/);
-  assert.match(indexSrc, /if \\(historySenderIsExempt\\) continue/);
+  assert.match(indexSrc, /runtimeConfig\.security\.fullModerationExemptPhoneNumbers/);
+  assert.match(indexSrc, /function isFullModerationExemptSender\(senderIdentifiers\)/);
+  assert.match(handlerSrc, /!isFullModerationExempt\s*\?\s*getTemporaryMuteStatus/);
+  assert.match(handlerSrc, /if \(statusShare && !isFullModerationExempt\)/);
+  assert.match(handlerSrc, /if \(channelForward && !isFullModerationExempt\)/);
+  assert.match(handlerSrc, /if \(!isFullModerationExempt\) \{\s*const burst = recordGroupMessage/);
+  assert.match(handlerSrc, /if \(!isFullModerationExempt && containsBadWord\(text\)\)/);
+  assert.match(handlerSrc, /ENABLE_LINK_MODERATION &&\s*!isFullModerationExempt &&\s*LINK_PATTERN\.test\(text\)/);
+  assert.match(handlerSrc, /if \(!isFullModerationExempt\) \{\s*const repeated = recordRepeatedMessage/);
+  assert.match(indexSrc, /if \(historySenderIsExempt\) continue/);
 });
 test('د لینکونو بندیز د مرکزي تنظیماتو له مخې فعال دی؛ شخصي استثنا په کوډ کې نه ده لیکل شوې', () => {
   const handlerSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'message-handler.js'), 'utf8');
