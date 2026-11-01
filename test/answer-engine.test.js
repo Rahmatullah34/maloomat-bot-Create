@@ -172,6 +172,35 @@ test('combines an AI summary with verified links when relevant search results ex
   assert.doesNotMatch(context.messages[0], /د AI ځواب/);
 });
 
+test('includes a clearly labelled local answer when sources exist but AI summarization fails', async () => {
+  const context = makeDependencies({
+    buildAnswerPlan: () => ({ category: 'history', detailed: false }),
+    requiresFactualSourceEvidence: () => true,
+    answerFromOfflineKnowledge: () => 'دا د بوټ پخوانی عمومي تاریخي ځواب دی.',
+    searchInternet: async () => {
+      context.state.searches += 1;
+      return [{ title: 'Relevant history source', url: 'https://example.org/history', snippet: 'A matching historical excerpt.', provider: 'test' }];
+    },
+    summarizeSourcesInPashto: async () => null,
+    readOpenRouterApiKey: () => 'test-key',
+    formatInternetResults: () => 'د اړوندو سرچینو موندنې او لینکونه.',
+  });
+  const answer = createAnswerEngine(context.dependencies);
+  const handled = await answer(
+    {},
+    'group@g.us',
+    'sender@s.whatsapp.net',
+    'دا تاریخي موضوع څه ده؟',
+    'member',
+  );
+
+  assert.equal(handled, true);
+  assert.equal(context.state.searches, 1);
+  assert.match(context.messages[0], /اړوندو سرچینو موندنې/);
+  assert.match(context.messages[0], /پخوانی عمومي تاریخي ځواب/);
+  assert.match(context.messages[0], /آنلاین نه دی تایید شوی/);
+});
+
 test('labels a source-required answer as unverified when no online source was found', async () => {
   const context = makeDependencies({
     buildAnswerPlan: () => ({ category: 'history', detailed: true }),
