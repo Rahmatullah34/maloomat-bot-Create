@@ -198,6 +198,59 @@ test('labels a source-required answer as unverified when no online source was fo
   assert.match(context.messages[0], /د آنلاین تایید شوې حوالې بدیل نه ده/);
 });
 
+test('returns a cautious local answer when sources and the AI service are unavailable', async () => {
+  const context = makeDependencies({
+    buildAnswerPlan: () => ({ category: 'history', detailed: false }),
+    requiresFactualSourceEvidence: () => true,
+    answerFromOfflineKnowledge: () => 'دا د موضوع عمومي تاریخي شالید دی.',
+    searchInternet: async () => {
+      context.state.searches += 1;
+      return [];
+    },
+    readOpenRouterApiKey: () => '',
+  });
+  const answer = createAnswerEngine(context.dependencies);
+  const handled = await answer(
+    {},
+    'group@g.us',
+    'sender@s.whatsapp.net',
+    'دا تاریخي موضوع څه ده',
+    'member',
+  );
+
+  assert.equal(handled, true);
+  assert.equal(context.state.searches, 1);
+  assert.equal(context.messages.length, 1);
+  assert.match(context.messages[0], /عمومي تاریخي شالید/);
+  assert.match(context.messages[0], /د سرچینې یادونه/);
+  assert.match(context.messages[0], /تر خپلواکې تایید مخکې مه منئ/);
+});
+
+test('always sends an explanatory reply rather than silently dropping a question when every provider fails', async () => {
+  const context = makeDependencies({
+    buildAnswerPlan: () => ({ category: 'general', detailed: false }),
+    searchInternet: async () => {
+      context.state.searches += 1;
+      return [];
+    },
+    readOpenRouterApiKey: () => '',
+    answerFromOfflineKnowledge: () => null,
+  });
+  const answer = createAnswerEngine(context.dependencies);
+  const handled = await answer(
+    {},
+    'group@g.us',
+    'sender@s.whatsapp.net',
+    'یو نادر علمي مفهوم څه دی',
+    'member',
+  );
+
+  assert.equal(handled, true);
+  assert.equal(context.state.searches, 1);
+  assert.equal(context.messages.length, 1);
+  assert.match(context.messages[0], /ستاسې پوښتنه مې ترلاسه کړه/);
+});
+
 test('does not invent a precise religious answer when authoritative evidence is unavailable', async () => {
   const context = makeDependencies({
     buildAnswerPlan: () => ({ category: 'religion', detailed: true }),
