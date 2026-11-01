@@ -307,15 +307,17 @@ test('د PN/LID بدیلونه د سپم شمېر او اخطار لپاره ی�
   assert.equal(findGroupParticipant(participants, ['987654321@lid'])?.admin, 'admin');
   assert.equal(isGroupAdminParticipant(findGroupParticipant(participants, ['987654321@lid'])), true);
 });
-test('تایید شوی اډمین د چټک او تکراري سپم له اخطار/حذف څخه معاف دی', () => {
+test('د ګروپ اډمینان هم د سپم او نامجازو لینکونو قواعدو تابع دي', () => {
   const indexSrc = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
   const handlerSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'message-handler.js'), 'utf8');
   assert.match(indexSrc, /async function resolveGroupSender\s*\(/,
-    'اډمین باید د WhatsApp د ګروپ metadata له مخې وپېژندل شي');
-  assert.match(handlerSrc, /if\s*\(!isSenderGroupAdmin && !isFullModerationExempt\)\s*\{\s*const burst = recordGroupMessage/,
-    'د چټک سپم حد باید یوازې پر عادي غړو تطبیق شي');
-  assert.match(handlerSrc, /if\s*\(!isSenderGroupAdmin && !isFullModerationExempt\)\s*\{\s*const repeated = recordRepeatedMessage/,
-    'د تکراري سپم حذف باید یوازې پر عادي غړو تطبیق شي');
+    'د اډمین هویت باید د WhatsApp د ګروپ metadata له مخې وپېژندل شي');
+  assert.match(handlerSrc, /if\s*\(!isFullModerationExempt\)\s*\{\s*const burst = recordGroupMessage/,
+    'چټک سپم باید پر اډمینانو هم تطبیق شي');
+  assert.match(handlerSrc, /if\s*\(!isFullModerationExempt\)\s*\{\s*const repeated = recordRepeatedMessage/,
+    'تکراري سپم باید پر اډمینانو هم تطبیق شي');
+  assert.doesNotMatch(indexSrc, /return isGroupAdminSender\(metadata\?\.participants, senders\)/,
+    'اډمین رول باید په خپله د لینک اجازه ورنه کړي');
 });
 test('هره سرغړونه د ۳۰ ثانییز اخطار throttle سربېره ثبتېږي', () => {
   const indexSrc = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
@@ -323,7 +325,7 @@ test('هره سرغړونه د ۳۰ ثانییز اخطار throttle سربېر�
   const end = indexSrc.indexOf('const GROUP_METADATA_CACHE_TTL_MS', start);
   const section = indexSrc.slice(start, end);
   const recordPosition = section.indexOf('const warningCount = recordViolationWarning');
-  const throttlePosition = section.indexOf('if (!shouldSendWarningNow(jid, offenderJid))');
+  const throttlePosition = section.indexOf('const warningCooldownPassed = shouldSendWarningNow(jid, offenderJid)');
   assert.ok(recordPosition >= 0, 'هره سرغړونه باید د اخطار په شمېر کې ثبت شي');
   assert.ok(throttlePosition > recordPosition, 'د اخطار throttle باید د سرغړونې تر ثبت وروسته وي');
   assert.match(section, /if \(!warningCooldownPassed && warningCount < 3\)/,
