@@ -205,6 +205,46 @@ test('full-services allowlist restores the innovation and career routes for that
   assert.equal(career.state.cvMessages.length, 0);
 });
 
+test('an allowlisted LID upgrades to full private services when Baileys maps it to the owner phone number', async () => {
+  const senderLid = '195953604702223@lid';
+  const socket = {
+    ev: {},
+    signalRepository: {
+      lidMapping: {
+        getPNForLID: async (jid) => {
+          assert.equal(jid, senderLid);
+          return '93700000001@s.whatsapp.net';
+        },
+      },
+    },
+  };
+  const h = createHarness({
+    socket,
+    classifyRemoteJid: () => 'private',
+    PRIVATE_QA_ALLOWED_LIDS: new Set(['195953604702223']),
+    PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: new Set(['93700000001']),
+    extractText: () => 'SERVICES',
+  });
+
+  await h.handler({
+    type: 'notify',
+    messages: [message(senderLid, 'SERVICES', {
+      key: {
+        remoteJid: senderLid,
+        participant: null,
+        remoteJidAlt: null,
+        participantAlt: null,
+      },
+    })],
+  });
+
+  assert.equal(h.state.innovationMessages.length, 1);
+  assert.equal(h.state.innovationMessages[0].text, 'SERVICES');
+  assert.equal(h.state.cvMessages.length, 0);
+  assert.equal(h.state.careerMessages.length, 0);
+  assert.equal(h.state.answers.length, 0);
+});
+
 test('full-services allowlist enables general private AI questions for the owner only', async () => {
   const h = createHarness({
     classifyRemoteJid: () => 'private',
