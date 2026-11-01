@@ -96,6 +96,7 @@ test('does not block an unrelated Islamic question in the answer engine', async 
   );
   assert.equal(handled, true);
   assert.match(context.messages[0], /شهادت|بناوې/);
+  assert.match(context.messages[0], /د سرچینې یادونه/);
   assert.doesNotMatch(context.messages[0], /معلومات فعلاً زموږ په خدمت کې نشته/);
 });
 
@@ -108,7 +109,7 @@ test('stops sensitive person-location or harm requests before web search', async
   assert.match(context.messages[0], /شخصي پتې|تعقیب|زیان رسولو/);
 });
 
-test('answers a stable local-knowledge question without calling external providers', async () => {
+test('searches for sources before falling back to a stable local-knowledge answer', async () => {
   const context = makeDependencies({
     answerFromOfflineKnowledge: () => 'دا د بوټ د محلي زېرمې ازمویښتي ځواب دی.',
     normalizePashto: value => String(value || '').normalize('NFKC').toLowerCase(),
@@ -116,8 +117,33 @@ test('answers a stable local-knowledge question without calling external provide
   const answer = createAnswerEngine(context.dependencies);
   const handled = await answer({}, 'group@g.us', 'sender@s.whatsapp.net', 'زړه څه کوي؟', 'member');
   assert.equal(handled, true);
-  assert.equal(context.state.searches, 0);
+  assert.equal(context.state.searches, 1);
   assert.match(context.messages[0], /محلي زېرمې/);
+  assert.match(context.messages[0], /اړوندې آنلاین سرچینې ونه موندل شوې/);
+});
+
+test('uses source-backed research for ordinary questions even when offline knowledge already has an answer', async () => {
+  const context = makeDependencies({
+    answerFromOfflineKnowledge: () => 'زوړ محلي ځواب.',
+    searchInternet: async () => {
+      context.state.searches += 1;
+      return [{ title: 'Relevant reference', url: 'https://example.org/topic', snippet: 'A directly relevant source excerpt.', provider: 'test' }];
+    },
+    summarizeSourcesInPashto: async (_question, sources) => {
+      context.state.summaries += 1;
+      assert.equal(sources.length, 1);
+      return 'د سرچینې پر بنسټ نوی ځواب.';
+    },
+    formatVerifiedSourceLinks: () => '\\n\\n🔎 اړونده سرچینه: https://example.org/topic',
+  });
+  const answer = createAnswerEngine(context.dependencies);
+  const handled = await answer({}, 'group@g.us', 'sender@s.whatsapp.net', 'زړه څه کوي؟', 'member');
+  assert.equal(handled, true);
+  assert.equal(context.state.searches, 1);
+  assert.equal(context.state.summaries, 1);
+  assert.match(context.messages[0], /د سرچینې پر بنسټ نوی ځواب/);
+  assert.match(context.messages[0], /اړونده سرچینه/);
+  assert.doesNotMatch(context.messages[0], /زوړ محلي ځواب/);
 });
 
 test('combines an AI summary with verified links when relevant search results exist', async () => {
@@ -197,7 +223,9 @@ test('formats Markdown emitted in answers using WhatsApp text syntax', async () 
   const handled = await answer({}, 'group@g.us', 'sender@s.whatsapp.net', '۲ جمع ۲ څو کېږي؟', 'member');
 
   assert.equal(handled, true);
-  assert.equal(context.messages[0], 'د حساب ځواب\n\n*پایله: ۴*\n• لومړی ټکی');
+  assert.equal(context.state.searches, 1);
+  assert.match(context.messages[0], /^د حساب ځواب\n\n\*پایله: ۴\*\n• لومړی ټکی/);
+  assert.match(context.messages[0], /د سرچینې یادونه/);
 });
 
 test('mentions the questioner and quotes the original group message for answer-engine replies', async () => {
@@ -219,6 +247,7 @@ test('mentions the questioner and quotes the original group message for answer-e
   );
 
   assert.equal(handled, true);
+  assert.equal(context.state.searches, 1);
   assert.deepEqual(context.deliveries[0].payload.mentions, ['15551230000@s.whatsapp.net']);
   assert.match(context.deliveries[0].payload.text, /^@15551230000\s/);
   assert.equal(context.deliveries[0].options.quoted, originalMessage);
