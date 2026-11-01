@@ -270,8 +270,13 @@ test('rejects unrelated Afghan biographies for a question about the number of di
       url: 'https://en.wikipedia.org/wiki/Districts_of_Afghanistan',
       snippet: 'A list and description of Afghanistan administrative districts.',
     },
+    {
+      title: 'Afghanistan Roadmap Report',
+      url: 'https://documents1.worldbank.org/curated/en/976021545165642530/pdf/133069-WP-P168141-PUBLIC-44684-Roadmap-Afghanistan-Report-Dec17-Digital.pdf',
+      snippet: 'Afghanistan is divided into 34 provinces and subdivided into 398 districts.',
+    },
   ];
 
   const filtered = rankRelevantSearchResults('افغانستان څو ولسوالۍ لري؟', results);
-  assert.deepEqual(filtered.map(item => item.title), ['Districts of Afghanistan']);
+  assert.deepEqual(filtered.map(item => item.title), ['Districts of Afghanistan', 'Afghanistan Roadmap Report']);
 });
