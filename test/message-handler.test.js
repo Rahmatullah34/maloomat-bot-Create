@@ -205,6 +205,22 @@ test('full-services allowlist restores the innovation and career routes for that
   assert.equal(career.state.cvMessages.length, 0);
 });
 
+test('full-services allowlist enables general private AI questions for the owner only', async () => {
+  const h = createHarness({
+    classifyRemoteJid: () => 'private',
+    PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: new Set(['93700000001']),
+    extractText: () => 'د افغانستان پلازمېنه کوم ښار دی؟',
+    handlePrivateInnovationMessage: async () => false,
+    handlePrivateCareerMessage: async () => false,
+  });
+  await h.handler({ type: 'notify', messages: [message('93700000001@s.whatsapp.net')] });
+  assert.equal(h.state.answers.length, 1);
+  assert.equal(h.state.answers[0][1], '93700000001@s.whatsapp.net');
+  assert.equal(h.state.answers[0][2], '93700000001@s.whatsapp.net');
+  assert.equal(h.state.answers[0][3], 'د افغانستان پلازمېنه کوم ښار دی؟');
+  assert.equal(h.state.cvMessages.length, 0);
+});
+
 test('full-services allowlist permits private voice notes while CV-only senders are told to use CV', async () => {
   const voiceMessage = {
     ...message('93700000001@s.whatsapp.net', ''),

@@ -154,6 +154,13 @@ test('retries a failed interview review using the saved answer', async () => {
   assert.equal(calls, 2);
 });
 
+test('does not consume an unrecognized question when no career session is active', async () => {
+  const h = harness();
+  const handled = await h.send('د افغانستان پلازمېنه کوم ښار دی؟');
+  assert.equal(handled, false);
+  assert.equal(h.sends.length, 0);
+});
+
 test('CANCEL ends any career flow and returns the user to the menu state', async () => {
   const h = harness();
   await h.send('INTERVIEW');
