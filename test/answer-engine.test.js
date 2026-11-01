@@ -119,7 +119,7 @@ test('searches for sources before falling back to a stable local-knowledge answe
   assert.equal(handled, true);
   assert.equal(context.state.searches, 1);
   assert.match(context.messages[0], /محلي زېرمې/);
-  assert.match(context.messages[0], /اړوندې آنلاین سرچینې ونه موندل شوې/);
+  assert.match(context.messages[0], /د سرچینې یادونه|اړوندې باوري آنلاین سرچینې/);
 });
 
 test('uses source-backed research for ordinary questions even when offline knowledge already has an answer', async () => {
@@ -143,7 +143,7 @@ test('uses source-backed research for ordinary questions even when offline knowl
   assert.equal(context.state.summaries, 1);
   assert.match(context.messages[0], /د سرچینې پر بنسټ نوی ځواب/);
   assert.match(context.messages[0], /اړونده سرچینه/);
-  assert.doesNotMatch(context.messages[0], /زوړ محلي ځواب/);
+  assert.match(context.messages[0], /زوړ محلي ځواب/);\n  assert.match(context.messages[0], /آنلاین نه دی تایید شوی/);
 });
 
 test('combines an AI summary with verified links when relevant search results exist', async () => {
@@ -294,7 +294,7 @@ test('does not invent a precise religious answer when authoritative evidence is 
   const handled = await answer({}, 'group@g.us', 'sender@s.whatsapp.net', 'د حدیث کره حواله راکړه؟', 'member');
   assert.equal(handled, true);
   assert.equal(context.state.searches, 1);
-  assert.match(context.messages[0], /باوري سرچینه|شواهد|نه اټکلم/);
+  assert.match(context.messages[0], /باوري ماخذ|شواهد|نه منسوبوم|تایید شوې حواله/);
 });
 
 test('formats Markdown emitted in answers using WhatsApp text syntax', async () => {
