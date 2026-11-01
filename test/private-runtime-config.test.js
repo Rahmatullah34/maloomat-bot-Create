@@ -19,23 +19,18 @@ function makeConfigDirectory(content) {
   return dir;
 }
 
-test('reads only supported private settings from the server-side JSON file', () => {
+test('reads only moderation settings from the server-side JSON file', () => {
   const dir = makeConfigDirectory(JSON.stringify({
-    PRIVATE_QA_ALLOWED_NUMBERS: '15551234567',
     FULL_MODERATION_EXEMPT_PHONE_NUMBER: '15557654321',
     ALLOWED_LINK_SENDERS: '15551234567,15557654321',
-    PRIVATE_QA_ALLOWED_LIDS: '123456789012345@lid',
-    PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: '0093700000001',
-    UNRECOGNIZED_SETTING: 'must-not-be-loaded',
+    PRIVATE_QA_ALLOWED_NUMBERS: 'must-be-ignored',
+    PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: 'must-be-ignored-too',
   }));
 
   try {
     assert.deepEqual(readPrivateRuntimeConfig(dir), {
-      PRIVATE_QA_ALLOWED_NUMBERS: '15551234567',
       FULL_MODERATION_EXEMPT_PHONE_NUMBER: '15557654321',
       ALLOWED_LINK_SENDERS: '15551234567,15557654321',
-      PRIVATE_QA_ALLOWED_LIDS: '123456789012345@lid',
-      PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS: '0093700000001',
     });
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -44,14 +39,14 @@ test('reads only supported private settings from the server-side JSON file', () 
 
 test('non-empty environment values override the private file and blank values fall back to it', () => {
   const dir = makeConfigDirectory(JSON.stringify({
-    PRIVATE_QA_ALLOWED_NUMBERS: '15551234567',
+    FULL_MODERATION_EXEMPT_PHONE_NUMBER: '15551234567',
     ALLOWED_LINK_SENDERS: '15557654321',
   }));
 
   try {
     assert.equal(
-      getPrivateRuntimeValue('PRIVATE_QA_ALLOWED_NUMBERS', {
-        PRIVATE_QA_ALLOWED_NUMBERS: '  ',
+      getPrivateRuntimeValue('FULL_MODERATION_EXEMPT_PHONE_NUMBER', {
+        FULL_MODERATION_EXEMPT_PHONE_NUMBER: '  ',
       }, dir),
       '15551234567'
     );
@@ -63,9 +58,9 @@ test('non-empty environment values override the private file and blank values fa
     );
     assert.equal(
       loadRuntimeEnvironment({
-        PRIVATE_QA_ALLOWED_NUMBERS: '',
+        FULL_MODERATION_EXEMPT_PHONE_NUMBER: '',
         PORT: '5000',
-      }, dir).PRIVATE_QA_ALLOWED_NUMBERS,
+      }, dir).FULL_MODERATION_EXEMPT_PHONE_NUMBER,
       '15551234567'
     );
   } finally {
