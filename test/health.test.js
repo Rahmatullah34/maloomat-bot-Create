@@ -17,6 +17,7 @@ function makeState(overrides = {}) {
       security: {
         privateQaAllowedNumbers: new Set(),
         privateQaAllowedLids: new Set(),
+        privateFullServicesAllowedNumbers: new Set(),
       },
       warningMute: { enabled: true, durationMinutes: 120 },
       ai: { model: 'test-model', maxOutputTokens: 2000 },
@@ -56,6 +57,7 @@ test('does not claim private Q&A is enabled unless an allowlist is configured', 
       security: {
         privateQaAllowedNumbers: new Set(['1234567890']),
         privateQaAllowedLids: new Set(),
+        privateFullServicesAllowedNumbers: new Set(),
       },
     },
   }));
@@ -70,12 +72,13 @@ test('reports allowlist counts for private Q&A without returning sender identifi
       security: {
         privateQaAllowedNumbers: new Set(['15551234567']),
         privateQaAllowedLids: new Set(['123456789012345', '123456789012346']),
+        privateFullServicesAllowedNumbers: new Set(['93700000001']),
       },
     },
   }));
   assert.deepEqual(
     configured.readiness.privateQuestionAnswers.allowlistCounts,
-    { phoneNumbers: 1, lids: 2 },
+    { phoneNumbers: 1, lids: 2, fullServicesNumbers: 1 },
   );
   const output = JSON.stringify(configured);
   assert.equal(output.includes('15551234567'), false);
@@ -86,9 +89,11 @@ test('never returns secret values or phone/LID identifiers from its config', () 
   const state = makeState();
   state.runtimeConfig.security.privateQaAllowedNumbers.add('12025550100');
   state.runtimeConfig.security.privateQaAllowedLids.add('123456789012345');
+  state.runtimeConfig.security.privateFullServicesAllowedNumbers.add('93700000001');
   const output = JSON.stringify(buildHealthPayload(state));
   assert.equal(output.includes('12025550100'), false);
   assert.equal(output.includes('123456789012345'), false);
+  assert.equal(output.includes('93700000001'), false);
   assert.equal(output.includes('local-secret'), false);
   assert.equal(output.includes('env-secret'), false);
 });
