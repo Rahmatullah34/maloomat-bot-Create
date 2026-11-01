@@ -406,16 +406,20 @@ async function deleteGroupMessage(
       participantName ||
       'unknown';
 
-    // شریک throttle: که دې غړي ته په وروستيو ۳۰ ثانیو کې اخطار استول شوی وي،
-    // نوی اخطار نه استوي — دې سره د بوټ اخطارونه پخپله سپم نه کیږي.
-    if (!shouldSendWarningNow(jid, offenderJid)) {
-      return;
-    }
-
+    // هره سرغړونه باید ثبت شي؛ د ۳۰ ثانیو throttle یوازې د اخطار د متن تکرار محدودوي.
+    // پخوانی ترتیب د throttle له امله پرله‌پسې سرغړونې نه ثبتولې او درې اخطارونه نه بشپړېدل.
     const warningCount = recordViolationWarning(jid, offenderJid);
     if (warningCount >= 3 && WARNING_MUTE_ENABLED) {
       setTemporaryMute(jid, offenderJid, WARNING_MUTE_DURATION_MS);
     }
+
+    if (!shouldSendWarningNow(jid, offenderJid)) {
+      console.log(
+        'ℹ️ سرغړونه ثبت شوه؛ د اخطار د تکرار ۳۰ ثانییز محدودیت فعال دی؛ د سرغړونو شمېر=' + warningCount
+      );
+      return;
+    }
+
     const statusText = deleted
       ? 'د پیغام د حذف غوښتنه واستول شوه.'
       : 'د پیغام حذف تایید نه شو؛ د بوټ د مدیر اجازه او د اتصال حالت وګوره.';
@@ -428,7 +432,7 @@ async function deleteGroupMessage(
         : '\n\n⛔ دا په تېرو ۲۴ ساعتونو کې درېیم یا ورپسې اخطار دی. د ګروپ مدیر دې موضوع وڅېړي.')
       : '\n\n📌 اخطار: ' + warningCount + ' له ۳ څخه. مهرباني وکړئ قوانین مراعات کړئ.';
 
-    await safeSend(socket, jid, {
+    const warningResult = await safeSend(socket, jid, {
       text:
         `⚠️ محترم ${participantName} جانه!\n\n` +
         `${reason}\n` +
@@ -436,6 +440,11 @@ async function deleteGroupMessage(
         escalationText +
         '\n🤝 د بیا تکرار په صورت کې به د ګروپ مدیر ته د اقدام سپارښتنه وشي.',
     });
+    if (warningResult) {
+      console.log('✅ د ګروپ اخطار واستول شو؛ د سرغړونو شمېر=' + warningCount);
+    } else {
+      console.error('❌ د ګروپ اخطار ونه لېږل شو؛ د WhatsApp د لېږلو خطا پورته وګوره.');
+    }
   }
 }
 
