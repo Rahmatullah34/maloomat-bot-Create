@@ -326,6 +326,8 @@ test('هره سرغړونه د ۳۰ ثانییز اخطار throttle سربېر�
   const throttlePosition = section.indexOf('if (!shouldSendWarningNow(jid, offenderJid))');
   assert.ok(recordPosition >= 0, 'هره سرغړونه باید د اخطار په شمېر کې ثبت شي');
   assert.ok(throttlePosition > recordPosition, 'د اخطار throttle باید د سرغړونې تر ثبت وروسته وي');
+  assert.match(section, /if \(!warningCooldownPassed && warningCount < 3\)/,
+    'درېیمه سرغړونه باید د اخطار د ۳۰ ثانییز محدودیت له امله پټه نه شي');
   assert.match(section, /warningCount >= 3 && WARNING_MUTE_ENABLED/,
     'درېیمه سرغړونه باید د لنډمهاله محدودیت شرط پوره کړي');
   assert.match(section, /د ګروپ اخطار ونه لېږل شو/,
