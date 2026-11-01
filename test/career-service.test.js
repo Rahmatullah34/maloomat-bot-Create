@@ -4,7 +4,6 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   createCareerService,
-  isCvCommand,
   isCoverLetterCommand,
   isInterviewCommand,
   isMenuCommand,
@@ -12,17 +11,12 @@ const {
 
 function harness(overrides = {}) {
   const sends = [];
-  const calls = { cv: [], letters: [], questions: [], reviews: [] };
+  const calls = { letters: [], questions: [], reviews: [] };
   const safeSend = async (_socket, jid, payload) => {
     sends.push({ jid, payload });
     return true;
   };
   const service = createCareerService({
-    handlePrivateCvMessage: async (args) => {
-      calls.cv.push(args);
-      await args.safeSend(args.socket, args.jid, { text: 'CV prompt' });
-      return true;
-    },
     generateCoverLetter: async (data) => {
       calls.letters.push({ ...data });
       return overrides.generateCoverLetter
@@ -52,24 +46,22 @@ function harness(overrides = {}) {
   return { service, sends, calls, send, args };
 }
 
-test('recognizes the career menu and its three service commands', () => {
+test('recognizes the career menu and its two remaining service commands', () => {
   assert.equal(isMenuCommand('CAREER'), true);
-  assert.equal(isCvCommand('CV PLUS'), true);
   assert.equal(isCoverLetterCommand('Cover Letter'), true);
   assert.equal(isInterviewCommand('د مرکې تمرین'), true);
 });
 
-test('shows the private employment menu and starts the existing CV flow', async () => {
+test('shows the private employment menu without CV and starts Cover Letter as option one', async () => {
   const h = harness();
   await h.send('CAREER');
-  assert.match(h.sends.at(-1).payload.text, /CV پلس/);
+  assert.doesNotMatch(h.sends.at(-1).payload.text, /CV|Resume|سي وي|سی وي/);
   assert.match(h.sends.at(-1).payload.text, /Cover Letter/);
   assert.match(h.sends.at(-1).payload.text, /Interview/);
 
   await h.send('1');
-  assert.equal(h.calls.cv.length, 1);
-  assert.equal(h.calls.cv[0].text, 'CV');
-  assert.match(h.sends.at(-1).payload.text, /CV prompt/);
+  assert.match(h.sends.at(-1).payload.text, /د انګلیسي Cover Letter جوړول/);
+  assert.equal(h.calls.letters.length, 0);
 });
 
 test('collects cover-letter details in native language and retries without asking again', async () => {
@@ -167,5 +159,5 @@ test('CANCEL ends any career flow and returns the user to the menu state', async
   await h.send('CANCEL');
   assert.match(h.sends.at(-1).payload.text, /لغوه شو/);
   await h.send('hello');
-  assert.match(h.sends.at(-1).payload.text, /۱، ۲ یا ۳/);
+  assert.match(h.sends.at(-1).payload.text, /۱ یا ۲/);
 });
