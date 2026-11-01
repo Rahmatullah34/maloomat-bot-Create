@@ -102,11 +102,11 @@ const ENABLE_LINK_MODERATION = runtimeConfig.features.linkModeration;
 const PRIVATE_QA_ALLOWED_NUMBERS = runtimeConfig.security.privateQaAllowedNumbers;
 const PRIVATE_QA_ALLOWED_LIDS = runtimeConfig.security.privateQaAllowedLids;
 const PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS = runtimeConfig.security.privateFullServicesAllowedNumbers;
-const FULL_MODERATION_EXEMPT_PHONE_NUMBER = runtimeConfig.security.fullModerationExemptPhoneNumber;
+const FULL_MODERATION_EXEMPT_PHONE_NUMBERS = runtimeConfig.security.fullModerationExemptPhoneNumbers;
 
 function isFullModerationExemptSender(senderIdentifiers) {
-  return Boolean(FULL_MODERATION_EXEMPT_PHONE_NUMBER) &&
-    hasMatchingPhoneNumber(senderIdentifiers, FULL_MODERATION_EXEMPT_PHONE_NUMBER);
+  return FULL_MODERATION_EXEMPT_PHONE_NUMBERS.size > 0 &&
+    hasMatchingPhoneNumber(senderIdentifiers, [...FULL_MODERATION_EXEMPT_PHONE_NUMBERS]);
 }
 
 const WARNING_MUTE_ENABLED = runtimeConfig.warningMute.enabled;
@@ -744,7 +744,8 @@ async function startBot() {
             '؛ د محلي معلوماتو شمېر: ' + OFFLINE_KNOWLEDGE.length +
             '؛ د CV مجازې شخصي شمېرې: ' + PRIVATE_QA_ALLOWED_NUMBERS.size +
             '؛ د بشپړو شخصي خدمتونو مجازې شمېرې: ' + PRIVATE_FULL_SERVICES_ALLOWED_NUMBERS.size +
-            '؛ د مجاز LID پېژندپاڼو شمېر: ' + PRIVATE_QA_ALLOWED_LIDS.size
+            '؛ د مجاز LID پېژندپاڼو شمېر: ' + PRIVATE_QA_ALLOWED_LIDS.size +
+            '؛ د ګروپ له ټولو نظم ساتنیزو قواعدو معاف شمېرې: ' + FULL_MODERATION_EXEMPT_PHONE_NUMBERS.size
           );
 
           if (pairingTimer) {
