@@ -183,3 +183,12 @@ test('provides a book-specific fallback for Tafsir Yaseer authorship questions',
   assert.match(results[0].url, /pashtonlegacylibrarykandahar\.com/);
   assert.deepEqual(getCuratedFallbackSources('د زړه دنده څه ده؟'), []);
 });
+
+
+test('builds focused district-count queries for Afghanistan', () => {
+  const { buildSearchQueries } = require('../lib/web-search');
+  const queries = buildSearchQueries('افغانستان څو ولسوالۍ لري؟');
+  assert.equal(queries.length, 3);
+  assert.ok(queries.every(query => /Afghanistan/i.test(query)));
+  assert.ok(queries.every(query => /district/i.test(query)));
+});
