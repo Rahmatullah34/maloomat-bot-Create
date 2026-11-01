@@ -79,7 +79,6 @@ const {
   findGroupParticipant,
   isGroupAdminParticipant,
   getCanonicalParticipantIdentifier,
-  isGroupAdminSender,
 } = require('./lib/moderation');
 
 // د WhatsApp د اتصال ریښتیایي حالت؛ د /health په ځواب کې ښودل کیږي.
@@ -518,8 +517,7 @@ async function resolveGroupSender(socket, groupJid, senderIdentifiers) {
   };
 }
 
-// د لینک اجازه: لومړی د شمېرې/اجازه لرونکي ډومېن لېست وګوره، بیا د ګروپ رول.
-// د اډمینانو د لینکونو او سپم معافیت لپاره هماغه cache شوی metadata شریکېږي.
+// د لینک اجازه یوازې د ALLOWED_LINK_SENDERS او ALLOWED_LINK_DOMAINS له مخې ټاکل کېږي؛ د اډمین رول ځانګړې اجازه نه ده.
 async function isLinkPermittedForSender(_socket, _groupJid, text, senderIdentifiers) {
   const senders = [...new Set(
     (Array.isArray(senderIdentifiers) ? senderIdentifiers : [])
