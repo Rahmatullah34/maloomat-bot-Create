@@ -143,7 +143,8 @@ test('uses source-backed research for ordinary questions even when offline knowl
   assert.equal(context.state.summaries, 1);
   assert.match(context.messages[0], /د سرچینې پر بنسټ نوی ځواب/);
   assert.match(context.messages[0], /اړونده سرچینه/);
-  assert.match(context.messages[0], /زوړ محلي ځواب/);\n  assert.match(context.messages[0], /آنلاین نه دی تایید شوی/);
+  assert.match(context.messages[0], /زوړ محلي ځواب/);
+  assert.match(context.messages[0], /آنلاین نه دی تایید شوی/);
 });
 
 test('combines an AI summary with verified links when relevant search results exist', async () => {
