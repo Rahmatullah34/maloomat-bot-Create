@@ -7,12 +7,12 @@ const {
   createImageQuestionExtractor,
 } = require('../lib/image-question');
 
-test('recognizes normal and wrapped WhatsApp image messages', () => {
+test('recognizes normal, wrapped, and image-document WhatsApp messages', () => {
   assert.equal(isImageMessage({ imageMessage: { mimetype: 'image/jpeg' } }), true);
   assert.equal(isImageMessage({
     viewOnceMessageV2: { message: { imageMessage: { mimetype: 'image/jpeg' } } },
   }), true);
-  assert.equal(isImageMessage({ conversation: 'دا یوازې متن دی' }), false);
+  assert.equal(isImageMessage({ documentMessage: { mimetype: 'image/jpeg', fileName: 'photo.jpg' } }), true);\n  assert.equal(isImageMessage({ documentMessage: { mimetype: 'application/octet-stream', fileName: 'worksheet.png' } }), true);\n  assert.equal(isImageMessage({ documentMessage: { mimetype: 'application/pdf', fileName: 'worksheet.pdf' } }), false);\n  assert.equal(isImageMessage({ conversation: 'دا یوازې متن دی' }), false);
 });
 
 test('does not call media or OpenRouter services for ordinary text', async () => {
@@ -63,7 +63,7 @@ test('downloads an image, sends a multimodal OpenRouter request, and returns the
   assert.equal(typeof downloadOptions.reuploadRequest, 'function');
 });
 
-test('keeps the sender caption when no question is visible in the image', async () => {
+test('does not route the image caption as a normal question when no question is visible', async () => {
   const extract = createImageQuestionExtractor({
     downloadMediaMessage: async () => Buffer.from('fake-image'),
     readOpenRouterApiKey: () => 'test-key',
@@ -76,4 +76,41 @@ test('keeps the sender caption when no question is visible in the image', async 
     await extract({ message: { imageMessage: { mimetype: 'image/png' } } }, {}, 'دا وګوره'),
     'دا وګوره'
   );
+});
+
+
+test('downloads image documents and sends them to the vision model', async () => {
+  let downloadedMessage;
+  const photoDocument = {
+    key: { remoteJid: '12345@g.us' },
+    message: {
+      documentMessage: {
+        mimetype: 'application/octet-stream',
+        fileName: 'worksheet.jpg',
+      },
+    },
+  };
+  const extract = createImageQuestionExtractor({
+    downloadMediaMessage: async (message) => {
+      downloadedMessage = message;
+      return Buffer.from('fake-jpeg-bytes');
+    },
+    readOpenRouterApiKey: () => 'test-key',
+    fetchImpl: async (_url, options) => {
+      const payload = JSON.parse(options.body);
+      assert.match(payload.messages[0].content[1].image_url.url, /^data:image\\/jpeg;base64,/);
+      return {
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: 'دا د انځور پوښتنه ده؟' } }],
+        }),
+      };
+    },
+  });
+
+  assert.equal(
+    await extract(photoDocument, {}, 'دا وګوره'),
+    'دا وګوره\\n\\n📷 د انځور پوښتنه:\\nدا د انځور پوښتنه ده؟'
+  );
+  assert.equal(downloadedMessage, photoDocument);
 });
