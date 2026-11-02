@@ -8,6 +8,7 @@ const {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
+  downloadMediaMessage,
 } = require('@whiskeysockets/baileys');
 
 const P = require('pino');
@@ -19,6 +20,7 @@ const { runtimeConfig, readOpenRouterApiKey } = require('./lib/runtime-config');
 const { buildHealthPayload } = require('./lib/health');
 const { createAnswerEngine } = require('./lib/answer-engine');
 const { createMessageHandler } = require('./lib/message-handler');
+const { createImageQuestionExtractor } = require('./lib/image-question');
 const { normalizePashto } = require('./lib/moderation');
 const {
   OFFLINE_KNOWLEDGE,
@@ -98,6 +100,14 @@ const ENABLE_LINK_MODERATION = runtimeConfig.features.linkModeration;
 const PRIVATE_QA_ALLOWED_NUMBERS = runtimeConfig.security.privateQaAllowedNumbers;
 const PRIVATE_QA_ALLOWED_LIDS = runtimeConfig.security.privateQaAllowedLids;
 const FULL_MODERATION_EXEMPT_PHONE_NUMBER = runtimeConfig.security.fullModerationExemptPhoneNumber;
+
+// د انځور دننه پوښتنه د OpenRouter د وړیا vision ماډل په مرسته لوستل کېږي.
+const extractQuestionFromImage = createImageQuestionExtractor({
+  downloadMediaMessage,
+  readOpenRouterApiKey,
+  visionModel: runtimeConfig.ai.visionModel,
+  logger: P({ level: 'silent' }),
+});
 
 function isFullModerationExemptSender(senderIdentifiers) {
   return Boolean(FULL_MODERATION_EXEMPT_PHONE_NUMBER) &&
@@ -951,6 +961,7 @@ async function startBot() {
       PRIVATE_QA_ALLOWED_LIDS,
       rememberMessage,
       extractText,
+      extractQuestionFromImage,
       safeSend,
       answerWithKnowledge,
       isGroupAllowed,

@@ -26,6 +26,7 @@ function createHarness(overrides = {}) {
     PRIVATE_QA_ALLOWED_LIDS: new Set(),
     rememberMessage: () => true,
     extractText: () => 'د زړه دنده څه ده؟',
+    extractQuestionFromImage: async (_msg, _socket, caption) => caption,
     safeSend: async (_socket, jid, payload) => { state.sends.push({ jid, text: payload?.text || '' }); return true; },
     answerWithKnowledge: async (...args) => { state.answers.push(args); return true; },
     isGroupAllowed: () => true,
@@ -157,6 +158,39 @@ test('routes a regular allowed group question with its original message and ment
   assert.equal(h.state.remembered.length, 1);
   assert.equal(h.state.answers[0][5].message, original);
   assert.equal(h.state.answers[0][5].mentionJid, '15551230000@s.whatsapp.net');
+});
+
+test('routes a question read from a group image into the normal answer engine', async () => {
+  const photo = message('12345@g.us', '', {
+    message: { imageMessage: { mimetype: 'image/jpeg' } },
+  });
+  const h = createHarness({
+    extractText: () => '',
+    extractQuestionFromImage: async (incoming, _socket, caption) => {
+      assert.equal(incoming, photo);
+      assert.equal(caption, '');
+      return 'د عکس پوښتنه څه ده؟';
+    },
+  });
+
+  await h.handler({ type: 'notify', messages: [photo] });
+  assert.equal(h.state.answers.length, 1);
+  assert.equal(h.state.answers[0][3], 'د عکس پوښتنه څه ده؟');
+});
+
+test('explains when an image has no readable question instead of silently ignoring it', async () => {
+  const photo = message('12345@g.us', '', {
+    message: { imageMessage: { mimetype: 'image/jpeg' } },
+  });
+  const h = createHarness({
+    extractText: () => '',
+    extractQuestionFromImage: async () => '',
+  });
+
+  await h.handler({ type: 'notify', messages: [photo] });
+  assert.equal(h.state.answers.length, 0);
+  assert.equal(h.state.sends.length, 1);
+  assert.match(h.state.sends[0].text, /روښانه عکس/);
 });
 
 test('does not print private identifiers from the message handler source', () => {

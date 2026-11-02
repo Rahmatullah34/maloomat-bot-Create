@@ -39,6 +39,7 @@ test('loads feature flags, bounded limits, and private allowlists from environme
     ENABLE_LINK_MODERATION: 'yes',
     WARNING_MUTE_DURATION_MINUTES: '1800',
     AI_MAX_OUTPUT_TOKENS: '2600',
+    OPENROUTER_VISION_MODEL: 'google/gemma-4-26b-a4b-it:free',
     SERVER_PORT: '8088',
     PRIVATE_QA_ALLOWED_NUMBERS: '+1 (202) 555-0100, 0044123456789, bad',
     PRIVATE_QA_ALLOWED_LIDS: '123456789012345, 998877665544332@lid',
@@ -52,6 +53,7 @@ test('loads feature flags, bounded limits, and private allowlists from environme
   assert.equal(config.features.linkModeration, true);
   assert.equal(config.warningMute.durationMinutes, 1440);
   assert.equal(config.ai.maxOutputTokens, 2600);
+  assert.equal(config.ai.visionModel, 'google/gemma-4-26b-a4b-it:free');
   assert.equal(config.serverPort, 8088);
   assert.deepEqual([...config.security.privateQaAllowedNumbers], ['12025550100', '0044123456789']);
   assert.deepEqual([...config.security.privateQaAllowedLids], ['123456789012345', '998877665544332']);
@@ -79,6 +81,10 @@ test('normalizes the WhatsApp pairing phone and preserves the local-file fallbac
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('uses a free image-capable model by default when no vision model is configured', () => {
+  assert.equal(loadRuntimeConfig({}).ai.visionModel, 'openrouter/free');
 });
 
 test('does not embed a private phone or LID allowlist in the runtime defaults', () => {
