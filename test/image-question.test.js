@@ -12,7 +12,10 @@ test('recognizes normal, wrapped, and image-document WhatsApp messages', () => {
   assert.equal(isImageMessage({
     viewOnceMessageV2: { message: { imageMessage: { mimetype: 'image/jpeg' } } },
   }), true);
-  assert.equal(isImageMessage({ documentMessage: { mimetype: 'image/jpeg', fileName: 'photo.jpg' } }), true);\n  assert.equal(isImageMessage({ documentMessage: { mimetype: 'application/octet-stream', fileName: 'worksheet.png' } }), true);\n  assert.equal(isImageMessage({ documentMessage: { mimetype: 'application/pdf', fileName: 'worksheet.pdf' } }), false);\n  assert.equal(isImageMessage({ conversation: 'دا یوازې متن دی' }), false);
+  assert.equal(isImageMessage({ documentMessage: { mimetype: 'image/jpeg', fileName: 'photo.jpg' } }), true);
+  assert.equal(isImageMessage({ documentMessage: { mimetype: 'application/octet-stream', fileName: 'worksheet.png' } }), true);
+  assert.equal(isImageMessage({ documentMessage: { mimetype: 'application/pdf', fileName: 'worksheet.pdf' } }), false);
+  assert.equal(isImageMessage({ conversation: 'دا یوازې متن دی' }), false);
 });
 
 test('does not call media or OpenRouter services for ordinary text', async () => {
@@ -74,10 +77,9 @@ test('does not route the image caption as a normal question when no question is 
   });
   assert.equal(
     await extract({ message: { imageMessage: { mimetype: 'image/png' } } }, {}, 'دا وګوره'),
-    'دا وګوره'
+    ''
   );
 });
-
 
 test('downloads image documents and sends them to the vision model', async () => {
   let downloadedMessage;
@@ -98,7 +100,7 @@ test('downloads image documents and sends them to the vision model', async () =>
     readOpenRouterApiKey: () => 'test-key',
     fetchImpl: async (_url, options) => {
       const payload = JSON.parse(options.body);
-      assert.match(payload.messages[0].content[1].image_url.url, /^data:image\\/jpeg;base64,/);
+      assert.match(payload.messages[0].content[1].image_url.url, /^data:image\/jpeg;base64,/);
       return {
         ok: true,
         json: async () => ({
@@ -110,7 +112,7 @@ test('downloads image documents and sends them to the vision model', async () =>
 
   assert.equal(
     await extract(photoDocument, {}, 'دا وګوره'),
-    'دا وګوره\\n\\n📷 د انځور پوښتنه:\\nدا د انځور پوښتنه ده؟'
+    'دا وګوره\n\n📷 د انځور پوښتنه:\nدا د انځور پوښتنه ده؟'
   );
   assert.equal(downloadedMessage, photoDocument);
 });
