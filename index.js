@@ -100,6 +100,12 @@ const ENABLE_LINK_MODERATION = runtimeConfig.features.linkModeration;
 const PRIVATE_QA_ALLOWED_NUMBERS = runtimeConfig.security.privateQaAllowedNumbers;
 const PRIVATE_QA_ALLOWED_LIDS = runtimeConfig.security.privateQaAllowedLids;
 const FULL_MODERATION_EXEMPT_PHONE_NUMBER = runtimeConfig.security.fullModerationExemptPhoneNumber;
+const PRIVATE_QA_OWNER_NUMBER = String(FULL_MODERATION_EXEMPT_PHONE_NUMBER || '').replace(/\D/g, '');
+const PRIVATE_QA_OWNER_ONLY = Boolean(
+  PRIVATE_QA_OWNER_NUMBER.length >= 7 &&
+  PRIVATE_QA_ALLOWED_NUMBERS.size === 1 &&
+  PRIVATE_QA_ALLOWED_NUMBERS.has(PRIVATE_QA_OWNER_NUMBER)
+);
 
 // د انځور دننه پوښتنه د OpenRouter د وړیا vision ماډل په مرسته لوستل کېږي.
 const extractQuestionFromImage = createImageQuestionExtractor({
@@ -735,7 +741,7 @@ async function startBot() {
             '🛡️ د ګروپ مدیریت فعال دی: کنځل، دیني پارونه، د Status/چینل فارورډونه، چټک او تکراري سپم؛ لینک اخطارونه: ' + (ENABLE_LINK_MODERATION ? 'فعال' : 'بند') + '; ' +
             'د پوښتنو ځوابونه: ' + (ENABLE_GROUP_QA ? 'فعال' : 'موقتي بند') +
             '؛ ویب لټون: ' + (ENABLE_GROUP_QA && ENABLE_INTERNET_SEARCH ? 'فعال' : 'بند') +
-            '؛ شخصي چټ: ' + (ENABLE_PRIVATE_QA && ENABLE_GROUP_QA && (PRIVATE_QA_ALLOWED_NUMBERS.size > 0 || PRIVATE_QA_ALLOWED_LIDS.size > 0) ? 'فعال' : 'بند/اجازه‌لیست تنظیم کړئ') +
+            '؛ شخصي چټ: ' + (ENABLE_PRIVATE_QA && ENABLE_GROUP_QA && PRIVATE_QA_OWNER_ONLY ? 'فعال (یوازې مالک)' : 'بند/یوازې د مالک شمېره تنظیم کړئ') +
             '؛ د محلي معلوماتو شمېر: ' + OFFLINE_KNOWLEDGE.length
           );
 
@@ -959,6 +965,7 @@ async function startBot() {
       ENABLE_PRIVATE_QA,
       PRIVATE_QA_ALLOWED_NUMBERS,
       PRIVATE_QA_ALLOWED_LIDS,
+      FULL_MODERATION_EXEMPT_PHONE_NUMBER,
       rememberMessage,
       extractText,
       extractQuestionFromImage,
