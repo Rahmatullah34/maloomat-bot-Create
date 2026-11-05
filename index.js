@@ -35,6 +35,7 @@ const {
   searchInternet,
   requestsInternetSearch,
   isTimeSensitiveQuestion,
+  getAfghanistanDateContext,
   summarizeSourcesInPashto,
   formatVerifiedSourceLinks,
   formatInternetResults,
@@ -153,6 +154,7 @@ const answerWithKnowledge = createAnswerEngine({
   formatVerifiedSourceLinks,
   formatInternetResults,
   readOpenRouterApiKey,
+  getAfghanistanDateContext,
 });
 
 
