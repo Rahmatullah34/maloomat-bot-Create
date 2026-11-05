@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { canonicalResultUrl, canUseUnverifiedGeneralKnowledgeFallback } = require('../lib/research-engine');
+const { canonicalResultUrl, canUseUnverifiedGeneralKnowledgeFallback, getAfghanistanDateContext } = require('../lib/research-engine');
 
 test('canonicalizes web links and removes common tracking parameters', () => {
   assert.equal(
@@ -39,3 +39,19 @@ test('does not use a general-knowledge fallback for current updates or explicit 
   );
 });
 
+
+test('uses the real Asia/Kabul date and Afghan Solar Hijri calendar instead of a stale model date', () => {
+  const current = getAfghanistanDateContext(new Date('2026-11-05T15:07:00.000Z'));
+  assert.equal(current.timeZone, 'Asia/Kabul');
+  assert.equal(current.gregorianDate, '2026-11-05');
+  assert.equal(current.solarHijriDate, '۱۴۰۵ عقرب ۱۴');
+  assert.equal(current.localTime, '19:37');
+  assert.match(current.systemInstruction, /2026-11-05/);
+  assert.match(current.systemInstruction, /۱۴۰۵ عقرب ۱۴/);
+
+  // د کارن په بېلګه کې راغلې پخوانۍ نېټه باید د ۱۴۰۴ عقرب ۲۷ په توګه وپېژندل شي،
+  // خو د ۲۰۲۶ کال د نن ورځې په توګه هېڅکله ونه ښودل شي.
+  const oldExample = getAfghanistanDateContext(new Date('2025-11-18T06:30:00.000Z'));
+  assert.equal(oldExample.gregorianDate, '2025-11-18');
+  assert.equal(oldExample.solarHijriDate, '۱۴۰۴ عقرب ۲۷');
+});
