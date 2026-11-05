@@ -17,6 +17,7 @@ function makeState(overrides = {}) {
       security: {
         privateQaAllowedNumbers: new Set(),
         privateQaAllowedLids: new Set(),
+        fullModerationExemptPhoneNumber: '',
       },
       warningMute: { enabled: true, durationMinutes: 120 },
       ai: { model: 'test-model', maxOutputTokens: 2000 },
@@ -56,6 +57,7 @@ test('does not claim private Q&A is enabled unless an allowlist is configured', 
       security: {
         privateQaAllowedNumbers: new Set(['1234567890']),
         privateQaAllowedLids: new Set(),
+        fullModerationExemptPhoneNumber: '1234567890',
       },
     },
   }));
@@ -70,12 +72,13 @@ test('reports allowlist counts for private Q&A without returning sender identifi
       security: {
         privateQaAllowedNumbers: new Set(['15551234567']),
         privateQaAllowedLids: new Set(['123456789012345', '123456789012346']),
+        fullModerationExemptPhoneNumber: '15551234567',
       },
     },
   }));
   assert.deepEqual(
     configured.readiness.privateQuestionAnswers.allowlistCounts,
-    { phoneNumbers: 1, lids: 2 },
+    { phoneNumbers: 1, lidsAccepted: 0 },
   );
   const output = JSON.stringify(configured);
   assert.equal(output.includes('15551234567'), false);
