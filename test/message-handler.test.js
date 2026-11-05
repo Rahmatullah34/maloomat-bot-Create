@@ -24,6 +24,7 @@ function createHarness(overrides = {}) {
     ENABLE_PRIVATE_QA: true,
     PRIVATE_QA_ALLOWED_NUMBERS: new Set(),
     PRIVATE_QA_ALLOWED_LIDS: new Set(),
+    FULL_MODERATION_EXEMPT_PHONE_NUMBER: '',
     rememberMessage: () => true,
     extractText: () => 'د زړه دنده څه ده؟',
     extractQuestionFromImage: async (_msg, _socket, caption) => caption,
@@ -98,19 +99,18 @@ test('rejects unauthorized private chats without logging the sender identifier',
   }
   assert.equal(h.state.answers.length, 0);
   assert.equal(h.state.sends.length, 0);
-  assert.ok(logLines.some(line => /شخصي پیغام رد شو/.test(line)));
-  assert.ok(logLines.some(line => /د مجازو شمېرو شمېر=0/.test(line)));
-  assert.ok(logLines.some(line => /د مجاز LID شمېر=0/.test(line)));
-  assert.ok(logLines.some(line => /د پیغام د پېژندنې ډول=PN/.test(line)));
+  assert.ok(logLines.some(line => /شخصي چټ بند پاتې دی/.test(line)));
   assert.equal(logLines.some(line => line.includes('15551234567@s.whatsapp.net')), false);
 });
 
-test('returns only the sender\'s own private-chat identifier on the explicit myid command', async () => {
+test('does not allow a LID-only sender to bypass the owner phone restriction', async () => {
   const senderLid = '123456789012345@lid';
+  const owner = '15551234567';
   const h = createHarness({
     classifyRemoteJid: () => 'private',
-    PRIVATE_QA_ALLOWED_NUMBERS: new Set(),
-    PRIVATE_QA_ALLOWED_LIDS: new Set(),
+    PRIVATE_QA_ALLOWED_NUMBERS: new Set([owner]),
+    PRIVATE_QA_ALLOWED_LIDS: new Set(['123456789012345']),
+    FULL_MODERATION_EXEMPT_PHONE_NUMBER: owner,
     extractText: () => 'myid',
   });
 
@@ -122,14 +122,14 @@ test('returns only the sender\'s own private-chat identifier on the explicit myi
   });
 
   assert.equal(h.state.answers.length, 0);
-  assert.equal(h.state.sends.length, 1);
-  assert.ok(h.state.sends[0].text.includes(senderLid));
+  assert.equal(h.state.sends.length, 0);
 });
 
 test('answers a private question only when its normalized phone is allowlisted', async () => {
   const h = createHarness({
     classifyRemoteJid: () => 'private',
     PRIVATE_QA_ALLOWED_NUMBERS: new Set(['15551234567']),
+    FULL_MODERATION_EXEMPT_PHONE_NUMBER: '15551234567',
     extractText: () => 'دا ازمویښتي پوښتنه ده؟',
   });
   await h.handler({ type: 'notify', messages: [message('15551234567@s.whatsapp.net')] });
@@ -178,7 +178,7 @@ test('routes a question read from a group image into the normal answer engine', 
   assert.equal(h.state.answers[0][3], 'د عکس پوښتنه څه ده؟');
 });
 
-test('explains when an image has no readable question instead of silently ignoring it', async () => {
+test('silently ignores a group image when it contains no readable question', async () => {
   const photo = message('12345@g.us', '', {
     message: { imageMessage: { mimetype: 'image/jpeg' } },
   });
@@ -189,8 +189,7 @@ test('explains when an image has no readable question instead of silently ignori
 
   await h.handler({ type: 'notify', messages: [photo] });
   assert.equal(h.state.answers.length, 0);
-  assert.equal(h.state.sends.length, 1);
-  assert.match(h.state.sends[0].text, /روښانه عکس/);
+  assert.equal(h.state.sends.length, 0);
 });
 
 test('does not print private identifiers from the message handler source', () => {
