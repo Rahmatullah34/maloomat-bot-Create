@@ -90,12 +90,15 @@ test('rejects unauthorized private chats without logging the sender identifier',
     PRIVATE_QA_ALLOWED_LIDS: new Set(),
   });
   const savedLog = console.log;
+  const savedWarn = console.warn;
   const logLines = [];
   console.log = (...args) => logLines.push(args.join(' '));
+  console.warn = (...args) => logLines.push(args.join(' '));
   try {
     await h.handler({ type: 'notify', messages: [message('15551234567@s.whatsapp.net')] });
   } finally {
     console.log = savedLog;
+    console.warn = savedWarn;
   }
   assert.equal(h.state.answers.length, 0);
   assert.equal(h.state.sends.length, 0);
