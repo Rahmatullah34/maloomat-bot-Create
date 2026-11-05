@@ -51,6 +51,34 @@ function makeDependencies(overrides = {}) {
   return { dependencies, messages, deliveries, state };
 }
 
+test('answers current Afghanistan date questions deterministically from the Kabul clock', async () => {
+  const context = makeDependencies({
+    getAfghanistanDateContext: () => ({
+      gregorianDate: '2026-11-05',
+      gregorianLongDate: 'November 5, 2026',
+      solarHijriDate: '۱۴۰۵ عقرب ۱۴',
+      localTime: '19:37',
+    }),
+    readOpenRouterApiKey: () => 'test-key',
+  });
+  const answer = createAnswerEngine(context.dependencies);
+  const handled = await answer(
+    {},
+    'group@g.us',
+    'sender@s.whatsapp.net',
+    'نن کومه نېټه ده؟',
+    'member',
+  );
+
+  assert.equal(handled, true);
+  assert.equal(context.state.searches, 0);
+  assert.equal(context.state.summaries, 0);
+  assert.match(context.messages[0], /November 5, 2026/);
+  assert.match(context.messages[0], /2026-11-05/);
+  assert.match(context.messages[0], /۱۴۰۵ عقرب ۱۴/);
+  assert.match(context.messages[0], /19:37/);
+});
+
 test('politely declines restricted Taliban-related political questions before local answers, web search, or AI', async () => {
   const context = makeDependencies({
     readOpenRouterApiKey: () => 'test-key',
