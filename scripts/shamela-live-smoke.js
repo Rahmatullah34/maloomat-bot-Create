@@ -30,6 +30,7 @@ async function main() {
   console.log('لیکوال: ' + source.author);
   console.log('چاپي ټوک/مخ: ' + source.printedPage);
   console.log('د پاڼې متن ولوستل شو: هو');
+  console.log('د پاڼې د متن لنډ اقتباس: ' + source.snippet.replace(/\\s+/gu, ' ').slice(0, 700));
   console.log('سرچینه: ' + source.url);
 }
 
