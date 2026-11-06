@@ -69,6 +69,10 @@ test('searches Arabic terms and reads the printed page before returning a citati
   const client = createShamelaClient({
     fetchImpl,
     readOpenRouterApiKey: () => '',
+    rateLimitStorePath: require('node:path').join(
+      require('node:os').tmpdir(),
+      'maloomat-shamela-mcp-test-' + process.pid + '-' + Date.now() + '.json',
+    ),
     logger: { warn() {} },
   });
   const results = await client.searchQuestion('د ږیرې خریل څه حکم لري؟');
