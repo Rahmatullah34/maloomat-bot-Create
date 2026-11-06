@@ -23,6 +23,8 @@ test('recognizes health, religion, science, translation, and current topics', ()
   assert.equal(classifyQuestion('د لمانځه فرضونه کوم دي؟'), 'religion');
   assert.equal(classifyQuestion('ربا او دحرمت دلیل مفصل ځواب؟'), 'religion');
   assert.equal(classifyQuestion('ایمان څه ته وایي؟'), 'religion');
+  assert.equal(classifyQuestion('ږیره خریلي ته سلام اچول څه حکم لري؟'), 'religion');
+  assert.equal(classifyQuestion('د وعدې د اوړو معامله څنګه ده؟'), 'religion');
   assert.equal(classifyQuestion('DNA څه شی دی؟'), 'science');
   assert.equal(classifyQuestion('فیسبوک اکاونټ څنګه فعال کړم؟'), 'how_to');
   assert.equal(classifyQuestion('دا انګلیسي متن وژباړه'), 'translation');
