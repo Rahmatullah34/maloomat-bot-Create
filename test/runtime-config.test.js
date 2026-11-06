@@ -83,6 +83,11 @@ test('normalizes the WhatsApp pairing phone and preserves the local-file fallbac
   }
 });
 
+test('enables Shamela search by default and allows it to be disabled explicitly', () => {
+  assert.equal(loadRuntimeConfig({}).features.shamelaSearch, true);
+  assert.equal(loadRuntimeConfig({ ENABLE_SHAMELA_SEARCH: 'false' }).features.shamelaSearch, false);
+});
+
 test('uses a free image-capable model by default when no vision model is configured', () => {
   assert.equal(loadRuntimeConfig({}).ai.visionModel, 'openrouter/free');
 });

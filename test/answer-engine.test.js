@@ -12,6 +12,9 @@ function makeDependencies(overrides = {}) {
     ENABLE_GROUP_QA: true,
     ENABLE_INTERNET_SEARCH: true,
     ENABLE_AI_SUMMARIZATION: true,
+    ENABLE_SHAMELA_SEARCH: false,
+    searchShamela: async () => [],
+    formatShamelaResults: () => '',
     looksLikeQuestion: () => true,
     isSensitiveSafetyRequest: () => false,
     safeSend: async (_socket, _jid, payload, options) => {
@@ -198,6 +201,56 @@ test('labels a source-required answer as unverified when no online source was fo
   assert.match(context.messages[0], /عمومي تشریح/);
   assert.match(context.messages[0], /معتبره آنلاین سرچینه په دې ځل ونه موندل شوه/);
   assert.match(context.messages[0], /د آنلاین تایید شوې حوالې بدیل نه ده/);
+});
+
+test('uses Shamela passages and real book citations before other religious answer paths', async () => {
+  const context = makeDependencies({
+    ENABLE_SHAMELA_SEARCH: true,
+    ENABLE_INTERNET_SEARCH: false,
+    buildAnswerPlan: () => ({ category: 'religion', detailed: true }),
+    searchShamela: async () => [{
+      title: 'فتح الباري — لیکوال: ابن حجر — ټوک/مخ: 1/100 — اصلي متن',
+      provider: 'المكتبة الشاملة — Quran Gallery MCP',
+      url: 'https://qurangallery.com/maktabah/book/100/200',
+      snippet: 'هذا نص عربي موثق من صفحة الكتاب في المكتبة الشاملة ويحتوي على شرح المسألة ودليلها.',
+      pageRead: true,
+    }],
+    summarizeSourcesInPashto: async prompt => {
+      context.state.summaries += 1;
+      assert.match(prompt, /د هر قول ترڅنګ د کتاب نوم/);
+      return 'دا د الشاملة د کتابونو پر بنسټ ازمویښتي ځواب دی.';
+    },
+    formatShamelaResults: () => '\\n\\n1. فتح الباري — ابن حجر — 1/100\\nhttps://qurangallery.com/maktabah/book/100/200',
+  });
+  const answer = createAnswerEngine(context.dependencies);
+  const handled = await answer({}, 'group@g.us', 'sender@s.whatsapp.net', 'د دې دیني مسئلې حکم څه دی؟', 'member');
+
+  assert.equal(handled, true);
+  assert.equal(context.state.searches, 0);
+  assert.equal(context.state.summaries, 1);
+  assert.match(context.messages[0], /د الشاملة د کتابونو پر بنسټ ځواب/);
+  assert.match(context.messages[0], /ازمویښتي ځواب/);
+  assert.match(context.messages[0], /فتح الباري/);
+  assert.match(context.messages[0], /qurangallery.com/);
+  assert.match(context.messages[0], /حدیث صحت/);
+});
+
+test('does not invent a religious answer when Shamela and trusted fallback sources return no evidence', async () => {
+  const context = makeDependencies({
+    ENABLE_SHAMELA_SEARCH: true,
+    ENABLE_INTERNET_SEARCH: false,
+    buildAnswerPlan: () => ({ category: 'religion', detailed: true }),
+    requiresAuthoritativeReligiousSource: () => true,
+    readOpenRouterApiKey: () => 'test-key',
+    searchShamela: async () => [],
+  });
+  const answer = createAnswerEngine(context.dependencies);
+  const handled = await answer({}, 'group@g.us', 'sender@s.whatsapp.net', 'د حدیث کره حواله راکړه؟', 'member');
+
+  assert.equal(handled, true);
+  assert.equal(context.state.searches, 0);
+  assert.equal(context.state.summaries, 0);
+  assert.match(context.messages[0], /اټکلي ځواب نه وړاندې کوم/);
 });
 
 test('does not invent a precise religious answer when authoritative evidence is unavailable', async () => {

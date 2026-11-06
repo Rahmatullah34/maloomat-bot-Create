@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   isTrustedReligiousDomain,
+  isShamelaMcpSourceUrl,
   isTrustedReligiousSource,
   filterTrustedReligiousSources,
   hasTrustedReligiousReferenceText,
@@ -20,6 +21,22 @@ test('accepts established primary-text and academic reference domains', () => {
   assert.equal(isTrustedReligiousDomain('https://www.vatican.va/'), true);
   assert.equal(isTrustedReligiousDomain('https://www.sefaria.org/'), true);
   assert.equal(isTrustedReligiousDomain('https://pashtonlegacylibrarykandahar.com/books1/3974'), true);
+});
+
+test('accepts only canonical Quran Gallery Shamela book pages as library evidence', () => {
+  const url = 'https://qurangallery.com/maktabah/book/123/456';
+  const source = {
+    title: 'فتح الباري — ابن حجر — 1/100',
+    url,
+    snippet: 'هذا نص كاف من صفحة الكتاب في مكتبة الشاملة، وقد استخرج من المتن الأصلي في الصفحة المطبوعة.',
+  };
+  assert.equal(isShamelaMcpSourceUrl(url), true);
+  assert.equal(isTrustedReligiousDomain(url), true);
+  assert.equal(isTrustedReligiousSource(source, 'د حدیث کره حواله راکړه؟'), true);
+  assert.equal(hasTrustedReligiousReferenceText(url, 'د حدیث کره حواله راکړه؟'), true);
+  assert.equal(isShamelaMcpSourceUrl('https://qurangallery.com/about'), false);
+  assert.equal(isShamelaMcpSourceUrl('https://fake.qurangallery.com/maktabah/book/123/456'), false);
+  assert.equal(isShamelaMcpSourceUrl('http://qurangallery.com/maktabah/book/123/456'), false);
 });
 
 test('does not accept lookalike or unrelated domains', () => {

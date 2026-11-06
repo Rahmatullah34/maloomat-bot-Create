@@ -21,6 +21,7 @@ const { buildHealthPayload } = require('./lib/health');
 const { createAnswerEngine } = require('./lib/answer-engine');
 const { createMessageHandler } = require('./lib/message-handler');
 const { createImageQuestionExtractor } = require('./lib/image-question');
+const { createShamelaClient, formatShamelaResults } = require('./lib/shamela-mcp');
 const { normalizePashto } = require('./lib/moderation');
 const {
   OFFLINE_KNOWLEDGE,
@@ -101,6 +102,11 @@ const ENABLE_LINK_MODERATION = runtimeConfig.features.linkModeration;
 const PRIVATE_QA_ALLOWED_NUMBERS = runtimeConfig.security.privateQaAllowedNumbers;
 const PRIVATE_QA_ALLOWED_LIDS = runtimeConfig.security.privateQaAllowedLids;
 const FULL_MODERATION_EXEMPT_PHONE_NUMBER = runtimeConfig.security.fullModerationExemptPhoneNumber;
+const ENABLE_SHAMELA_SEARCH = runtimeConfig.features.shamelaSearch;
+const shamelaClient = createShamelaClient({
+  readOpenRouterApiKey,
+  model: runtimeConfig.ai.model,
+});
 const PRIVATE_QA_OWNER_NUMBER = String(FULL_MODERATION_EXEMPT_PHONE_NUMBER || '').replace(/\D/g, '');
 const PRIVATE_QA_OWNER_ONLY = Boolean(
   PRIVATE_QA_OWNER_NUMBER.length >= 7 &&
@@ -130,6 +136,9 @@ const answerWithKnowledge = createAnswerEngine({
   ENABLE_GROUP_QA,
   ENABLE_INTERNET_SEARCH,
   ENABLE_AI_SUMMARIZATION,
+  ENABLE_SHAMELA_SEARCH,
+  searchShamela: shamelaClient.searchQuestion,
+  formatShamelaResults,
   looksLikeQuestion,
   isSensitiveSafetyRequest,
   safeSend,
