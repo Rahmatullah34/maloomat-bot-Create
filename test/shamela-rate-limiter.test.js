@@ -99,6 +99,12 @@ test('stops at the conservative daily cap and resets only on the next UTC day', 
       error => error.code === 'SHAMELA_DAILY_LIMIT',
     );
 
+    const restartedSameDay = createShamelaRateLimiter(options);
+    await assert.rejects(
+      restartedSameDay.schedule(async () => 'still blocked after restart'),
+      error => error.code === 'SHAMELA_DAILY_LIMIT',
+    );
+
     clock += 24 * 60 * 60 * 1000;
     const nextDayLimiter = createShamelaRateLimiter(options);
     await nextDayLimiter.schedule(async () => 'next day');
