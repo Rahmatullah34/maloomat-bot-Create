@@ -80,7 +80,7 @@ test('searches Arabic terms and reads the printed page before returning a citati
   assert.deepEqual(calls[1].params.arguments, { unit: 'page', book_id: 111, page_id: 222 });
   assert.equal(results.length, 1);
   assert.match(results[0].title, /ابن حجر/);
-  assert.match(results[0].title, /1\\/ 100/);
+  assert.match(results[0].title, /1\/ 100/);
   assert.equal(results[0].pageRead, true);
   assert.match(results[0].snippet, /نص الصفحة الكامل/);
   assert.match(formatShamelaResults(results), /qurangallery.com/);
