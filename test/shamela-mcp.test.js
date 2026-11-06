@@ -21,6 +21,7 @@ test('has Arabic fallback terms for common Pashto religious queries', () => {
   assert.match(fallbackArabicSearchQuery('د ږیرې خریل څه حکم لري؟'), /حلق اللحية/);
   assert.match(fallbackArabicSearchQuery('وعده او تورق څه دي؟'), /التورق/);
   assert.equal(fallbackArabicSearchQuery('یوه نامعلومه موضوع'), '');
+  assert.match(fallbackArabicSearchQuery('د اسلام دین څه دی؟'), /تعريف الإسلام/);
 });
 
 test('extracts the body and footnotes separately from a Shamela page response', () => {
