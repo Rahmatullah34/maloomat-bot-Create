@@ -26,3 +26,5 @@ jobs:
           done
       - name: Run unit and regression tests
         run: npm test
+      - name: Verify a real Pashto question against the Shamela MCP server
+        run: node scripts/shamela-live-smoke.js
