@@ -4,15 +4,15 @@ The bot supports these Pashto requests in both allowed group chats and the owner
 
 ## Text services
 
-Creative writing and image generation activate only when a message begins with one of these exact prefixes:
+Creative writing and image generation activate only when a message begins with one of these exact prefixes and ends with a question mark (`؟` or `?`). Without the final question mark, the command is ignored.
 
-- Simple writing: **لیکنه: د چاپېریال په اړه یوه ساده لیکنه ولیکه**
-- Academic article: **مقاله: د تعلیم پر اهمیت علمي مقاله ولیکه**
-- Start a book: **کتاب: د پښتو ژبې په اړه کتاب پیل کړه**
-- Continue a book: reply to the latest chapter and write **کتاب: بل فصل ولیکه**
-- Image: **عکس: د افغانستان د غرونو یو ښکلی انځور جوړ کړه**
+- Simple writing: **لیکنه: د چاپېریال په اړه یوه ساده لیکنه ولیکه؟**
+- Academic article: **مقاله: د تعلیم پر اهمیت علمي مقاله ولیکه؟**
+- Start a book: **کتاب: د پښتو ژبې په اړه کتاب پیل کړه؟**
+- Continue a book: reply to the latest chapter and write **کتاب: بل فصل ولیکه؟**
+- Image: **عکس: د افغانستان د غرونو یو ښکلی انځور جوړ کړه؟**
 
-Ordinary text, ordinary questions, and received images do not activate creative generation. The service guide remains available with **خدمتونه**.
+Ordinary text, ordinary questions, and received images do not activate creative generation. A prefix without a final question mark does not activate it either. The service guide remains available with **خدمتونه**.
 
 When referring to an earlier answer, use WhatsApp Reply. The bot keeps the original subject and up to five follow-up turns, isolated by chat and sender.
 
@@ -20,7 +20,7 @@ Text creation uses the existing OPENROUTER_API_KEY with OPENROUTER_CREATIVE_MODE
 
 ## Image generation
 
-Example: reply to a previous topic with **عکس: د همدې موضوع عکس جوړ کړه**
+Example: reply to a previous topic with **عکس: د همدې موضوع عکس جوړ کړه؟**
 
 Image generation uses Cloudflare Workers AI with @cf/black-forest-labs/flux-1-schnell. It is optional and stays disabled until both Cloudflare values are present in the hosting environment:
 
