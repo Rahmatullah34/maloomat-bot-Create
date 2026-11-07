@@ -100,6 +100,17 @@ test('loads OpenRouter API credentials from private-runtime-config.json and lets
   }
 });
 
+test('selects Cloudflare Workers AI for staged tests and defaults safely to OpenRouter', () => {
+  const cloudflare = loadRuntimeConfig({
+    AI_PROVIDER: 'cloudflare',
+    CLOUDFLARE_AI_TEXT_MODEL: '@cf/zai-org/glm-4.7-flash',
+  });
+  assert.equal(cloudflare.ai.provider, 'cloudflare');
+  assert.equal(cloudflare.ai.cloudflareTextModel, '@cf/zai-org/glm-4.7-flash');
+  assert.equal(loadRuntimeConfig({}).ai.provider, 'openrouter');
+  assert.equal(loadRuntimeConfig({ AI_PROVIDER: 'unknown' }).ai.provider, 'openrouter');
+});
+
 test('normalizes the WhatsApp pairing phone and preserves the local-file fallback', () => {
   assert.equal(readWhatsAppPhone({ WHATSAPP_PHONE: '+1 (202) 555-0100' }, '/missing'), '12025550100');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'maloomat-phone-'));
