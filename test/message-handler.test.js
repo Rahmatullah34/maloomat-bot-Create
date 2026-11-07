@@ -14,6 +14,7 @@ function createHarness(overrides = {}) {
     remembered: [],
     burstCalls: 0,
     badWordCalls: 0,
+    persistedLids: [],
   };
   const socket = { ev: {} };
   const dependencies = {
@@ -24,6 +25,9 @@ function createHarness(overrides = {}) {
     ENABLE_PRIVATE_QA: true,
     PRIVATE_QA_ALLOWED_NUMBERS: new Set(),
     PRIVATE_QA_ALLOWED_LIDS: new Set(),
+    PRIVATE_QA_OWNER_CLAIM_CODE: '',
+    PRIVATE_QA_OWNER_CLAIMED: false,
+    persistPrivateOwnerLid: async lid => { state.persistedLids.push(lid); },
     FULL_MODERATION_EXEMPT_PHONE_NUMBER: '',
     rememberMessage: () => true,
     extractText: () => 'د زړه دنده څه ده؟',
@@ -106,7 +110,7 @@ test('rejects unauthorized private chats without logging the sender identifier',
   assert.equal(logLines.some(line => line.includes('15551234567@s.whatsapp.net')), false);
 });
 
-test('does not allow a LID-only sender to bypass the owner phone restriction', async () => {
+test('allows a LID-only private sender only when that exact LID is owner-allowlisted', async () => {
   const senderLid = '123456789012345@lid';
   const owner = '15551234567';
   const h = createHarness({
@@ -114,18 +118,47 @@ test('does not allow a LID-only sender to bypass the owner phone restriction', a
     PRIVATE_QA_ALLOWED_NUMBERS: new Set([owner]),
     PRIVATE_QA_ALLOWED_LIDS: new Set(['123456789012345']),
     FULL_MODERATION_EXEMPT_PHONE_NUMBER: owner,
-    extractText: () => 'myid',
+    extractText: () => 'دا ازمویښتي پوښتنه ده؟',
   });
 
   await h.handler({
     type: 'notify',
-    messages: [message(senderLid, 'myid', {
+    messages: [message(senderLid, 'دا ازمویښتي پوښتنه ده؟', {
       key: { remoteJid: senderLid, id: 'test-message', participant: null, participantAlt: undefined, remoteJidAlt: undefined, fromMe: false },
     })],
   });
 
+  assert.equal(h.state.answers.length, 1);
+  assert.equal(h.state.answers[0][3], 'دا ازمویښتي پوښتنه ده؟');
+});
+
+test('claims and persists the owner LID with the one-time private claim code', async () => {
+  const senderLid = '123456789012345@lid';
+  const owner = '15551234567';
+  const claimCode = 'MAL-OWNER-CLAIM-7KQ9-M4X2-P8VD-R6TN';
+  const allowedLids = new Set();
+  const h = createHarness({
+    classifyRemoteJid: () => 'private',
+    PRIVATE_QA_ALLOWED_NUMBERS: new Set([owner]),
+    PRIVATE_QA_ALLOWED_LIDS: allowedLids,
+    PRIVATE_QA_OWNER_CLAIM_CODE: claimCode,
+    PRIVATE_QA_OWNER_CLAIMED: false,
+    FULL_MODERATION_EXEMPT_PHONE_NUMBER: owner,
+    extractText: () => claimCode.toLowerCase(),
+  });
+
+  await h.handler({
+    type: 'notify',
+    messages: [message(senderLid, claimCode, {
+      key: { remoteJid: senderLid, id: 'owner-claim', participant: null, participantAlt: undefined, remoteJidAlt: undefined, fromMe: false },
+    })],
+  });
+
+  assert.deepEqual(h.state.persistedLids, ['123456789012345']);
+  assert.equal(allowedLids.has('123456789012345'), true);
   assert.equal(h.state.answers.length, 0);
-  assert.equal(h.state.sends.length, 0);
+  assert.equal(h.state.sends.length, 1);
+  assert.match(h.state.sends[0].text, /شخصي چټ.*فعال شو/);
 });
 
 test('answers a private question only when its normalized phone is allowlisted', async () => {
