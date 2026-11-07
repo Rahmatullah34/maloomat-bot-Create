@@ -251,3 +251,48 @@ test('mentions the questioner and quotes the original group message for answer-e
   assert.match(context.deliveries[0].payload.text, /^@15551230000\s/);
   assert.equal(context.deliveries[0].options.quoted, originalMessage);
 });
+
+test('uses the quoted message as context for successive WhatsApp follow-up replies', async () => {
+  const searchedQuestions = [];
+  const context = makeDependencies({
+    searchInternet: async question => {
+      searchedQuestions.push(question);
+      return [];
+    },
+  });
+  const answer = createAnswerEngine(context.dependencies);
+
+  await answer(
+    {},
+    '12345@g.us',
+    '15551230000@s.whatsapp.net',
+    'ولې؟',
+    'ازموینه',
+    {
+      message: { key: { id: 'reply-one' } },
+      quotedText: 'د زړه دنده څه ده؟',
+    },
+  );
+  await answer(
+    {},
+    '12345@g.us',
+    '15551230000@s.whatsapp.net',
+    'دا څنګه کار کوي؟',
+    'ازموینه',
+    {
+      message: { key: { id: 'reply-two' } },
+      quotedText: 'زړه وینه ټول بدن ته پمپ کوي.',
+    },
+  );
+
+  assert.equal(searchedQuestions.length, 2);
+  assert.match(searchedQuestions[0], /د WhatsApp د مخکیني پیغام متن/);
+  assert.match(searchedQuestions[0], /د زړه دنده څه ده؟/);
+  assert.match(searchedQuestions[0], /د کارونکي نوې پوښتنه یا پیغام:\nولې؟/);
+  assert.match(searchedQuestions[1], /زړه وینه ټول بدن ته پمپ کوي\./);
+  assert.match(searchedQuestions[1], /د کارونکي نوې پوښتنه یا پیغام:\nدا څنګه کار کوي؟/);
+  assert.equal(context.deliveries.length, 2);
+  assert.equal(context.deliveries[0].options.quoted.key.id, 'reply-one');
+  assert.equal(context.deliveries[1].options.quoted.key.id, 'reply-two');
+});
+
