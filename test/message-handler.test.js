@@ -232,3 +232,81 @@ test('does not print private identifiers from the message handler source', () =>
   const handlerSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'message-handler.js'), 'utf8');
   assert.doesNotMatch(handlerSrc, /JID='\s*\+\s*groupJid/);
 });
+
+test('passes quoted WhatsApp reply context on every group follow-up', async () => {
+  const h = createHarness({
+    extractText: content => String(
+      content?.extendedTextMessage?.text || content?.conversation || ''
+    ).trim(),
+  });
+  const firstReply = message('12345@g.us', 'ولې؟', {
+    key: { id: 'group-reply-1' },
+    message: {
+      extendedTextMessage: {
+        text: 'ولې؟',
+        contextInfo: { quotedMessage: { conversation: 'د زړه دنده څه ده؟' } },
+      },
+    },
+  });
+  const secondReply = message('12345@g.us', 'دا څنګه کار کوي؟', {
+    key: { id: 'group-reply-2' },
+    message: {
+      extendedTextMessage: {
+        text: 'دا څنګه کار کوي؟',
+        contextInfo: { quotedMessage: { conversation: 'زړه وینه ټول بدن ته پمپ کوي.' } },
+      },
+    },
+  });
+
+  await h.handler({ type: 'notify', messages: [firstReply] });
+  await h.handler({ type: 'notify', messages: [secondReply] });
+
+  assert.equal(h.state.answers.length, 2);
+  assert.equal(h.state.answers[0][3], 'ولې؟');
+  assert.equal(h.state.answers[0][5].quotedText, 'د زړه دنده څه ده؟');
+  assert.equal(h.state.answers[1][3], 'دا څنګه کار کوي؟');
+  assert.equal(h.state.answers[1][5].quotedText, 'زړه وینه ټول بدن ته پمپ کوي.');
+});
+
+test('passes quoted WhatsApp reply context on every owner private-chat follow-up', async () => {
+  const owner = '15551234567';
+  const ownerLid = '123456789012345';
+  const remoteJid = ownerLid + '@lid';
+  const h = createHarness({
+    PRIVATE_QA_ALLOWED_NUMBERS: new Set([owner]),
+    PRIVATE_QA_ALLOWED_LIDS: new Set([ownerLid]),
+    FULL_MODERATION_EXEMPT_PHONE_NUMBER: owner,
+    extractText: content => String(
+      content?.extendedTextMessage?.text || content?.conversation || ''
+    ).trim(),
+  });
+  const makePrivateReply = (id, text, quotedText) => message(remoteJid, text, {
+    key: {
+      id,
+      remoteJid,
+      participant: null,
+      participantAlt: undefined,
+      remoteJidAlt: undefined,
+    },
+    message: {
+      extendedTextMessage: {
+        text,
+        contextInfo: { quotedMessage: { conversation: quotedText } },
+      },
+    },
+  });
+
+  await h.handler({
+    type: 'notify',
+    messages: [makePrivateReply('private-reply-1', 'ولې؟', 'د زړه دنده څه ده؟')],
+  });
+  await h.handler({
+    type: 'notify',
+    messages: [makePrivateReply('private-reply-2', 'دا څنګه کار کوي؟', 'زړه وینه ټول بدن ته پمپ کوي.')],
+  });
+
+  assert.equal(h.state.answers.length, 2);
+  assert.equal(h.state.answers[0][5].quotedText, 'د زړه دنده څه ده؟');
+  assert.equal(h.state.answers[1][5].quotedText, 'زړه وینه ټول بدن ته پمپ کوي.');
+});
+
