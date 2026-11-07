@@ -203,6 +203,20 @@ test('handles group-rules commands before burst, bad-word, and link moderation',
   assert.equal(h.state.answers.length, 0);
 });
 
+test('keeps group moderation active for messages without a question mark', async () => {
+  const h = createHarness({
+    extractText: () => 'دا عادي متن دی، پوښتنه نه ده',
+    containsBadWord: () => true,
+  });
+  await h.handler({
+    type: 'notify',
+    messages: [message('12345@g.us', 'دا عادي متن دی، پوښتنه نه ده')],
+  });
+  assert.equal(h.state.deletions.length, 1);
+  assert.equal(h.state.answers.length, 0);
+  assert.equal(h.state.sends.length, 0);
+});
+
 test('routes a regular allowed group question with its original message and mentionable sender JID', async () => {
   const h = createHarness();
   const original = message('12345@g.us');
