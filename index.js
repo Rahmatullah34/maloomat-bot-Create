@@ -100,6 +100,8 @@ const ENABLE_AI_SUMMARIZATION = runtimeConfig.features.aiSummarization;
 const ENABLE_LINK_MODERATION = runtimeConfig.features.linkModeration;
 const PRIVATE_QA_ALLOWED_NUMBERS = runtimeConfig.security.privateQaAllowedNumbers;
 const PRIVATE_QA_ALLOWED_LIDS = runtimeConfig.security.privateQaAllowedLids;
+const PRIVATE_QA_OWNER_CLAIM_CODE = runtimeConfig.security.privateQaOwnerClaimCode;
+const PRIVATE_QA_OWNER_CLAIMED = runtimeConfig.security.privateQaOwnerClaimed;
 const FULL_MODERATION_EXEMPT_PHONE_NUMBER = runtimeConfig.security.fullModerationExemptPhoneNumber;
 const PRIVATE_QA_OWNER_NUMBER = String(FULL_MODERATION_EXEMPT_PHONE_NUMBER || '').replace(/\D/g, '');
 const PRIVATE_QA_OWNER_ONLY = Boolean(
@@ -967,6 +969,8 @@ async function startBot() {
       ENABLE_PRIVATE_QA,
       PRIVATE_QA_ALLOWED_NUMBERS,
       PRIVATE_QA_ALLOWED_LIDS,
+      PRIVATE_QA_OWNER_CLAIM_CODE,
+      PRIVATE_QA_OWNER_CLAIMED,
       FULL_MODERATION_EXEMPT_PHONE_NUMBER,
       rememberMessage,
       extractText,
