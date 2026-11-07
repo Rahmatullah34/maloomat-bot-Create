@@ -390,15 +390,17 @@ test('does not send an ordinary article request to the creative generator withou
     },
   });
   const answer = createAnswerEngine(context.dependencies);
-  await answer(
+  const handled = await answer(
     {},
     'group@g.us',
     'sender@s.whatsapp.net',
     'د چاپېریال په اړه مقاله ولیکه',
     'member',
   );
+  assert.equal(handled, false);
   assert.equal(creativeCalls, 0);
   assert.equal(context.state.searches, 0);
+  assert.equal(context.messages.length, 0);
 });
 
 test('generates a requested reply-based image and quotes the triggering WhatsApp message', async () => {
