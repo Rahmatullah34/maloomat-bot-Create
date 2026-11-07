@@ -77,6 +77,32 @@ test('uses configured Cloudflare AI for no-source fallback without an OpenRouter
   assert.match(context.messages[0], /Cloudflare د بدیل ځواب/);
 });
 
+test('uses configured Cloudflare AI for no-source fallback without an OpenRouter key', async () => {
+  let summaryCalls = 0;
+  const context = makeDependencies({
+    isAIConfigured: () => true,
+    readOpenRouterApiKey: () => '',
+    summarizeSourcesInPashto: async () => {
+      summaryCalls += 1;
+      return 'دا د Cloudflare د بدیل ځواب ازموینه ده.';
+    },
+  });
+  const answer = createAnswerEngine(context.dependencies);
+
+  const handled = await answer(
+    {},
+    'group@g.us',
+    'sender@s.whatsapp.net',
+    'Cloudflare Workers AI څنګه کار کوي؟',
+    'member',
+  );
+
+  assert.equal(handled, true);
+  assert.equal(context.state.searches, 1);
+  assert.equal(summaryCalls, 1);
+  assert.match(context.messages[0], /Cloudflare د بدیل ځواب/);
+});
+
 test('answers current Afghanistan date questions deterministically from the Kabul clock', async () => {
   const context = makeDependencies({
     getAfghanistanDateContext: () => ({
