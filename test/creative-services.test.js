@@ -28,7 +28,7 @@ test('detects simple Pashto writing requests and keeps quoted topic context', ()
 });
 
 test('detects academic article requests and extracts an explicit topic', () => {
-  const request = detectCreativeRequest('د تعلیم په ارزښت علمي مقاله ولیکه');
+  const request = detectCreativeRequest('د تعلیم په اړه علمي مقاله ولیکه');
   assert.equal(request.kind, 'article');
   assert.equal(request.style, 'academic');
   assert.equal(request.topic, 'تعلیم');
