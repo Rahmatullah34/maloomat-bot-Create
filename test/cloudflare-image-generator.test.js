@@ -22,7 +22,7 @@ test('calls the Cloudflare FLUX model and returns the generated image buffer', a
   });
 
   const result = await generate('A school library illustration', 'group|sender');
-  assert.match(calledUrl, /@cf/black-forest-labs/flux-1-schnell);
+  assert.ok(calledUrl.includes('/ai/run/@cf/black-forest-labs/flux-1-schnell'));
   assert.equal(calledBody.prompt, 'A school library illustration');
   assert.equal(calledBody.steps, 4);
   assert.equal(result.buffer.toString(), 'test-image');
