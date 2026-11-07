@@ -163,22 +163,28 @@ test('isReactionMessage: لایکونه اخطار نه اخلي او نقل ش�
   assert.equal(isReactionMessage({ conversation: 'عادي پیغام' }), false);
 });
 
-test('looksLikeQuestion: د پای پوښتنیزه نښه لازمي ده', () => {
+test('looksLikeQuestion: نښه یا روښانه پوښتنیز/غوښتنیز عبارت', () => {
   assert.equal(looksLikeQuestion('دا څه دی؟'), true);
   assert.equal(looksLikeQuestion('د انسان د زړه دنده څه ده؟'), true);
   assert.equal(looksLikeQuestion('کله چې نبي کریم ﷺ جهاد ته تلو، زغره یې چا جوړه کړې وه؟'), true);
   assert.equal(looksLikeQuestion('د زغرې په اړه معلومات راکړه؟'), true);
   assert.equal(looksLikeQuestion('how does it work?'), true);
   assert.equal(looksLikeQuestion('دا څه دی?'), true);
-  assert.equal(looksLikeQuestion('د انسان د زړه دنده څه ده'), false);
-  assert.equal(looksLikeQuestion('کله چې نبي کریم ﷺ جهاد ته تلو، زغره یې چا جوړه کړې وه'), false);
-  assert.equal(looksLikeQuestion('د زغرې په اړه معلومات راکړه'), false);
-  assert.equal(looksLikeQuestion('how does it work'), false);
+
+  // روښانه پوښتنې او معلوماتي غوښتنې د نښې پرته هم ځواب ته لېږل کېږي.
+  assert.equal(looksLikeQuestion('د انسان د زړه دنده څه ده'), true);
+  assert.equal(looksLikeQuestion('کله چې نبي کریم ﷺ جهاد ته تلو، زغره یې چا جوړه کړې وه'), true);
+  assert.equal(looksLikeQuestion('د زغرې په اړه معلومات راکړه'), true);
+  assert.equal(looksLikeQuestion('how does it work'), true);
+  assert.equal(looksLikeQuestion('explain photosynthesis'), true);
+
+  // عادي خبرې او زماني جملې لا هم د پوښتنې په توګه نه پېژندل کېږي.
   assert.equal(looksLikeQuestion('دا پوښتنه؟ خو دلته نور متن شته'), false);
   assert.equal(looksLikeQuestion('سلام علیکم'), false);
   assert.equal(looksLikeQuestion('نن هوا ښه ده'), false);
   assert.equal(looksLikeQuestion('خلک وایي چې سبا باران دی'), false);
   assert.equal(looksLikeQuestion('کله چې زه ماشوم وم، هلته مې ژوند کاوه'), false);
+  assert.equal(looksLikeQuestion('I know what you mean'), false);
 });
 
 test('temporary mute: د درېیم اخطار لپاره دوه ساعته محدودیت ساتي', () => {
