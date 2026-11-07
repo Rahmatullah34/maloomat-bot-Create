@@ -12,6 +12,7 @@ const {
   normalizePhoneNumber,
   normalizeLid,
   readOpenRouterApiKey,
+  readCloudflareApiToken,
   readWhatsAppPhone,
 } = require('../lib/runtime-config');
 
@@ -58,6 +59,17 @@ test('loads feature flags, bounded limits, and private allowlists from environme
   assert.deepEqual([...config.security.privateQaAllowedNumbers], ['12025550100', '0044123456789']);
   assert.deepEqual([...config.security.privateQaAllowedLids], ['123456789012345', '998877665544332']);
   assert.equal(config.security.fullModerationExemptPhoneNumber, '12025550100');
+});
+
+test('loads the free creative model and optional Cloudflare image settings', () => {
+  const config = loadRuntimeConfig({
+    OPENROUTER_CREATIVE_MODEL: 'openrouter/free',
+    CLOUDFLARE_ACCOUNT_ID: 'example-account',
+    CLOUDFLARE_IMAGE_MODEL: '@cf/black-forest-labs/flux-1-schnell',
+  });
+  assert.equal(config.ai.creativeModel, 'openrouter/free');
+  assert.equal(config.image.cloudflareAccountId, 'example-account');
+  assert.equal(config.image.cloudflareModel, '@cf/black-forest-labs/flux-1-schnell');
 });
 
 test('uses the environment API key first and can read a locally ignored key file', () => {
@@ -110,4 +122,10 @@ test('loads private security settings from the server-side JSON fallback', () =>
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+
+test('reads the Cloudflare API token from the process environment without persisting it in config', () => {
+  assert.equal(readCloudflareApiToken({ CLOUDFLARE_API_TOKEN: ' cloudflare-secret ' }), 'cloudflare-secret');
+  assert.equal(readCloudflareApiToken({}), '');
 });
