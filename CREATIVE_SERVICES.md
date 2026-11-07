@@ -16,7 +16,7 @@ Ordinary text, ordinary questions, and received images do not activate creative 
 
 When referring to an earlier answer, use WhatsApp Reply. The bot keeps the original subject and up to five follow-up turns, isolated by chat and sender.
 
-Text creation uses the existing OPENROUTER_API_KEY with OPENROUTER_CREATIVE_MODEL, defaulting to openrouter/free. The bot limits creative requests to 30 attempts per running process/day to preserve quota. OpenRouter's free-model allowance is rate-limited (currently 50 requests/day and 20 requests/minute for free variants); provider-side limits still apply. The local counter resets when the process restarts, but the provider quota does not. See https://openrouter.ai/collections/free-models and https://openrouter.ai/pricing.
+Text creation uses OPENROUTER_API_KEY with OPENROUTER_CREATIVE_MODEL, defaulting to openrouter/free. On SillyDev, the key may be set as an environment secret or stored in the ignored server-side private-runtime-config.json under OPENROUTER_API_KEY; it is never included in /health output. The bot limits creative requests to 30 attempts per running process/day to preserve quota. OpenRouter's free-model allowance is rate-limited (currently 50 requests/day and 20 requests/minute for free variants); provider-side limits still apply. The local counter resets when the process restarts, but the provider quota does not. See https://openrouter.ai/collections/free-models and https://openrouter.ai/pricing.
 
 ## Image generation
 
