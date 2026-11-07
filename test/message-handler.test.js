@@ -174,6 +174,25 @@ test('answers a private question only when its normalized phone is allowlisted',
   assert.equal(h.state.burstCalls, 0);
 });
 
+test('silently ignores an ordinary private image without a readable question', async () => {
+  const owner = '15551234567';
+  const h = createHarness({
+    classifyRemoteJid: () => 'private',
+    PRIVATE_QA_ALLOWED_NUMBERS: new Set([owner]),
+    FULL_MODERATION_EXEMPT_PHONE_NUMBER: owner,
+    extractText: () => '',
+    extractQuestionFromImage: async () => '',
+  });
+  await h.handler({
+    type: 'notify',
+    messages: [message(owner + '@s.whatsapp.net', '', {
+      message: { imageMessage: { mimetype: 'image/jpeg' } },
+    })],
+  });
+  assert.equal(h.state.answers.length, 0);
+  assert.equal(h.state.sends.length, 0);
+});
+
 test('handles group-rules commands before burst, bad-word, and link moderation', async () => {
   const h = createHarness({ isGroupRulesCommand: () => true, extractText: () => 'قوانین' });
   await h.handler({ type: 'notify', messages: [message('12345@g.us')] });
