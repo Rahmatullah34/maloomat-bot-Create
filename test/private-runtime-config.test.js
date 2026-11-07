@@ -25,6 +25,8 @@ test('reads only supported private settings from the server-side JSON file', () 
     FULL_MODERATION_EXEMPT_PHONE_NUMBER: '15557654321',
     ALLOWED_LINK_SENDERS: '15551234567,15557654321',
     PRIVATE_QA_ALLOWED_LIDS: '123456789012345@lid',
+    CLOUDFLARE_ACCOUNT_ID: 'test-account-id',
+    CLOUDFLARE_API_TOKEN: 'test-cloudflare-token',
     UNRECOGNIZED_SETTING: 'must-not-be-loaded',
   }));
 
@@ -34,6 +36,8 @@ test('reads only supported private settings from the server-side JSON file', () 
       FULL_MODERATION_EXEMPT_PHONE_NUMBER: '15557654321',
       ALLOWED_LINK_SENDERS: '15551234567,15557654321',
       PRIVATE_QA_ALLOWED_LIDS: '123456789012345@lid',
+      CLOUDFLARE_ACCOUNT_ID: 'test-account-id',
+      CLOUDFLARE_API_TOKEN: 'test-cloudflare-token',
     });
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -66,6 +70,31 @@ test('non-empty environment values override the private file and blank values fa
       }, dir).PRIVATE_QA_ALLOWED_NUMBERS,
       '15551234567'
     );
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('loads Cloudflare credentials from the private server file and lets environment values override them', () => {
+  const dir = makeConfigDirectory(JSON.stringify({
+    CLOUDFLARE_ACCOUNT_ID: 'private-account-id',
+    CLOUDFLARE_API_TOKEN: 'private-token',
+  }));
+
+  try {
+    const loaded = loadRuntimeEnvironment({
+      CLOUDFLARE_ACCOUNT_ID: '',
+      CLOUDFLARE_API_TOKEN: '',
+    }, dir);
+    assert.equal(loaded.CLOUDFLARE_ACCOUNT_ID, 'private-account-id');
+    assert.equal(loaded.CLOUDFLARE_API_TOKEN, 'private-token');
+
+    const overridden = loadRuntimeEnvironment({
+      CLOUDFLARE_ACCOUNT_ID: 'environment-account-id',
+      CLOUDFLARE_API_TOKEN: 'environment-token',
+    }, dir);
+    assert.equal(overridden.CLOUDFLARE_ACCOUNT_ID, 'environment-account-id');
+    assert.equal(overridden.CLOUDFLARE_API_TOKEN, 'environment-token');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
