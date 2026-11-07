@@ -367,7 +367,7 @@ test('routes a requested Pashto article through the configured free creative tex
     {},
     'group@g.us',
     'sender@s.whatsapp.net',
-    'د چاپېریال په اړه مقاله ولیکه',
+    'مقاله: د چاپېریال په اړه مقاله ولیکه',
     'member',
   );
 
@@ -375,6 +375,27 @@ test('routes a requested Pashto article through the configured free creative tex
   assert.match(creativePrompt, /د لیکنې دنده/);
   assert.match(creativePrompt, /چاپېریال/);
   assert.match(context.messages[0], /د چاپېریال په اړه مقاله/);
+  assert.equal(context.state.searches, 0);
+});
+
+
+test('does not send an ordinary article request to the creative generator without a prefix', async () => {
+  let creativeCalls = 0;
+  const context = makeDependencies({
+    generateCreativeText: async () => {
+      creativeCalls += 1;
+      return 'دا باید د عادي غوښتنې لپاره ونه کارول شي.';
+    },
+  });
+  const answer = createAnswerEngine(context.dependencies);
+  await answer(
+    {},
+    'group@g.us',
+    'sender@s.whatsapp.net',
+    'د چاپېریال په اړه مقاله ولیکه',
+    'member',
+  );
+  assert.equal(creativeCalls, 0);
   assert.equal(context.state.searches, 0);
 });
 
@@ -393,7 +414,7 @@ test('generates a requested reply-based image and quotes the triggering WhatsApp
     {},
     'group@g.us',
     'sender@s.whatsapp.net',
-    'د همدې موضوع عکس جوړ کړه',
+    'عکس: د همدې موضوع عکس جوړ کړه',
     'member',
     { message: originalMessage, quotedText: 'د پښتو الفبا د زده‌کړې لپاره ښوونیزه موضوع' },
   );
