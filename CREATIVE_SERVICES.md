@@ -13,7 +13,6 @@ Creative writing and image generation activate only when a message begins with o
 - Image: **عکس: د افغانستان د غرونو یو ښکلی انځور جوړ کړه**
 
 Ordinary text, ordinary questions, and received images do not activate creative generation. The service guide remains available with **خدمتونه**.
-- Service guide: write **خدمتونه**
 
 When referring to an earlier answer, use WhatsApp Reply. The bot keeps the original subject and up to five follow-up turns, isolated by chat and sender.
 
