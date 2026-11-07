@@ -113,6 +113,53 @@ test('calls the configured OpenRouter free model and returns its generated text'
   assert.equal(requestBody.max_tokens, 2200);
 });
 
+test('reports model metadata when OpenRouter succeeds without returning text', async () => {
+  const generate = createOpenRouterCreativeGenerator({
+    apiKey: 'test-key',
+    model: 'openrouter/free',
+    fetchImpl: async () => ({
+      ok: true,
+      json: async () => ({
+        model: 'nvidia/nemotron-3-ultra:free',
+        choices: [{ message: { content: '' }, finish_reason: 'length' }],
+        usage: { completion_tokens: 2200 },
+      }),
+    }),
+  });
+  await assert.rejects(
+    generate('یوه ساده لیکنه'),
+    error => error.code === 'CREATIVE_EMPTY_RESPONSE' &&
+      /nvidia\/nemotron-3-ultra:free/.test(error.message) &&
+      /finish_reason=length/.test(error.message) &&
+      /completion_tokens=2200/.test(error.message)
+  );
+});
+
+test('extracts text segments when OpenRouter returns content as an array', async () => {
+  const generate = createOpenRouterCreativeGenerator({
+    apiKey: 'test-key',
+    fetchImpl: async () => ({
+      ok: true,
+      json: async () => ({
+        choices: [{
+          message: {
+            content: [{ type: 'text', text: 'دا ' }, { type: 'text', text: 'ازمویني متن دی.' }],
+          },
+        }],
+      }),
+    }),
+  });
+  assert.equal(await generate('یوه ساده لیکنه'), 'دا \nازمویني متن دی.');
+});
+
+test('classifies rejected OpenRouter API keys separately from rate limits', async () => {
+  const generate = createOpenRouterCreativeGenerator({
+    apiKey: 'test-key',
+    fetchImpl: async () => ({ ok: false, status: 401, text: async () => 'Unauthorized' }),
+  });
+  await assert.rejects(generate('یوه لیکنه'), error => error.code === 'CREATIVE_PROVIDER_AUTH_ERROR');
+});
+
 test('fails safely when no OpenRouter key is configured', async () => {
   const generate = createOpenRouterCreativeGenerator({ apiKey: '' });
   await assert.rejects(generate('یوه لیکنه'), error => error.code === 'CREATIVE_AI_NOT_CONFIGURED');
