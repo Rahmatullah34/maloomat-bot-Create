@@ -84,6 +84,22 @@ test('uses the environment API key first and can read a locally ignored key file
   }
 });
 
+test('loads OpenRouter API credentials from private-runtime-config.json and lets the environment override them', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'maloomat-openrouter-config-'));
+  try {
+    fs.writeFileSync(path.join(dir, 'private-runtime-config.json'), JSON.stringify({
+      OPENROUTER_API_KEY: 'private-openrouter-key',
+    }), 'utf8');
+    assert.equal(readOpenRouterApiKey({}, dir), 'private-openrouter-key');
+    assert.equal(
+      readOpenRouterApiKey({ OPENROUTER_API_KEY: 'environment-openrouter-key' }, dir),
+      'environment-openrouter-key'
+    );
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('normalizes the WhatsApp pairing phone and preserves the local-file fallback', () => {
   assert.equal(readWhatsAppPhone({ WHATSAPP_PHONE: '+1 (202) 555-0100' }, '/missing'), '12025550100');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'maloomat-phone-'));
