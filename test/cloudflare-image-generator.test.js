@@ -37,7 +37,7 @@ test('refuses to call the image provider when Cloudflare credentials are missing
   );
 });
 
-test('limits each sender to two free image requests per UTC day', async () => {
+test('limits each sender to five free image requests per UTC day', async () => {
   let calls = 0;
   const generate = createCloudflareImageGenerator({
     accountId: 'account-id',
@@ -52,11 +52,12 @@ test('limits each sender to two free image requests per UTC day', async () => {
     },
   });
 
-  await generate('first prompt', 'sender-1');
-  await generate('second prompt', 'sender-1');
+  for (let i = 1; i <= 5; i += 1) {
+    await generate('prompt ' + i, 'sender-1');
+  }
   await assert.rejects(
-    generate('third prompt', 'sender-1'),
+    generate('sixth prompt', 'sender-1'),
     error => error.code === 'IMAGE_DAILY_LIMIT'
   );
-  assert.equal(calls, 2);
+  assert.equal(calls, 5);
 });
