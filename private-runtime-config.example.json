@@ -7,5 +7,7 @@
   "PRIVATE_QA_OWNER_CLAIMED": "false",
   "CLOUDFLARE_ACCOUNT_ID": "",
   "CLOUDFLARE_API_TOKEN": "",
-  "OPENROUTER_API_KEY": ""
+  "OPENROUTER_API_KEY": "",
+  "AI_PROVIDER": "openrouter",
+  "CLOUDFLARE_AI_TEXT_MODEL": "@cf/zai-org/glm-4.7-flash"
 }
