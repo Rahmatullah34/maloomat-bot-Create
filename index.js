@@ -16,9 +16,11 @@ const { installSensitiveLogRedaction } = require('./lib/safe-console');
 installSensitiveLogRedaction();
 const express = require('express');
 const { classifyRemoteJid, shouldHandleNotifyEvent } = require('./lib/message-router');
-const { runtimeConfig, readOpenRouterApiKey } = require('./lib/runtime-config');
+const { runtimeConfig, readOpenRouterApiKey, readCloudflareApiToken } = require('./lib/runtime-config');
 const { buildHealthPayload } = require('./lib/health');
 const { createAnswerEngine } = require('./lib/answer-engine');
+const { createOpenRouterCreativeGenerator } = require('./lib/creative-services');
+const { createCloudflareImageGenerator } = require('./lib/cloudflare-image-generator');
 const { createMessageHandler } = require('./lib/message-handler');
 const { createImageQuestionExtractor } = require('./lib/image-question');
 const { normalizePashto } = require('./lib/moderation');
@@ -127,6 +129,22 @@ const WARNING_MUTE_ENABLED = runtimeConfig.warningMute.enabled;
 const WARNING_MUTE_DURATION_MINUTES = runtimeConfig.warningMute.durationMinutes;
 const WARNING_MUTE_DURATION_MS = runtimeConfig.warningMute.durationMs;
 
+// د وړیا تخلیقي متن ماډل جلا دی؛ د عادي پوښتنو د اصلي ماډل تنظیم نه بدلوي.
+const generateCreativeText = createOpenRouterCreativeGenerator({
+  apiKey: readOpenRouterApiKey(),
+  model: runtimeConfig.ai.creativeModel,
+  maxTokens: runtimeConfig.ai.maxOutputTokens,
+  dailyLimit: 30,
+});
+
+// د عکس تولید اختیاري دی؛ تر Cloudflare حساب او API Token مخکې نه چلېږي.
+const generateImage = createCloudflareImageGenerator({
+  accountId: runtimeConfig.image.cloudflareAccountId,
+  apiToken: readCloudflareApiToken(),
+  model: runtimeConfig.image.cloudflareModel,
+  dailyLimit: 50,
+});
+
 // د ځواب منطق د محلي معلوماتو، سرچینو او AI خدماتو ترمنځ همغږي کوي.
 const answerWithKnowledge = createAnswerEngine({
   ENABLE_GROUP_QA,
@@ -157,6 +175,8 @@ const answerWithKnowledge = createAnswerEngine({
   formatInternetResults,
   readOpenRouterApiKey,
   getAfghanistanDateContext,
+  generateCreativeText,
+  generateImage,
 });
 
 
