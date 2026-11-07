@@ -98,6 +98,23 @@ test('classifies invalid Workers AI tokens and rate limits', async () => {
   );
 });
 
+test('classifies Cloudflare request timeouts with a stable error code', async () => {
+  const client = createCloudflareAIClient({
+    accountId: 'test-account',
+    apiToken: 'test-token',
+    fetchImpl: async () => {
+      const error = new Error('The operation was aborted due to timeout');
+      error.name = 'TimeoutError';
+      throw error;
+    },
+  });
+
+  await assert.rejects(
+    client.chatCompletion({ messages: [{ role: 'user', content: 'سلام' }] }),
+    error => error.code === 'CLOUDFLARE_AI_TIMEOUT' && /timed out/.test(error.message)
+  );
+});
+
 test('reports model metadata when Cloudflare returns an empty completion', async () => {
   const generate = createCloudflareCreativeGenerator({
     accountId: 'test-account',
