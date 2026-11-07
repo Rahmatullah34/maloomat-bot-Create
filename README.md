@@ -16,7 +16,7 @@
 - `WARNING_MUTE_DURATION_MINUTES` — د محدودیت موده په دقیقو کې؛ ډیفالټ: `120` (دوه ساعته)، اعظمي `1440` دقیقې.
 - `RESET_WHATSAPP_SESSION`، `WHATSAPP_PHONE`، `OPENROUTER_API_KEY` — د اړتیا له مخې تنظیم کړئ؛ API key یوازې په SillyDev Startup/Secrets یا په سرور کې د `OPENROUTER_API_KEY` په محلي، ignored فایل کې وساتئ.
 - `PRIVATE_QA_ALLOWED_NUMBERS` — د شخصي چټ لپاره یوازې یوه شمېره، د هېواد له کوډ سره. دا باید له `FULL_MODERATION_EXEMPT_PHONE_NUMBER` سره عیناً برابره وي؛ څو شمېرې یا د بل چا شمېره شخصي چټ بندوي. ارزښت یوازې په SillyDev کې وساتئ، په GitHub کې یې مه لیکئ.
-- `PRIVATE_QA_ALLOWED_LIDS` — د شخصي چټ لپاره نه کارول کېږي؛ تش یې پرېږدئ. LID یوازې هغه وخت منل کېږي چې WhatsApp یې د هماغې یوازینۍ مالک شمېرې ته واړوي.
+- `PRIVATE_QA_ALLOWED_LIDS` — د مالک د تایید شوي WhatsApp LID لېست؛ یوازې په محلي محرم فایل کې ساتل کېږي. `PRIVATE_QA_OWNER_CLAIM_CODE` یو ځلنی پټ کوډ دی چې مالک یې په شخصي چټ کې استوي؛ بوټ د هماغې LID پېژندپاڼه ثبتوي او کوډ مصرفوي. `PRIVATE_QA_OWNER_CLAIMED` د بیا کارونې مخه نیسي. دا ارزښتونه په GitHub کې مه لیکئ.
 - `FULL_MODERATION_EXEMPT_PHONE_NUMBER` — د مالک اصلي WhatsApp شمېره؛ د شخصي چټ یوازینی مجاز کاروونکی همدا شمېره ده.
 - `ENABLE_GROUP_QA`، `ENABLE_PRIVATE_QA`، `ENABLE_INTERNET_SEARCH`، `ENABLE_AI_SUMMARIZATION`، `ENABLE_LINK_MODERATION` — د اړوندو ځانګړنو د فعال/بندولو لپاره؛ ډیفالټ ارزښتونه `true` دي.
 - `OPENROUTER_MODEL` — د عادي متني ځوابونو ماډل؛ ډیفالټ: `openai/gpt-6-luna`.
@@ -82,7 +82,9 @@
   "PRIVATE_QA_ALLOWED_NUMBERS": "",
   "FULL_MODERATION_EXEMPT_PHONE_NUMBER": "",
   "ALLOWED_LINK_SENDERS": "",
-  "PRIVATE_QA_ALLOWED_LIDS": ""
+  "PRIVATE_QA_ALLOWED_LIDS": "",
+  "PRIVATE_QA_OWNER_CLAIM_CODE": "",
+  "PRIVATE_QA_OWNER_CLAIMED": "false"
 }
 ```
 
