@@ -20,6 +20,7 @@ const { runtimeConfig, readOpenRouterApiKey, readCloudflareApiToken } = require(
 const { buildHealthPayload } = require('./lib/health');
 const { createAnswerEngine } = require('./lib/answer-engine');
 const { createOpenRouterCreativeGenerator } = require('./lib/creative-services');
+const { createCloudflareCreativeGenerator } = require('./lib/cloudflare-chat');
 const { createCloudflareImageGenerator } = require('./lib/cloudflare-image-generator');
 const { createMessageHandler } = require('./lib/message-handler');
 const { createImageQuestionExtractor } = require('./lib/image-question');
@@ -129,13 +130,25 @@ const WARNING_MUTE_ENABLED = runtimeConfig.warningMute.enabled;
 const WARNING_MUTE_DURATION_MINUTES = runtimeConfig.warningMute.durationMinutes;
 const WARNING_MUTE_DURATION_MS = runtimeConfig.warningMute.durationMs;
 
-// د وړیا تخلیقي متن ماډل جلا دی؛ د عادي پوښتنو د اصلي ماډل تنظیم نه بدلوي.
-const generateCreativeText = createOpenRouterCreativeGenerator({
-  apiKey: readOpenRouterApiKey(),
-  model: runtimeConfig.ai.creativeModel,
-  maxTokens: runtimeConfig.ai.maxOutputTokens,
-  dailyLimit: 30,
-});
+// د AI خدمت د AI_PROVIDER له مخې ټاکل کېږي. د ازموینې لپاره OpenRouter لا هم موجود ساتل شوی.
+const cloudflareAIConfigured = Boolean(runtimeConfig.image.cloudflareAccountId && readCloudflareApiToken());
+const activeAIConfigured = runtimeConfig.ai.provider === 'cloudflare'
+  ? cloudflareAIConfigured
+  : Boolean(readOpenRouterApiKey());
+const generateCreativeText = runtimeConfig.ai.provider === 'cloudflare'
+  ? createCloudflareCreativeGenerator({
+      accountId: runtimeConfig.image.cloudflareAccountId,
+      apiToken: readCloudflareApiToken(),
+      model: runtimeConfig.ai.cloudflareTextModel,
+      maxTokens: runtimeConfig.ai.maxOutputTokens,
+      dailyLimit: 30,
+    })
+  : createOpenRouterCreativeGenerator({
+      apiKey: readOpenRouterApiKey(),
+      model: runtimeConfig.ai.creativeModel,
+      maxTokens: runtimeConfig.ai.maxOutputTokens,
+      dailyLimit: 30,
+    });
 
 // د عکس تولید اختیاري دی؛ تر Cloudflare حساب او API Token مخکې نه چلېږي.
 const generateImage = createCloudflareImageGenerator({
@@ -201,8 +214,8 @@ app.get('/health', (_req, res) => {
     allowedGroups: allowedGroupsCount(),
     historyCleanup: isHistoryCleanupEnabled(),
     autoPublishing: getAutoPublisherStatus(),
-    aiKeyConfigured: Boolean(readOpenRouterApiKey()),
-    creativeTextConfigured: Boolean(readOpenRouterApiKey()),
+    aiKeyConfigured: activeAIConfigured,
+    creativeTextConfigured: activeAIConfigured,
     imageGenerationConfigured: Boolean(
       runtimeConfig.image.cloudflareAccountId && readCloudflareApiToken()
     ),
@@ -770,7 +783,7 @@ async function startBot() {
             'د پوښتنو ځوابونه: ' + (ENABLE_GROUP_QA ? 'فعال' : 'موقتي بند') +
             '؛ ویب لټون: ' + (ENABLE_GROUP_QA && ENABLE_INTERNET_SEARCH ? 'فعال' : 'بند') +
             '؛ شخصي چټ: ' + (ENABLE_PRIVATE_QA && ENABLE_GROUP_QA && PRIVATE_QA_OWNER_ONLY ? 'فعال (یوازې مالک)' : 'بند/یوازې د مالک شمېره تنظیم کړئ') +
-            '؛ تخلیقي لیکنې/مقالې/کتاب: ' + (Boolean(readOpenRouterApiKey()) ? 'فعال (وړیا ماډل)' : 'د API کیلي ته اړتیا لري') +
+            '؛ تخلیقي لیکنې/مقالې/کتاب: ' + (activeAIConfigured ? 'فعال (' + (runtimeConfig.ai.provider === 'cloudflare' ? 'Cloudflare Workers AI' : 'OpenRouter') + ')' : 'د AI حسابي تنظیماتو ته اړتیا لري') +
             '؛ د عکس جوړول: ' + (runtimeConfig.image.cloudflareAccountId && readCloudflareApiToken() ? 'فعال' : 'د Cloudflare تنظیماتو ته اړتیا لري') +
             '؛ د محلي معلوماتو شمېر: ' + OFFLINE_KNOWLEDGE.length
           );
