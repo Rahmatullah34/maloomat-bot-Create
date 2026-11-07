@@ -163,28 +163,26 @@ test('isReactionMessage: لایکونه اخطار نه اخلي او نقل ش�
   assert.equal(isReactionMessage({ conversation: 'عادي پیغام' }), false);
 });
 
-test('looksLikeQuestion: نښه یا روښانه پوښتنیز/غوښتنیز عبارت', () => {
+test('looksLikeQuestion: یوازې د پای پوښتنیزه نښه مني', () => {
   assert.equal(looksLikeQuestion('دا څه دی؟'), true);
   assert.equal(looksLikeQuestion('د انسان د زړه دنده څه ده؟'), true);
-  assert.equal(looksLikeQuestion('کله چې نبي کریم ﷺ جهاد ته تلو، زغره یې چا جوړه کړې وه؟'), true);
-  assert.equal(looksLikeQuestion('د زغرې په اړه معلومات راکړه؟'), true);
   assert.equal(looksLikeQuestion('how does it work?'), true);
-  assert.equal(looksLikeQuestion('دا څه دی?'), true);
+  assert.equal(looksLikeQuestion('دا څه دی?   '), true);
+  assert.equal(looksLikeQuestion('دا څه دی؟»'), true);
+  assert.equal(looksLikeQuestion('د زغرې په اړه معلومات راکړه؟'), true);
 
-  // روښانه پوښتنې او معلوماتي غوښتنې د نښې پرته هم ځواب ته لېږل کېږي.
-  assert.equal(looksLikeQuestion('د انسان د زړه دنده څه ده'), true);
-  assert.equal(looksLikeQuestion('کله چې نبي کریم ﷺ جهاد ته تلو، زغره یې چا جوړه کړې وه'), true);
-  assert.equal(looksLikeQuestion('د زغرې په اړه معلومات راکړه'), true);
-  assert.equal(looksLikeQuestion('how does it work'), true);
-  assert.equal(looksLikeQuestion('explain photosynthesis'), true);
+  // پوښتنیزې کلمې او امرونه د پای نښې پرته نه منل کېږي.
+  assert.equal(looksLikeQuestion('د انسان د زړه دنده څه ده'), false);
+  assert.equal(looksLikeQuestion('د زغرې په اړه معلومات راکړه'), false);
+  assert.equal(looksLikeQuestion('explain photosynthesis'), false);
+  assert.equal(looksLikeQuestion('د چاپېریال په اړه مقاله ولیکه'), false);
+  assert.equal(looksLikeQuestion('د افغانستان عکس جوړ کړه'), false);
 
-  // عادي خبرې او زماني جملې لا هم د پوښتنې په توګه نه پېژندل کېږي.
+  // نښه باید د پیغام په پای کې وي.
   assert.equal(looksLikeQuestion('دا پوښتنه؟ خو دلته نور متن شته'), false);
   assert.equal(looksLikeQuestion('سلام علیکم'), false);
   assert.equal(looksLikeQuestion('نن هوا ښه ده'), false);
-  assert.equal(looksLikeQuestion('خلک وایي چې سبا باران دی'), false);
-  assert.equal(looksLikeQuestion('کله چې زه ماشوم وم، هلته مې ژوند کاوه'), false);
-  assert.equal(looksLikeQuestion('I know what you mean'), false);
+  assert.equal(looksLikeQuestion(''), false);
 });
 
 test('temporary mute: د درېیم اخطار لپاره دوه ساعته محدودیت ساتي', () => {
