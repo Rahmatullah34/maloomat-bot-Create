@@ -19,7 +19,9 @@
 - `PRIVATE_QA_ALLOWED_LIDS` — د مالک د تایید شوي WhatsApp LID لېست؛ یوازې په محلي محرم فایل کې ساتل کېږي. `PRIVATE_QA_OWNER_CLAIM_CODE` یو ځلنی پټ کوډ دی چې مالک یې په شخصي چټ کې استوي؛ بوټ د هماغې LID پېژندپاڼه ثبتوي او کوډ مصرفوي. `PRIVATE_QA_OWNER_CLAIMED` د بیا کارونې مخه نیسي. دا ارزښتونه په GitHub کې مه لیکئ.
 - `FULL_MODERATION_EXEMPT_PHONE_NUMBER` — د مالک اصلي WhatsApp شمېره؛ د شخصي چټ یوازینی مجاز کاروونکی همدا شمېره ده.
 - `ENABLE_GROUP_QA`، `ENABLE_PRIVATE_QA`، `ENABLE_INTERNET_SEARCH`، `ENABLE_AI_SUMMARIZATION`، `ENABLE_LINK_MODERATION` — د اړوندو ځانګړنو د فعال/بندولو لپاره؛ ډیفالټ ارزښتونه `true` دي.
-- `OPENROUTER_MODEL` — د عادي متني ځوابونو ماډل؛ ډیفالټ: `openai/gpt-6-luna`.
+- `AI_PROVIDER` — د متني AI ازموینې/اصلي خدمت ټاکي: `openrouter` (ډیفالټ) یا `cloudflare`. د Cloudflare د لیکنې او د ویب سرچینو لنډیز د ازموینې لپاره `cloudflare` وټاکئ؛ تر بریالۍ ازموینې مخکې OpenRouter مه لرې کوئ.
+- `CLOUDFLARE_AI_TEXT_MODEL` — د Cloudflare Workers AI د متن ماډل؛ ډیفالټ: `@cf/zai-org/glm-4.7-flash`.
+- `OPENROUTER_MODEL` — د OpenRouter د عادي متني ځوابونو ماډل؛ ډیفالټ: `openai/gpt-6-luna`.
 - `OPENROUTER_VISION_MODEL` — د عکس دننه د پوښتنو لوستلو ماډل؛ ډیفالټ: `openrouter/free` چې له وړیا او د عکس لوستلو وړ ماډلونو څخه یو انتخابوي. د بدلولو لپاره د OpenRouter له image-input ملاتړ لرونکی ماډل وټاکئ.
 - `AI_MAX_OUTPUT_TOKENS` — د AI د ځواب اعظمي اوږدوالی؛ ډیفالټ `1400` دی؛ له `500` تر `2000` پورې ارزښت منل کېږي. لوړ حد د اوږد ځواب امکان زیاتوي، خو دقت نه تضمینوي.
 
