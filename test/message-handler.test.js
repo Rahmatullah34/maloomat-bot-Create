@@ -240,7 +240,7 @@ test('passes quoted WhatsApp reply context on every group follow-up', async () =
     ).trim(),
   });
   const firstReply = message('12345@g.us', 'ولې؟', {
-    key: { id: 'group-reply-1' },
+    key: { remoteJid: '12345@g.us', id: 'group-reply-1', participant: '15551230000@s.whatsapp.net', fromMe: false },
     message: {
       extendedTextMessage: {
         text: 'ولې؟',
@@ -249,7 +249,7 @@ test('passes quoted WhatsApp reply context on every group follow-up', async () =
     },
   });
   const secondReply = message('12345@g.us', 'دا څنګه کار کوي؟', {
-    key: { id: 'group-reply-2' },
+    key: { remoteJid: '12345@g.us', id: 'group-reply-2', participant: '15551230000@s.whatsapp.net', fromMe: false },
     message: {
       extendedTextMessage: {
         text: 'دا څنګه کار کوي؟',
