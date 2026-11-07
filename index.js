@@ -187,6 +187,7 @@ const answerWithKnowledge = createAnswerEngine({
   formatVerifiedSourceLinks,
   formatInternetResults,
   readOpenRouterApiKey,
+  isAIConfigured: () => activeAIConfigured,
   getAfghanistanDateContext,
   generateCreativeText,
   generateImage,
