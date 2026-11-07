@@ -81,6 +81,32 @@ test('does not route the image caption as a normal question when no question is 
   );
 });
 
+
+test('does not turn an image exercise or statement into a question without a visible final mark', async () => {
+  let promptText = '';
+  const extract = createImageQuestionExtractor({
+    downloadMediaMessage: async () => Buffer.from('fake-image'),
+    readOpenRouterApiKey: () => 'test-key',
+    fetchImpl: async (_url, options) => {
+      const body = JSON.parse(options.body);
+      promptText = body.messages[0].content[0].text;
+      return {
+        ok: true,
+        json: async () => ({ choices: [{ message: { content: 'د چاپېریال ساتنه مهمه ده' } }] }),
+      };
+    },
+  });
+
+  const result = await extract(
+    { message: { imageMessage: { mimetype: 'image/jpeg' } } },
+    {},
+    '',
+  );
+  assert.equal(result, '');
+  assert.match(promptText, /already ends with a question mark/);
+  assert.match(promptText, /Never add a question mark/);
+});
+
 test('downloads image documents and sends them to the vision model', async () => {
   let downloadedMessage;
   const photoDocument = {
