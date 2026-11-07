@@ -17,9 +17,9 @@ test('shows the new service guide on common help commands', () => {
   assert.match(getCreativeHelpReply(), /عکس/);
 });
 
-test('detects simple Pashto writing requests and keeps quoted topic context', () => {
+test('detects simple Pashto writing requests only with the explicit prefix and keeps quoted topic context', () => {
   const request = detectCreativeRequest(
-    'دا په ساده ژبه ولیکه',
+    'لیکنه: دا په ساده ژبه ولیکه',
     'د زړه دنده دا ده چې وینه ټول بدن ته پمپ کړي.'
   );
   assert.equal(request.kind, 'writing');
@@ -27,8 +27,8 @@ test('detects simple Pashto writing requests and keeps quoted topic context', ()
   assert.match(request.topic, /د زړه دنده/);
 });
 
-test('detects academic article requests and extracts an explicit topic', () => {
-  const request = detectCreativeRequest('د تعلیم په اړه علمي مقاله ولیکه');
+test('detects academic article requests only with the explicit prefix and extracts an explicit topic', () => {
+  const request = detectCreativeRequest('مقاله: د تعلیم په اړه علمي مقاله ولیکه');
   assert.equal(request.kind, 'article');
   assert.equal(request.style, 'academic');
   assert.equal(request.topic, 'تعلیم');
@@ -38,11 +38,11 @@ test('detects academic article requests and extracts an explicit topic', () => {
 });
 
 test('starts a book and recognizes chapter continuation from a quoted book context', () => {
-  const first = detectCreativeRequest('د پښتو ژبې په اړه کتاب پیل کړه');
+  const first = detectCreativeRequest('کتاب: د پښتو ژبې په اړه کتاب پیل کړه');
   assert.equal(first.kind, 'book');
   assert.match(first.topic, /پښتو ژبې/);
 
-  const next = detectCreativeRequest('بل فصل ولیکه', 'د کتاب فهرست او لومړی فصل');
+  const next = detectCreativeRequest('کتاب: بل فصل ولیکه', 'د کتاب فهرست او لومړی فصل');
   assert.equal(next.kind, 'book');
   assert.equal(next.continuation, true);
   assert.match(buildCreativePrompt(next, 'د کتاب فهرست او لومړی فصل'), /راتلونکی فصل/);
@@ -50,11 +50,23 @@ test('starts a book and recognizes chapter continuation from a quoted book conte
 
 test('uses quoted context as the image topic for reply-based image requests', () => {
   const request = detectCreativeRequest(
-    'د همدې موضوع عکس جوړ کړه',
+    'عکس: د همدې موضوع عکس جوړ کړه',
     'د پښتو الفبا د زده‌کړې لپاره د تورو او ماشومانو ښوونیزه موضوع'
   );
   assert.equal(request.kind, 'image');
   assert.match(buildImagePrompt(request), /پښتو الفبا/);
+});
+
+test('does not activate creative services for ordinary writing or image messages', () => {
+  assert.equal(detectCreativeRequest('د چاپېریال په اړه مقاله ولیکه'), null);
+  assert.equal(detectCreativeRequest('د افغانستان عکس جوړ کړه'), null);
+  assert.equal(detectCreativeRequest('دا لیکنه سمه ده؟'), null);
+  assert.equal(detectCreativeRequest('کتاب ولوله'), null);
+});
+
+test('asks for a topic when a creative prefix is sent without one', () => {
+  assert.deepEqual(detectCreativeRequest('مقاله:'), { kind: 'missing_topic', command: 'مقاله' });
+  assert.deepEqual(detectCreativeRequest('عکس:'), { kind: 'missing_topic', command: 'عکس' });
 });
 
 test('calls the configured OpenRouter free model and returns its generated text', async () => {
