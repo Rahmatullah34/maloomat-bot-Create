@@ -286,11 +286,11 @@ test('uses the quoted message as context for successive WhatsApp follow-up repli
   );
 
   assert.equal(searchedQuestions.length, 2);
-  assert.match(searchedQuestions[0], /د WhatsApp د مخکیني پیغام متن/);
   assert.match(searchedQuestions[0], /د زړه دنده څه ده؟/);
-  assert.match(searchedQuestions[0], /د کارونکي نوې پوښتنه یا پیغام:\nولې؟/);
-  assert.match(searchedQuestions[1], /زړه وینه ټول بدن ته پمپ کوي\./);
-  assert.match(searchedQuestions[1], /د کارونکي نوې پوښتنه یا پیغام:\nدا څنګه کار کوي؟/);
+  assert.match(searchedQuestions[0], /ولې؟/);
+  assert.doesNotMatch(searchedQuestions[0], /د WhatsApp د مخکیني پیغام متن|لارښوونه/);
+  assert.match(searchedQuestions[1], /دا څنګه کار کوي؟/);
+  assert.doesNotMatch(searchedQuestions[1], /د WhatsApp د مخکیني پیغام متن|لارښوونه/);
   assert.equal(context.deliveries.length, 2);
   assert.equal(context.deliveries[0].options.quoted.key.id, 'reply-one');
   assert.equal(context.deliveries[1].options.quoted.key.id, 'reply-two');
