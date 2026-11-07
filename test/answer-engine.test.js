@@ -296,3 +296,59 @@ test('uses the quoted message as context for successive WhatsApp follow-up repli
   assert.equal(context.deliveries[1].options.quoted.key.id, 'reply-two');
 });
 
+
+
+test('keeps the original question and up to five successive WhatsApp reply turns isolated per sender', async () => {
+  const summaryPrompts = [];
+  const searchQueries = [];
+  const context = makeDependencies({
+    readOpenRouterApiKey: () => 'test-key',
+    searchInternet: async query => {
+      searchQueries.push(query);
+      return [];
+    },
+    summarizeSourcesInPashto: async question => {
+      summaryPrompts.push(question);
+      return 'د ازموینې ځواب ' + summaryPrompts.length;
+    },
+  });
+  const answer = createAnswerEngine(context.dependencies);
+  const chat = '12345@g.us';
+  const sender = '15551230000@s.whatsapp.net';
+
+  await answer({}, chat, sender, 'افغانستان څو ولایتونه لري؟', 'ازموینه');
+  assert.equal(context.messages.length, 1);
+
+  const followups = [
+    'نور وضاحت راکړه',
+    'ولې؟',
+    'څنګه؟',
+    'یو مثال هم راکړه',
+    'لنډیز یې راکړه',
+  ];
+
+  for (let index = 0; index < followups.length; index += 1) {
+    const quotedText = context.messages[context.messages.length - 1];
+    await answer(
+      {},
+      chat,
+      sender,
+      followups[index],
+      'ازموینه',
+      {
+        message: { key: { id: 'reply-' + (index + 1) } },
+        quotedText,
+      },
+    );
+  }
+
+  assert.equal(summaryPrompts.length, 6);
+  assert.match(summaryPrompts[5], /افغانستان څو ولایتونه لري/);
+  for (const followup of followups) {
+    assert.ok(summaryPrompts[5].includes(followup), 'د پنځو Reply پړاوونو مخینه باید وساتل شي: ' + followup);
+  }
+  assert.equal(context.deliveries.length, 6);
+  assert.equal(context.deliveries[5].options.quoted.key.id, 'reply-5');
+  assert.equal(searchQueries.length, 6);
+  assert.doesNotMatch(searchQueries[5], /د همدې کارن د وروستي بحث مخینه|د کارن پوښتنه\/تعقیب/);
+});
