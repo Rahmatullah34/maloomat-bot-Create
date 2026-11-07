@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   detectCreativeRequest,
+  isUnprefixedCreativeRequest,
   buildCreativePrompt,
   buildImagePrompt,
   getCreativeHelpReply,
@@ -62,6 +63,14 @@ test('does not activate creative services for ordinary writing or image messages
   assert.equal(detectCreativeRequest('د افغانستان عکس جوړ کړه'), null);
   assert.equal(detectCreativeRequest('دا لیکنه سمه ده؟'), null);
   assert.equal(detectCreativeRequest('کتاب ولوله'), null);
+});
+
+test('identifies unprefixed creative commands so the answer engine can ignore them', () => {
+  assert.equal(isUnprefixedCreativeRequest('د چاپېریال په اړه مقاله ولیکه'), true);
+  assert.equal(isUnprefixedCreativeRequest('د افغانستان عکس جوړ کړه'), true);
+  assert.equal(isUnprefixedCreativeRequest('عکس: د افغانستان غرونه'), false);
+  assert.equal(isUnprefixedCreativeRequest('د چاپېریال ساتنه ولې مهمه ده؟'), false);
+  assert.equal(isUnprefixedCreativeRequest('دا لیکنه سمه ده؟'), false);
 });
 
 test('asks for a topic when a creative prefix is sent without one', () => {
