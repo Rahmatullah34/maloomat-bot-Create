@@ -382,6 +382,8 @@ test('routes a requested Pashto article through the configured free creative tex
 test('does not send an ordinary article request to the creative generator without a prefix', async () => {
   let creativeCalls = 0;
   const context = makeDependencies({
+    ENABLE_INTERNET_SEARCH: false,
+    ENABLE_AI_SUMMARIZATION: false,
     generateCreativeText: async () => {
       creativeCalls += 1;
       return 'دا باید د عادي غوښتنې لپاره ونه کارول شي.';
