@@ -383,9 +383,16 @@ test('answers only messages ending in a question mark, including replies', async
   const context = makeDependencies({
     ENABLE_INTERNET_SEARCH: false,
     ENABLE_AI_SUMMARIZATION: false,
-    looksLikeQuestion: value => /[؟?]\\s*$/.test(String(value || '').trim()),
-    answerCommonPashtoQuestion: value =>
-      /[؟?]\\s*$/.test(String(value || '').trim()) ? 'دا د پوښتنې ازمویښتي ځواب دی.' : null,
+    looksLikeQuestion: value => {
+      const text = String(value || '').trim();
+      return text.endsWith('؟') || text.endsWith('?');
+    },
+    answerCommonPashtoQuestion: value => {
+      const text = String(value || '').trim();
+      return text.endsWith('؟') || text.endsWith('?')
+        ? 'دا د پوښتنې ازمویښتي ځواب دی.'
+        : null;
+    },
   });
   const answer = createAnswerEngine(context.dependencies);
 
