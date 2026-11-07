@@ -28,6 +28,8 @@ test('reads only supported private settings from the server-side JSON file', () 
     CLOUDFLARE_ACCOUNT_ID: 'test-account-id',
     CLOUDFLARE_API_TOKEN: 'test-cloudflare-token',
     OPENROUTER_API_KEY: 'test-openrouter-token',
+    AI_PROVIDER: 'cloudflare',
+    CLOUDFLARE_AI_TEXT_MODEL: '@cf/zai-org/glm-4.7-flash',
     UNRECOGNIZED_SETTING: 'must-not-be-loaded',
   }));
 
@@ -40,6 +42,8 @@ test('reads only supported private settings from the server-side JSON file', () 
       CLOUDFLARE_ACCOUNT_ID: 'test-account-id',
       CLOUDFLARE_API_TOKEN: 'test-cloudflare-token',
       OPENROUTER_API_KEY: 'test-openrouter-token',
+      AI_PROVIDER: 'cloudflare',
+      CLOUDFLARE_AI_TEXT_MODEL: '@cf/zai-org/glm-4.7-flash',
     });
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
