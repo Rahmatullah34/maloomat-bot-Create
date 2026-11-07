@@ -202,6 +202,10 @@ app.get('/health', (_req, res) => {
     historyCleanup: isHistoryCleanupEnabled(),
     autoPublishing: getAutoPublisherStatus(),
     aiKeyConfigured: Boolean(readOpenRouterApiKey()),
+    creativeTextConfigured: Boolean(readOpenRouterApiKey()),
+    imageGenerationConfigured: Boolean(
+      runtimeConfig.image.cloudflareAccountId && readCloudflareApiToken()
+    ),
     knowledgeEntries: OFFLINE_KNOWLEDGE.length,
   }));
 });
@@ -766,6 +770,8 @@ async function startBot() {
             'د پوښتنو ځوابونه: ' + (ENABLE_GROUP_QA ? 'فعال' : 'موقتي بند') +
             '؛ ویب لټون: ' + (ENABLE_GROUP_QA && ENABLE_INTERNET_SEARCH ? 'فعال' : 'بند') +
             '؛ شخصي چټ: ' + (ENABLE_PRIVATE_QA && ENABLE_GROUP_QA && PRIVATE_QA_OWNER_ONLY ? 'فعال (یوازې مالک)' : 'بند/یوازې د مالک شمېره تنظیم کړئ') +
+            '؛ تخلیقي لیکنې/مقالې/کتاب: ' + (Boolean(readOpenRouterApiKey()) ? 'فعال (وړیا ماډل)' : 'د API کیلي ته اړتیا لري') +
+            '؛ د عکس جوړول: ' + (runtimeConfig.image.cloudflareAccountId && readCloudflareApiToken() ? 'فعال' : 'د Cloudflare تنظیماتو ته اړتیا لري') +
             '؛ د محلي معلوماتو شمېر: ' + OFFLINE_KNOWLEDGE.length
           );
 
