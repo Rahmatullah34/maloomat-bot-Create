@@ -27,6 +27,7 @@ test('reads only supported private settings from the server-side JSON file', () 
     PRIVATE_QA_ALLOWED_LIDS: '123456789012345@lid',
     CLOUDFLARE_ACCOUNT_ID: 'test-account-id',
     CLOUDFLARE_API_TOKEN: 'test-cloudflare-token',
+    OPENROUTER_API_KEY: 'test-openrouter-token',
     UNRECOGNIZED_SETTING: 'must-not-be-loaded',
   }));
 
@@ -38,6 +39,7 @@ test('reads only supported private settings from the server-side JSON file', () 
       PRIVATE_QA_ALLOWED_LIDS: '123456789012345@lid',
       CLOUDFLARE_ACCOUNT_ID: 'test-account-id',
       CLOUDFLARE_API_TOKEN: 'test-cloudflare-token',
+      OPENROUTER_API_KEY: 'test-openrouter-token',
     });
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -48,6 +50,7 @@ test('non-empty environment values override the private file and blank values fa
   const dir = makeConfigDirectory(JSON.stringify({
     PRIVATE_QA_ALLOWED_NUMBERS: '15551234567',
     ALLOWED_LINK_SENDERS: '15557654321',
+    OPENROUTER_API_KEY: 'private-openrouter-key',
   }));
 
   try {
@@ -62,6 +65,11 @@ test('non-empty environment values override the private file and blank values fa
         ALLOWED_LINK_SENDERS: '15550001111',
       }, dir),
       '15550001111'
+    );
+    assert.equal(getPrivateRuntimeValue('OPENROUTER_API_KEY', {}, dir), 'private-openrouter-key');
+    assert.equal(
+      getPrivateRuntimeValue('OPENROUTER_API_KEY', { OPENROUTER_API_KEY: 'environment-openrouter-key' }, dir),
+      'environment-openrouter-key'
     );
     assert.equal(
       loadRuntimeEnvironment({
