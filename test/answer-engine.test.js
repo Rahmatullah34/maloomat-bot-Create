@@ -367,7 +367,7 @@ test('routes a requested Pashto article through the configured free creative tex
     {},
     'group@g.us',
     'sender@s.whatsapp.net',
-    'مقاله: د چاپېریال په اړه مقاله ولیکه',
+    'مقاله: د چاپېریال په اړه مقاله ولیکه؟',
     'member',
   );
 
@@ -422,6 +422,30 @@ test('answers only messages ending in a question mark, including replies', async
   assert.match(context.messages[0], /د پوښتنې ازمویښتي ځواب/);
 });
 
+test('does not invoke any creative service if its prefixed command lacks a final question mark', async () => {
+  let creativeCalls = 0;
+  let imageCalls = 0;
+  const context = makeDependencies({
+    ENABLE_INTERNET_SEARCH: false,
+    ENABLE_AI_SUMMARIZATION: false,
+    generateCreativeText: async () => { creativeCalls += 1; return 'no'; },
+    generateImage: async () => { imageCalls += 1; return { buffer: Buffer.from('x') }; },
+  });
+  const answer = createAnswerEngine(context.dependencies);
+  for (const command of [
+    'لیکنه: د چاپېریال په اړه لیکنه ولیکه',
+    'مقاله: د تعلیم په اړه مقاله ولیکه',
+    'کتاب: د پښتو ژبې کتاب پیل کړه',
+    'عکس: د افغانستان غرونه جوړ کړه',
+  ]) {
+    const handled = await answer({}, 'group@g.us', 'sender@s.whatsapp.net', command, 'member');
+    assert.equal(handled, false, command);
+  }
+  assert.equal(creativeCalls, 0);
+  assert.equal(imageCalls, 0);
+  assert.equal(context.messages.length, 0);
+});
+
 test('does not send an ordinary article request to the creative generator without a prefix', async () => {
   let creativeCalls = 0;
   const context = makeDependencies({
@@ -461,7 +485,7 @@ test('generates a requested reply-based image and quotes the triggering WhatsApp
     {},
     'group@g.us',
     'sender@s.whatsapp.net',
-    'عکس: د همدې موضوع عکس جوړ کړه',
+    'عکس: د همدې موضوع عکس جوړ کړه؟',
     'member',
     { message: originalMessage, quotedText: 'د پښتو الفبا د زده‌کړې لپاره ښوونیزه موضوع' },
   );
