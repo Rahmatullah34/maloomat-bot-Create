@@ -320,11 +320,11 @@ test('keeps the original question and up to five successive WhatsApp reply turns
   assert.equal(context.messages.length, 1);
 
   const followups = [
-    'نور وضاحت راکړه',
+    'نور وضاحت راکړه؟',
     'ولې؟',
     'څنګه؟',
-    'یو مثال هم راکړه',
-    'لنډیز یې راکړه',
+    'یو مثال هم راکړه؟',
+    'لنډیز یې راکړه؟',
   ];
 
   for (let index = 0; index < followups.length; index += 1) {
@@ -378,6 +378,42 @@ test('routes a requested Pashto article through the configured free creative tex
   assert.equal(context.state.searches, 0);
 });
 
+
+test('answers only messages ending in a question mark, including replies', async () => {
+  const context = makeDependencies({
+    ENABLE_INTERNET_SEARCH: false,
+    ENABLE_AI_SUMMARIZATION: false,
+    looksLikeQuestion: value => /[؟?]\\s*$/.test(String(value || '').trim()),
+    answerCommonPashtoQuestion: value =>
+      /[؟?]\\s*$/.test(String(value || '').trim()) ? 'دا د پوښتنې ازمویښتي ځواب دی.' : null,
+  });
+  const answer = createAnswerEngine(context.dependencies);
+
+  const ordinaryRequest = await answer(
+    {},
+    'group@g.us',
+    'sender@s.whatsapp.net',
+    'معلومات راکړه',
+    'member',
+    {
+      message: { key: { id: 'reply-without-mark' } },
+      quotedText: 'د چاپېریال په اړه مخکینی ځواب',
+    },
+  );
+  assert.equal(ordinaryRequest, false);
+  assert.equal(context.messages.length, 0);
+
+  const actualQuestion = await answer(
+    {},
+    'group@g.us',
+    'sender@s.whatsapp.net',
+    'د چاپېریال ساتنه ولې مهمه ده؟',
+    'member',
+  );
+  assert.equal(actualQuestion, true);
+  assert.equal(context.messages.length, 1);
+  assert.match(context.messages[0], /د پوښتنې ازمویښتي ځواب/);
+});
 
 test('does not send an ordinary article request to the creative generator without a prefix', async () => {
   let creativeCalls = 0;
