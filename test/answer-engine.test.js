@@ -509,7 +509,7 @@ test('explains when the optional Cloudflare image generator is not configured', 
     {},
     'group@g.us',
     'sender@s.whatsapp.net',
-    'د ښوونځي عکس جوړ کړه',
+    'عکس: د ښوونځي عکس جوړ کړه؟',
     'member',
   );
 
