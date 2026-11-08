@@ -250,7 +250,7 @@ test('routes a question read from a group image into the normal answer engine', 
 
 test('deletes a captionless Status image before the empty-image shortcut, even with sticker metadata', async () => {
   const statusPhoto = message('12345@g.us', '', {
-    key: { id: 'status-photo' },
+    key: { remoteJid: '12345@g.us', id: 'status-photo', participant: '15551230000@s.whatsapp.net', fromMe: false },
     message: {
       groupStatusMentionMessage: {},
       imageMessage: { mimetype: 'image/jpeg' },
@@ -262,7 +262,7 @@ test('deletes a captionless Status image before the empty-image shortcut, even w
     extractText: () => '',
     extractQuestionFromImage: async () => { ocrCalls += 1; return ''; },
     isWhatsAppStatusShare: incoming => incoming === statusPhoto,
-    isStickerMessage: incoming => incoming === statusPhoto,
+    isStickerMessage: incoming => incoming === statusPhoto.message,
   });
 
   await h.handler({ type: 'notify', messages: [statusPhoto] });
@@ -276,12 +276,12 @@ test('deletes a captionless Status image before the empty-image shortcut, even w
 
 test('ignores a standalone sticker without counting it as spam or sending it to AI', async () => {
   const sticker = message('12345@g.us', '', {
-    key: { id: 'standalone-sticker' },
+    key: { remoteJid: '12345@g.us', id: 'standalone-sticker', participant: '15551230000@s.whatsapp.net', fromMe: false },
     message: { stickerMessage: { mimetype: 'image/webp' } },
   });
   const h = createHarness({
     extractText: () => '',
-    isStickerMessage: incoming => incoming === sticker,
+    isStickerMessage: incoming => incoming === sticker.message,
   });
 
   await h.handler({ type: 'notify', messages: [sticker] });
