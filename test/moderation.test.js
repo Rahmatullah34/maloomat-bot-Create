@@ -148,6 +148,51 @@ test('isWhatsAppStatusShare: اصلي Status نیسي، نقل شوې برخه �
   );
 });
 
+test('isWhatsAppStatusShare recognizes protocol and preview-card Status variants only on the message itself', () => {
+  assert.equal(isWhatsAppStatusShare({ message: { protocolMessage: { type: 25 } } }), true);
+  assert.equal(isWhatsAppStatusShare({ message: { statusQuotedMessage: { key: { id: 'status-1' } } } }), true);
+  assert.equal(
+    isWhatsAppStatusShare({
+      message: {
+        videoMessage: {
+          contextInfo: { externalAdReply: { title: 'Status', body: '(0:14)' } },
+        },
+      },
+    }),
+    true
+  );
+  assert.equal(
+    isWhatsAppStatusShare({
+      message: {
+        imageMessage: {
+          contextInfo: { isGroupStatus: true, statusAttributions: [{ type: 10 }] },
+        },
+      },
+    }),
+    true
+  );
+  assert.equal(
+    isWhatsAppStatusShare({
+      message: {
+        conversation: 'Status په اړه یوه پوښتنه ده؟',
+        contextInfo: { quotedMessage: { protocolMessage: { type: 25 } } },
+      },
+    }),
+    false
+  );
+  assert.equal(
+    isWhatsAppStatusShare({
+      message: {
+        extendedTextMessage: {
+          text: 'خبرتیا',
+          contextInfo: { externalAdReply: { title: 'BBC News', body: 'World news' } },
+        },
+      },
+    }),
+    false
+  );
+});
+
 test('isStickerMessage: اصلي سټیکر پېژني، خو نقل شوې سټیکر محتوا نه', () => {
   assert.equal(isStickerMessage({ stickerMessage: { mimetype: 'image/webp' } }), true);
   assert.equal(

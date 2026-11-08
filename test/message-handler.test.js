@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { createMessageHandler } = require('../lib/message-handler');
+const { isWhatsAppStatusShare } = require('../lib/moderation');
 
 function createHarness(overrides = {}) {
   const state = {
@@ -269,6 +270,39 @@ test('deletes a captionless Status image before the empty-image shortcut, even w
   assert.equal(ocrCalls, 0, 'Status media should be classified before image OCR');
   assert.equal(h.state.deletions.length, 1);
   assert.equal(h.state.deletions[0][2], statusPhoto.key);
+  assert.match(h.state.deletions[0][4], /Status/);
+  assert.equal(h.state.burstCalls, 0);
+  assert.equal(h.state.answers.length, 0);
+});
+
+test('deletes a WhatsApp Status media preview card before ordinary media handling', async () => {
+  const statusCard = message('12345@g.us', '', {
+    key: {
+      remoteJid: '12345@g.us',
+      id: 'status-preview-card',
+      participant: '15551230000@s.whatsapp.net',
+      fromMe: false,
+    },
+    message: {
+      videoMessage: {
+        mimetype: 'video/mp4',
+        contextInfo: {
+          externalAdReply: { title: 'Status', body: '(0:14)' },
+        },
+      },
+    },
+  });
+  let ocrCalls = 0;
+  const h = createHarness({
+    extractText: () => '',
+    extractQuestionFromImage: async () => { ocrCalls += 1; return ''; },
+    isWhatsAppStatusShare,
+  });
+
+  await h.handler({ type: 'notify', messages: [statusCard] });
+  assert.equal(ocrCalls, 0);
+  assert.equal(h.state.deletions.length, 1);
+  assert.equal(h.state.deletions[0][2], statusCard.key);
   assert.match(h.state.deletions[0][4], /Status/);
   assert.equal(h.state.burstCalls, 0);
   assert.equal(h.state.answers.length, 0);
