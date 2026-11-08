@@ -148,6 +148,40 @@ test('isWhatsAppStatusShare: اصلي Status نیسي، نقل شوې برخه �
   );
 });
 
+test('isWhatsAppStatusShare detects WhatsApp card titles that append Status after the sender number', () => {
+  assert.equal(
+    isWhatsAppStatusShare({
+      message: {
+        videoMessage: {
+          contextInfo: {
+            externalAdReply: {
+              title: '+93 70 780 6298 • Status',
+              body: '(0:23)',
+            },
+          },
+        },
+      },
+    }),
+    true
+  );
+  assert.equal(
+    isWhatsAppStatusShare({
+      message: {
+        conversation: 'Status د لغت په اړه پوښتنه ده؟',
+        extendedTextMessage: {
+          contextInfo: {
+            externalAdReply: {
+              title: 'School Status Update',
+              body: 'New timetable',
+            },
+          },
+        },
+      },
+    }),
+    false
+  );
+});
+
 test('isWhatsAppStatusShare recognizes protocol and preview-card Status variants only on the message itself', () => {
   assert.equal(isWhatsAppStatusShare({ message: { protocolMessage: { type: 25 } } }), true);
   assert.equal(isWhatsAppStatusShare({ message: { statusQuotedMessage: { key: { id: 'status-1' } } } }), true);
