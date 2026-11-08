@@ -23,6 +23,7 @@ const {
   isForwardedChannelMessage,
   isWhatsAppStatusShare,
   isReactionMessage,
+  isStickerMessage,
   extractText,
   looksLikeQuestion,
   setTemporaryMute,
@@ -142,6 +143,21 @@ test('isWhatsAppStatusShare: اصلي Status نیسي، نقل شوې برخه �
         conversation: 'غبرګون',
         contextInfo: { quotedMessage: { statusMentionMessage: {} } },
       },
+    }),
+    false
+  );
+});
+
+test('isStickerMessage: اصلي سټیکر پېژني، خو نقل شوې سټیکر محتوا نه', () => {
+  assert.equal(isStickerMessage({ stickerMessage: { mimetype: 'image/webp' } }), true);
+  assert.equal(
+    isStickerMessage({ ephemeralMessage: { message: { stickerMessage: {} } } }),
+    true
+  );
+  assert.equal(
+    isStickerMessage({
+      conversation: 'ځواب',
+      contextInfo: { quotedMessage: { stickerMessage: {} } },
     }),
     false
   );

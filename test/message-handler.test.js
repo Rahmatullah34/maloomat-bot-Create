@@ -22,6 +22,7 @@ function createHarness(overrides = {}) {
     shouldHandleNotifyEvent: (type, msg) => type === 'notify' && Boolean(msg?.message && !msg.key?.fromMe),
     classifyRemoteJid: jid => String(jid || '').endsWith('@g.us') ? 'group' : 'private',
     isReactionMessage: () => false,
+    isStickerMessage: () => false,
     ENABLE_PRIVATE_QA: true,
     PRIVATE_QA_ALLOWED_NUMBERS: new Set(),
     PRIVATE_QA_ALLOWED_LIDS: new Set(),
@@ -245,6 +246,48 @@ test('routes a question read from a group image into the normal answer engine', 
   await h.handler({ type: 'notify', messages: [photo] });
   assert.equal(h.state.answers.length, 1);
   assert.equal(h.state.answers[0][3], 'د عکس پوښتنه څه ده؟');
+});
+
+test('deletes a captionless Status image before the empty-image shortcut, even with sticker metadata', async () => {
+  const statusPhoto = message('12345@g.us', '', {
+    key: { id: 'status-photo' },
+    message: {
+      groupStatusMentionMessage: {},
+      imageMessage: { mimetype: 'image/jpeg' },
+      stickerMessage: { mimetype: 'image/webp' },
+    },
+  });
+  let ocrCalls = 0;
+  const h = createHarness({
+    extractText: () => '',
+    extractQuestionFromImage: async () => { ocrCalls += 1; return ''; },
+    isWhatsAppStatusShare: incoming => incoming === statusPhoto,
+    isStickerMessage: incoming => incoming === statusPhoto,
+  });
+
+  await h.handler({ type: 'notify', messages: [statusPhoto] });
+  assert.equal(ocrCalls, 0, 'Status media should be classified before image OCR');
+  assert.equal(h.state.deletions.length, 1);
+  assert.equal(h.state.deletions[0][2], statusPhoto.key);
+  assert.match(h.state.deletions[0][4], /Status/);
+  assert.equal(h.state.burstCalls, 0);
+  assert.equal(h.state.answers.length, 0);
+});
+
+test('ignores a standalone sticker without counting it as spam or sending it to AI', async () => {
+  const sticker = message('12345@g.us', '', {
+    key: { id: 'standalone-sticker' },
+    message: { stickerMessage: { mimetype: 'image/webp' } },
+  });
+  const h = createHarness({
+    extractText: () => '',
+    isStickerMessage: incoming => incoming === sticker,
+  });
+
+  await h.handler({ type: 'notify', messages: [sticker] });
+  assert.equal(h.state.deletions.length, 0);
+  assert.equal(h.state.burstCalls, 0);
+  assert.equal(h.state.answers.length, 0);
 });
 
 test('silently ignores a group image when it contains no readable question', async () => {
