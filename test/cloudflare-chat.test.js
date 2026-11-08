@@ -41,6 +41,10 @@ test('calls the Cloudflare Workers AI chat-completions endpoint with the selecte
   assert.equal(request.body.model, '@cf/zai-org/glm-4.7-flash');
   assert.equal(request.body.max_completion_tokens, 800);
   assert.equal(request.body.max_tokens, undefined);
+  assert.deepEqual(request.body.chat_template_kwargs, {
+    enable_thinking: false,
+    clear_thinking: true,
+  });
   assert.equal(data.choices[0].message.content, 'دا د Cloudflare ازمویني ځواب دی.');
 });
 
