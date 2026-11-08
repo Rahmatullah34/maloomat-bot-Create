@@ -84,7 +84,7 @@ test('allows encyclopedic references for general religious background questions'
 });
 
 test('distinguishes general religious background from precise religious claims', () => {
-  assert.equal(requiresAuthoritativeReligiousSource('د قیامت وړې نښې مفصل او کتابونو معلومات راکړه؟'), false);
+  assert.equal(requiresAuthoritativeReligiousSource('د قیامت وړې نښې مفصل او کتابونو معلومات راکړه؟'), true);
   assert.equal(requiresAuthoritativeReligiousSource('What is a hadith?'), false);
   assert.equal(requiresAuthoritativeReligiousSource('د لمانځه فرضونه کوم دي؟'), true);
   assert.equal(requiresAuthoritativeReligiousSource('د حنفي فقهې له مخې د لمانځه فرضونه څو دي؟'), true);
@@ -226,7 +226,7 @@ test('requires authoritative Islamic sources for hadith, citations, and rulings'
     filterTrustedReligiousSources([wiki, hadith], 'د حدیث کره حواله او شمېره راکړه').map(item => item.title),
     ['Sahih al-Bukhari 1036'],
   );
-  assert.equal(hasTrustedReligiousReferenceText('https://en.wikipedia.org/wiki/Signs_of_the_hour', 'کتابونو حوالې راکړه'), true);
+  assert.equal(hasTrustedReligiousReferenceText('https://en.wikipedia.org/wiki/Signs_of_the_hour', 'کتابونو حوالې راکړه'), false);
   assert.equal(hasTrustedReligiousReferenceText('https://sunnah.com/bukhari:1036', 'کتابونو حوالې راکړه'), true);
 });
 
