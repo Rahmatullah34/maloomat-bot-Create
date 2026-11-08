@@ -72,7 +72,7 @@ test('uses configured Cloudflare AI for no-source fallback without an OpenRouter
   );
 
   assert.equal(handled, true);
-  assert.equal(context.state.searches, 1);
+  assert.equal(context.state.searches, 0);
   assert.equal(summaryCalls, 1);
   assert.match(context.messages[0], /Cloudflare د بدیل ځواب/);
 });
