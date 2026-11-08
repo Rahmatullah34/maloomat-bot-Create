@@ -93,6 +93,13 @@ test('generates English research queries for common Islamic questions', () => {
   assert.ok(riba.some(query => /Sunnah scholarly explanation/i.test(query)));
 });
 
+test('uses one named Hanafi book for prayer-condition count and order', () => {
+  const hints = getResearchQueryHints('د حنفي فقهې له مخې د لمانځه شرطونه څو دي؟');
+  assert.equal(hints.length, 2);
+  assert.match(hints[0], /Hanafi fiqh book Shurut al-Salah/);
+  assert.match(hints[1], /ketabonline.com\\/ar\\/books\\/29352/);
+});
+
 test('searches prayer faraidh questions against school-specific scholarly sources', () => {
   const hanafi = getResearchQueryHints('د حنفي فقهې له مخې د لمانځه فرضونه کوم دي؟');
   assert.equal(hanafi.length, 2);

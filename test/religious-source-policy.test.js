@@ -12,6 +12,8 @@ const {
   isHanafiFiqhReferenceUrl,
   isPrayerRequirementQuestion,
   isPrayerRequirementEvidenceSource,
+  isPrayerConditionsQuestion,
+  isPrayerConditionsBookSource,
   isQuranRukuCountQuestion,
   isQuranLongestWordQuestion,
   asksForReligiousReferences,
@@ -91,6 +93,35 @@ test('distinguishes general religious background from precise religious claims',
   assert.equal(requiresAuthoritativeReligiousSource('د دې حدیث کره حواله او شمېره راکړه؟'), true);
   assert.equal(requiresAuthoritativeReligiousSource('ایا دا عمل حلال دی که حرام؟'), true);
   assert.equal(requiresAuthoritativeReligiousSource('د قرآن د دې آیت کره متن او شمېره راکړه؟'), true);
+});
+
+test('requires the selected Hanafi book for prayer-condition lists and rejects Wikipedia/other mixed lists', () => {
+  const question = 'د حنفي فقهې له مخې د لمانځه شرطونه څو دي؟';
+  const selectedBook = {
+    title: 'شروط الصلاة | مجلد 1 | صفحة 5 | فقه حنفي',
+    url: 'https://ketabonline.com/ar/books/29352/read?page=1&part=1',
+    snippet: 'باب شروط الصلاة، وهي ثمانية: الوضوء بالماء المطلق أو التيمم، طهارة الثوب، طهارة المكان، طهارة البدن، ستر العورة، استقبال القبلة، النية، ومعرفة أوقات الصلاة.',
+  };
+  const wikipedia = {
+    title: 'Salah',
+    url: 'https://en.wikipedia.org/wiki/Salah',
+    snippet: 'Salah is the ritual prayer in Islam. It has several conditions and obligatory acts in Islamic law.',
+  };
+  const otherHanafiList = {
+    title: 'Conditions of Salah',
+    url: 'https://islamqa.org/hanafi/daruliftaa-birmingham/136138/',
+    snippet: 'Hanafi Fiqh. A different fatwa lists the conditions of Salah with separate subcategories and a different count.',
+  };
+
+  assert.equal(isPrayerConditionsQuestion(question), true);
+  assert.equal(isPrayerConditionsBookSource(selectedBook), true);
+  assert.equal(requiresAuthoritativeReligiousSource(question), true);
+  assert.equal(isTrustedReligiousSource(selectedBook, question), true);
+  assert.equal(isTrustedReligiousSource(wikipedia, question), false);
+  assert.equal(isTrustedReligiousSource(otherHanafiList, question), false);
+  assert.equal(hasTrustedReligiousReferenceText(selectedBook.url, question), true);
+  assert.equal(hasTrustedReligiousReferenceText(wikipedia.url, question), false);
+  assert.deepEqual(filterTrustedReligiousSources([selectedBook, wikipedia, otherHanafiList], question), [selectedBook]);
 });
 
 test('recognizes Quran ruku-count questions and permits only its targeted references', () => {

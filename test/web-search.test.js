@@ -22,6 +22,25 @@ test('provides a specific Hanafi scholarly fallback for prayer faraidh', () => {
   assert.deepEqual(filterTrustedReligiousSources(sources, 'د حنفي فقهې له مخې د لمانځه فرضونه کوم دي؟'), sources);
 });
 
+test('uses the same eight-condition Hanafi book as the sole fallback for prayer conditions', () => {
+  const question = 'د حنفي فقهې له مخې د لمانځه شرطونه څو دي؟';
+  const sources = getCuratedFallbackSources(question);
+  assert.equal(sources.length, 1);
+  assert.match(sources[0].title, /شروط الصلاة/);
+  assert.match(sources[0].snippet, /اته شرطونه/);
+  assert.match(sources[0].snippet, /د بدن پاکوالی/);
+  assert.match(sources[0].snippet, /د لمانځه د وختونو پېژندل/);
+  assert.match(sources[0].provider, /Hanafi fiqh book/);
+  assert.deepEqual(filterTrustedReligiousSources(sources, question), sources);
+  assert.deepEqual(
+    buildSearchQueries(question),
+    [
+      'Hanafi fiqh book Shurut al-Salah شروط الصلاة باب شروط الصلاة وهي ثمانية',
+      'site:ketabonline.com/ar/books/29352/read "باب شروط الصلاة، وهي ثمانية"',
+    ]
+  );
+});
+
 test('strips common Pashto question and answer-request wording before search', () => {
   assert.equal(
     extractSearchTopic('میرویس نیکه څوک و؟ مفصل ځواب راکړه؟'),
