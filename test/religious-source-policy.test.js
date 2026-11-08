@@ -14,6 +14,7 @@ const {
   isPrayerRequirementEvidenceSource,
   isPrayerConditionsQuestion,
   isPrayerConditionsBookSource,
+  asksForReligiousEnumeration,
   isQuranRukuCountQuestion,
   isQuranLongestWordQuestion,
   asksForReligiousReferences,
@@ -87,7 +88,7 @@ test('distinguishes general religious background from precise religious claims',
   assert.equal(requiresAuthoritativeReligiousSource('What is a hadith?'), false);
   assert.equal(requiresAuthoritativeReligiousSource('د لمانځه فرضونه کوم دي؟'), true);
   assert.equal(requiresAuthoritativeReligiousSource('د حنفي فقهې له مخې د لمانځه فرضونه څو دي؟'), true);
-  assert.equal(requiresAuthoritativeReligiousSource('د روژې فرضونه کوم دي؟'), false);
+  assert.equal(requiresAuthoritativeReligiousSource('د روژې فرضونه کوم دي؟'), true);
   assert.equal(isPrayerRequirementQuestion('د لمانځه فرضونه کوم دي؟'), true);
   assert.equal(isHanafiFiqhQuestion('د حنفي فقهې له مخې د لمانځه فرضونه؟'), true);
   assert.equal(requiresAuthoritativeReligiousSource('د دې حدیث کره حواله او شمېره راکړه؟'), true);
@@ -129,7 +130,7 @@ test('requires a reliable source for enumerations across different religious tra
   assert.equal(asksForReligiousEnumeration('د روژې فرضونه کوم دي؟'), true);
   assert.equal(asksForReligiousEnumeration('What are the four noble truths in Buddhism?'), true);
   assert.equal(asksForReligiousEnumeration('How many books are in the Bible?'), true);
-  assert.equal(asksForReligiousEnumeration('د قیامت وړې نښې مفصل او کتابونو معلومات راکړه؟'), false);
+  assert.equal(asksForReligiousEnumeration('د قیامت وړې نښې مفصل او کتابونو معلومات راکړه؟'), true);
   assert.equal(requiresAuthoritativeReligiousSource('How many books are in the Bible?'), true);
 });
 
