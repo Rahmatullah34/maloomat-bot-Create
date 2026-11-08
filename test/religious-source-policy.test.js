@@ -221,7 +221,7 @@ test('requires authoritative Islamic sources for hadith, citations, and rulings'
   };
 
   assert.equal(isTrustedReligiousSource(wiki, 'د حدیث کره حواله او شمېره راکړه'), false);
-  assert.equal(isTrustedReligiousSource(wiki, 'د قیامت وړې نښې مفصل او کتابونو معلومات راکړه؟'), true);
+  assert.equal(isTrustedReligiousSource(wiki, 'د قیامت وړې نښې مفصل او کتابونو معلومات راکړه؟'), false);
   assert.deepEqual(
     filterTrustedReligiousSources([wiki, hadith], 'د حدیث کره حواله او شمېره راکړه').map(item => item.title),
     ['Sahih al-Bukhari 1036'],
