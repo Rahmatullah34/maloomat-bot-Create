@@ -39,7 +39,8 @@ test('calls the Cloudflare Workers AI chat-completions endpoint with the selecte
   assert.match(request.url, /\/accounts\/test-account\/ai\/v1\/chat\/completions$/);
   assert.equal(request.options.headers.Authorization, 'Bearer test-token');
   assert.equal(request.body.model, '@cf/zai-org/glm-4.7-flash');
-  assert.equal(request.body.max_tokens, 800);
+  assert.equal(request.body.max_completion_tokens, 800);
+  assert.equal(request.body.max_tokens, undefined);
   assert.equal(data.choices[0].message.content, 'دا د Cloudflare ازمویني ځواب دی.');
 });
 
