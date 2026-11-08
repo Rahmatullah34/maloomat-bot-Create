@@ -8,6 +8,10 @@ const {
   filterTrustedReligiousSources,
   hasTrustedReligiousReferenceText,
   requiresAuthoritativeReligiousSource,
+  isHanafiFiqhQuestion,
+  isHanafiFiqhReferenceUrl,
+  isPrayerRequirementQuestion,
+  isPrayerRequirementEvidenceSource,
   isQuranRukuCountQuestion,
   isQuranLongestWordQuestion,
   asksForReligiousReferences,
@@ -22,7 +26,15 @@ test('accepts established primary-text and academic reference domains', () => {
   assert.equal(isTrustedReligiousDomain('https://pashtonlegacylibrarykandahar.com/books1/3974'), true);
 });
 
-test('does not accept lookalike or unrelated domains', () => {
+test('does not accept lookalike or unrelated domains', () => {test('recognizes established Hanafi fiqh answer paths without treating generic pages as fiqh evidence', () => {
+  assert.equal(isTrustedReligiousDomain('https://islamqa.org/hanafi/daruliftaa-birmingham/172251/'), true);
+  assert.equal(isTrustedReligiousDomain('https://seekersguidance.org/answers/hanafi-fiqh/repeat-prayers/'), true);
+  assert.equal(isHanafiFiqhReferenceUrl('https://islamqa.org/hanafi/daruliftaa-birmingham/172251/'), true);
+  assert.equal(isHanafiFiqhReferenceUrl('https://islamqa.org/shafii/example/'), false);
+  assert.equal(isHanafiFiqhReferenceUrl('https://seekersguidance.org/answers/shafii-fiqh/example/'), false);
+});
+
+
   assert.equal(isTrustedReligiousDomain('https://sunnah.com.fake-example.org/page'), false);
   assert.equal(isTrustedReligiousDomain('https://fake.sunnah.com/bukhari:8'), false);
   assert.equal(isTrustedReligiousDomain('https://notquran.com/'), false);
@@ -71,8 +83,11 @@ test('allows encyclopedic references for general religious background questions'
 test('distinguishes general religious background from precise religious claims', () => {
   assert.equal(requiresAuthoritativeReligiousSource('د قیامت وړې نښې مفصل او کتابونو معلومات راکړه؟'), false);
   assert.equal(requiresAuthoritativeReligiousSource('What is a hadith?'), false);
-  assert.equal(requiresAuthoritativeReligiousSource('د لمانځه فرضونه کوم دي؟'), false);
+  assert.equal(requiresAuthoritativeReligiousSource('د لمانځه فرضونه کوم دي؟'), true);
+  assert.equal(requiresAuthoritativeReligiousSource('د حنفي فقهې له مخې د لمانځه فرضونه څو دي؟'), true);
   assert.equal(requiresAuthoritativeReligiousSource('د روژې فرضونه کوم دي؟'), false);
+  assert.equal(isPrayerRequirementQuestion('د لمانځه فرضونه کوم دي؟'), true);
+  assert.equal(isHanafiFiqhQuestion('د حنفي فقهې له مخې د لمانځه فرضونه؟'), true);
   assert.equal(requiresAuthoritativeReligiousSource('د دې حدیث کره حواله او شمېره راکړه؟'), true);
   assert.equal(requiresAuthoritativeReligiousSource('ایا دا عمل حلال دی که حرام؟'), true);
   assert.equal(requiresAuthoritativeReligiousSource('د قرآن د دې آیت کره متن او شمېره راکړه؟'), true);
@@ -108,7 +123,47 @@ test('recognizes Quran ruku-count questions and permits only its targeted refere
   assert.equal(hasTrustedReligiousReferenceText(wiki.url, question), false);
 });
 
-test('requires authoritative Islamic sources for hadith, citations, and rulings', () => {
+test('requires authoritative Islamic sources for hadith, citations, and rulings', () => {test('rejects Wikipedia for prayer faraidh and accepts a topic-specific Hanafi fatwa source', () => {
+  const question = 'د حنفي فقهې له مخې د لمانځه فرضونه کوم دي؟';
+  const wiki = {
+    title: 'Salah',
+    url: 'https://en.wikipedia.org/wiki/Salah',
+    snippet: 'Salah is the ritual prayer in Islam and one of the Five Pillars of Islam. It includes obligatory daily prayers.',
+  };
+  const genericHanafiSite = {
+    title: 'Islamic Prayer Overview',
+    url: 'https://islamqa.org/general/prayer/',
+    snippet: 'A general overview of prayer in Islam, without a Hanafi school label or a list of compulsory acts.',
+  };
+  const hanafiFatwa = {
+    title: 'What Are the Compulsory Acts of Salah',
+    url: 'https://islamqa.org/hanafi/daruliftaa-birmingham/172251/what-are-the-compulsory-acts-of-salah/',
+    snippet: 'Hanafi Fiqh. Darul Ifta Birmingham explains six compulsory acts (Faraidh) of Salah: first Takbir, standing, recitation, Ruku, both Sajdahs, and final sitting.',
+  };
+  const officialHanafiSource = {
+    title: 'What Are the Compulsory Acts of Salah — Darul Ifta Birmingham',
+    url: 'https://daruliftabirmingham.co.uk/what-are-the-compulsory-acts-of-salah/',
+    snippet: 'Darul Ifta Birmingham answers under Hanafi Fiqh and lists six compulsory acts (Faraidh) of Salah: Takbeer Tahreemah, Qiyaam, Qiraa-ah, Rukoo, both Sajdahs, and Qa’dah Akheerah.',
+  };
+
+  assert.equal(isPrayerRequirementQuestion(question), true);
+  assert.equal(isPrayerRequirementEvidenceSource(hanafiFatwa), true);
+  assert.equal(isTrustedReligiousSource(wiki, question), false);
+  assert.equal(isTrustedReligiousSource(genericHanafiSite, question), false);
+  assert.equal(isTrustedReligiousSource(hanafiFatwa, question), true);
+  assert.equal(isTrustedReligiousSource(officialHanafiSource, question), true);
+  assert.equal(
+    hasTrustedReligiousReferenceText(hanafiFatwa.url, question),
+    true
+  );
+  assert.deepEqual(
+    filterTrustedReligiousSources([wiki, genericHanafiSite, hanafiFatwa, officialHanafiSource], question)
+      .map(item => item.title),
+    [hanafiFatwa.title, officialHanafiSource.title]
+  );
+});
+
+
   const wiki = {
     title: 'Signs of the Hour',
     url: 'https://en.wikipedia.org/wiki/Signs_of_the_hour',
