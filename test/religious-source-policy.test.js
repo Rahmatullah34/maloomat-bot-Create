@@ -124,6 +124,22 @@ test('requires the selected Hanafi book for prayer-condition lists and rejects W
   assert.deepEqual(filterTrustedReligiousSources([selectedBook, wikipedia, otherHanafiList], question), [selectedBook]);
 });
 
+test('requires a reliable source for enumerations across different religious traditions', () => {
+  assert.equal(asksForReligiousEnumeration('د حنفي فقهې له مخې د لمانځه شرطونه څو دي؟'), true);
+  assert.equal(asksForReligiousEnumeration('د روژې فرضونه کوم دي؟'), true);
+  assert.equal(asksForReligiousEnumeration('What are the four noble truths in Buddhism?'), true);
+  assert.equal(asksForReligiousEnumeration('How many books are in the Bible?'), true);
+  assert.equal(asksForReligiousEnumeration('د قیامت وړې نښې مفصل او کتابونو معلومات راکړه؟'), false);
+  assert.equal(requiresAuthoritativeReligiousSource('How many books are in the Bible?'), true);
+});
+
+test('applies the Shurut al-Salah special source only to Islamic Salah conditions', () => {
+  assert.equal(isPrayerConditionsQuestion('د لمانځه شرطونه څو دي؟'), true);
+  assert.equal(isPrayerConditionsQuestion('باب شروط الصلاة وهي ثمانية'), true);
+  assert.equal(isPrayerConditionsQuestion('What are the conditions of Christian prayer?'), false);
+  assert.equal(isPrayerConditionsQuestion('What are Buddhist prayer conditions?'), false);
+});
+
 test('recognizes Quran ruku-count questions and permits only its targeted references', () => {
   const question = 'قرآن کریم څو رکوع ګانې لري؟';
   assert.equal(isQuranRukuCountQuestion(question), true);

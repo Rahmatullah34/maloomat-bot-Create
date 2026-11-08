@@ -97,7 +97,7 @@ test('uses one named Hanafi book for prayer-condition count and order', () => {
   const hints = getResearchQueryHints('د حنفي فقهې له مخې د لمانځه شرطونه څو دي؟');
   assert.equal(hints.length, 2);
   assert.match(hints[0], /Hanafi fiqh book Shurut al-Salah/);
-  assert.match(hints[1], /ketabonline.com\\/ar\\/books\\/29352/);
+  assert.ok(hints[1].includes('ketabonline.com/ar/books/29352'));
 });
 
 test('searches prayer faraidh questions against school-specific scholarly sources', () => {
