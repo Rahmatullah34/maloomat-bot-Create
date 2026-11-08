@@ -132,6 +132,14 @@ test('isForwardedChannelMessage: اصلي پیغام نیسي، نقل شوې ب
   );
 });
 
+test('isWhatsAppStatusShare detects Status at the beginning of the message text', () => {
+  assert.equal(isWhatsAppStatusShare({ message: { conversation: 'Status د دې ویډیو برخه ده' } }), true);
+  assert.equal(isWhatsAppStatusShare({ message: { extendedTextMessage: { text: '  WhatsApp Status: ویډیو' } } }), true);
+  assert.equal(isWhatsAppStatusShare({ message: { conversation: 'دا د Status په اړه عادي پوښتنه ده' } }), false);
+  assert.equal(isWhatsAppStatusShare({ message: { conversation: 'زما د ښوونځي Status' } }), false);
+  assert.equal(isWhatsAppStatusShare({ message: { conversation: 'سلام', contextInfo: { quotedMessage: { conversation: 'Status ویډیو' } } } }), false);
+});
+
 test('isWhatsAppStatusShare: اصلي Status نیسي، نقل شوې برخه نه', () => {
   assert.equal(
     isWhatsAppStatusShare({ message: { statusMentionMessage: {} } }),
