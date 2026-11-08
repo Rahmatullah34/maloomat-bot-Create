@@ -26,7 +26,7 @@ test('accepts established primary-text and academic reference domains', () => {
   assert.equal(isTrustedReligiousDomain('https://pashtonlegacylibrarykandahar.com/books1/3974'), true);
 });
 
-test('does not accept lookalike or unrelated domains', () => {test('recognizes established Hanafi fiqh answer paths without treating generic pages as fiqh evidence', () => {
+test('recognizes established Hanafi fiqh answer paths', () => {
   assert.equal(isTrustedReligiousDomain('https://islamqa.org/hanafi/daruliftaa-birmingham/172251/'), true);
   assert.equal(isTrustedReligiousDomain('https://seekersguidance.org/answers/hanafi-fiqh/repeat-prayers/'), true);
   assert.equal(isHanafiFiqhReferenceUrl('https://islamqa.org/hanafi/daruliftaa-birmingham/172251/'), true);
@@ -34,7 +34,7 @@ test('does not accept lookalike or unrelated domains', () => {test('recognizes e
   assert.equal(isHanafiFiqhReferenceUrl('https://seekersguidance.org/answers/shafii-fiqh/example/'), false);
 });
 
-
+test('does not accept lookalike or unrelated domains', () => {
   assert.equal(isTrustedReligiousDomain('https://sunnah.com.fake-example.org/page'), false);
   assert.equal(isTrustedReligiousDomain('https://fake.sunnah.com/bukhari:8'), false);
   assert.equal(isTrustedReligiousDomain('https://notquran.com/'), false);
@@ -123,7 +123,7 @@ test('recognizes Quran ruku-count questions and permits only its targeted refere
   assert.equal(hasTrustedReligiousReferenceText(wiki.url, question), false);
 });
 
-test('requires authoritative Islamic sources for hadith, citations, and rulings', () => {test('rejects Wikipedia for prayer faraidh and accepts a topic-specific Hanafi fatwa source', () => {
+test('rejects Wikipedia for prayer faraidh and accepts topic-specific Hanafi fatwa sources', () => {
   const question = 'د حنفي فقهې له مخې د لمانځه فرضونه کوم دي؟';
   const wiki = {
     title: 'Salah',
@@ -152,10 +152,7 @@ test('requires authoritative Islamic sources for hadith, citations, and rulings'
   assert.equal(isTrustedReligiousSource(genericHanafiSite, question), false);
   assert.equal(isTrustedReligiousSource(hanafiFatwa, question), true);
   assert.equal(isTrustedReligiousSource(officialHanafiSource, question), true);
-  assert.equal(
-    hasTrustedReligiousReferenceText(hanafiFatwa.url, question),
-    true
-  );
+  assert.equal(hasTrustedReligiousReferenceText(hanafiFatwa.url, question), true);
   assert.deepEqual(
     filterTrustedReligiousSources([wiki, genericHanafiSite, hanafiFatwa, officialHanafiSource], question)
       .map(item => item.title),
@@ -163,7 +160,7 @@ test('requires authoritative Islamic sources for hadith, citations, and rulings'
   );
 });
 
-
+test('requires authoritative Islamic sources for hadith, citations, and rulings', () => {
   const wiki = {
     title: 'Signs of the Hour',
     url: 'https://en.wikipedia.org/wiki/Signs_of_the_hour',

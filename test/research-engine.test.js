@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { canonicalResultUrl, canUseUnverifiedGeneralKnowledgeFallback, getAfghanistanDateContext, isCompleteAIAnswer } = require('../lib/research-engine');
 
-test('canonicalizes web links and removes common tracking parameters', () => {test('rejects empty, cut-off, or unbalanced-Markdown AI answers', () => {
+test('rejects empty, cut-off, or unbalanced-Markdown AI answers', () => {
   assert.equal(isCompleteAIAnswer(''), false);
   assert.equal(isCompleteAIAnswer('د لمانځه **'), false);
   assert.equal(isCompleteAIAnswer('دا بشپړ ځواب دی او'), false);
@@ -13,7 +13,7 @@ test('canonicalizes web links and removes common tracking parameters', () => {te
   assert.equal(isCompleteAIAnswer('دا عادي او بشپړ ځواب دی.'), true);
 });
 
-
+test('canonicalizes web links and removes common tracking parameters', () => {
   assert.equal(
     canonicalResultUrl('https://example.org/page?utm_source=facebook&article=42#section'),
     'https://example.org/page?article=42',

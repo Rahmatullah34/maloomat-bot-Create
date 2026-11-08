@@ -93,17 +93,16 @@ test('generates English research queries for common Islamic questions', () => {
   assert.ok(riba.some(query => /Sunnah scholarly explanation/i.test(query)));
 });
 
-test('does not invent historical research hints for unrelated questions', () => {test('searches prayer faraidh questions against school-specific scholarly sources', () => {
+test('searches prayer faraidh questions against school-specific scholarly sources', () => {
   const hanafi = getResearchQueryHints('د حنفي فقهې له مخې د لمانځه فرضونه کوم دي؟');
   assert.equal(hanafi.length, 2);
   assert.ok(hanafi.some(query => /Hanafi Fiqh.*compulsory acts faraidh of salah/i.test(query)));
-  assert.ok(hanafi.some(query => /site:islamqa.org\\/hanafi/i.test(query)));
-
+  assert.ok(hanafi.some(query => query.includes('site:islamqa.org/hanafi')));
   const generic = getResearchQueryHints('د لمانځه فرضونه کوم دي؟');
   assert.ok(generic.some(query => /Hanafi Fiqh/i.test(query)));
 });
 
-
+test('does not invent historical research hints for unrelated questions', () => {
   assert.deepEqual(getResearchQueryHints('سلام'), []);
 });
 

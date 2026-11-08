@@ -12,21 +12,17 @@ const {
 } = require('../lib/web-search');
 const { filterTrustedReligiousSources } = require('../lib/religious-source-policy');
 
-test('strips common Pashto question and answer-request wording before search', () => {test('provides a specific Hanafi scholarly fallback for prayer faraidh, not a generic encyclopedia', () => {
+test('provides a specific Hanafi scholarly fallback for prayer faraidh', () => {
   const sources = getCuratedFallbackSources('د حنفي فقهې له مخې د لمانځه فرضونه کوم دي؟');
   assert.equal(sources.length, 1);
   assert.match(sources[0].title, /Compulsory Acts of Salah/);
-  assert.match(sources[0].url, /daruliftabirmingham\\.co\\.uk/);
+  assert.match(sources[0].url, /daruliftabirmingham\.co\.uk/);
   assert.match(sources[0].snippet, /شپږ فرضونه/);
   assert.match(sources[0].provider, /Hanafi fiqh/);
-
-  assert.deepEqual(
-    filterTrustedReligiousSources(sources, 'د حنفي فقهې له مخې د لمانځه فرضونه کوم دي؟'),
-    sources
-  );
+  assert.deepEqual(filterTrustedReligiousSources(sources, 'د حنفي فقهې له مخې د لمانځه فرضونه کوم دي؟'), sources);
 });
 
-
+test('strips common Pashto question and answer-request wording before search', () => {
   assert.equal(
     extractSearchTopic('میرویس نیکه څوک و؟ مفصل ځواب راکړه؟'),
     'میرویس نیکه',
