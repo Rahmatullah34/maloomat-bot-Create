@@ -256,7 +256,7 @@ test('allows a verified group admin to register moderation exemptions privately'
     socket: { ev: {}, user: { id: '15551230002:12@s.whatsapp.net' } },
     extractText: () => 'استثنا ثبت کړه',
     FULL_MODERATION_EXEMPT_PHONE_NUMBERS: exemptPhones,
-    persistModerationExemptPhones: async phones => { registered.push(...phones); },
+    persistModerationExemptPhoneNumbers: async phones => { registered.push(...phones); },
     resolveGroupSender: async () => ({
       isAdmin: true,
       participantKey: '15551230001@s.whatsapp.net',
@@ -280,7 +280,7 @@ test('does not allow a non-admin to register a moderation exemption', async () =
   const registered = [];
   const h = createHarness({
     extractText: () => 'استثنا ثبت کړه',
-    persistModerationExemptPhones: async phones => { registered.push(...phones); },
+    persistModerationExemptPhoneNumbers: async phones => { registered.push(...phones); },
     resolveGroupSender: async () => ({
       isAdmin: false,
       participantKey: '15551230001@s.whatsapp.net',
