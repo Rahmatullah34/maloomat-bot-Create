@@ -107,6 +107,7 @@ const PRIVATE_QA_ALLOWED_LIDS = runtimeConfig.security.privateQaAllowedLids;
 const PRIVATE_QA_OWNER_CLAIM_CODE = runtimeConfig.security.privateQaOwnerClaimCode;
 const PRIVATE_QA_OWNER_CLAIMED = runtimeConfig.security.privateQaOwnerClaimed;
 const FULL_MODERATION_EXEMPT_PHONE_NUMBER = runtimeConfig.security.fullModerationExemptPhoneNumber;
+const FULL_MODERATION_EXEMPT_PHONE_NUMBERS = runtimeConfig.security.fullModerationExemptPhoneNumbers;
 const PRIVATE_QA_OWNER_NUMBER = String(FULL_MODERATION_EXEMPT_PHONE_NUMBER || '').replace(/\D/g, '');
 const PRIVATE_QA_OWNER_ONLY = Boolean(
   PRIVATE_QA_OWNER_NUMBER.length >= 7 &&
@@ -123,8 +124,10 @@ const extractQuestionFromImage = createImageQuestionExtractor({
 });
 
 function isFullModerationExemptSender(senderIdentifiers) {
-  return Boolean(FULL_MODERATION_EXEMPT_PHONE_NUMBER) &&
-    hasMatchingPhoneNumber(senderIdentifiers, FULL_MODERATION_EXEMPT_PHONE_NUMBER);
+  const exemptNumbers = FULL_MODERATION_EXEMPT_PHONE_NUMBERS instanceof Set
+    ? [...FULL_MODERATION_EXEMPT_PHONE_NUMBERS]
+    : [FULL_MODERATION_EXEMPT_PHONE_NUMBER].filter(Boolean);
+  return exemptNumbers.length > 0 && hasMatchingPhoneNumber(senderIdentifiers, exemptNumbers);
 }
 
 const WARNING_MUTE_ENABLED = runtimeConfig.warningMute.enabled;
@@ -1006,6 +1009,8 @@ async function startBot() {
       PRIVATE_QA_OWNER_CLAIM_CODE,
       PRIVATE_QA_OWNER_CLAIMED,
       FULL_MODERATION_EXEMPT_PHONE_NUMBER,
+      FULL_MODERATION_EXEMPT_PHONE_NUMBERS,
+      BOT_PHONE_NUMBER: runtimeConfig.whatsapp.phone,
       rememberMessage,
       extractText,
       extractQuestionFromImage,
