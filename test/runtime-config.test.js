@@ -111,6 +111,18 @@ test('selects Cloudflare Workers AI for staged tests and defaults safely to Open
   assert.equal(loadRuntimeConfig({ AI_PROVIDER: 'unknown' }).ai.provider, 'openrouter');
 });
 
+test('uses the connected WhatsApp number as the moderation owner when no explicit exemption is set', () => {
+  const config = loadRuntimeConfig({ WHATSAPP_PHONE: '0707285093' });
+  assert.equal(config.whatsapp.phone, '0707285093');
+  assert.equal(config.security.fullModerationExemptPhoneNumber, '0707285093');
+
+  const explicit = loadRuntimeConfig({
+    WHATSAPP_PHONE: '0707285093',
+    FULL_MODERATION_EXEMPT_PHONE_NUMBER: '+93 70 111 2233',
+  });
+  assert.equal(explicit.security.fullModerationExemptPhoneNumber, '93701112233');
+});
+
 test('normalizes the WhatsApp pairing phone and preserves the local-file fallback', () => {
   assert.equal(readWhatsAppPhone({ WHATSAPP_PHONE: '+1 (202) 555-0100' }, '/missing'), '12025550100');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'maloomat-phone-'));
