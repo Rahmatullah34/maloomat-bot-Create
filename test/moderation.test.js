@@ -206,7 +206,7 @@ test('isWhatsAppStatusShare detects WhatsApp card titles that append Status afte
         },
       },
     }),
-    false
+    true
   );
 });
 
@@ -240,7 +240,7 @@ test('isWhatsAppStatusShare recognizes protocol and preview-card Status variants
         contextInfo: { quotedMessage: { protocolMessage: { type: 25 } } },
       },
     }),
-    false
+    true
   );
   assert.equal(
     isWhatsAppStatusShare({
