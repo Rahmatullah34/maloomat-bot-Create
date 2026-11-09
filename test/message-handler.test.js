@@ -249,6 +249,52 @@ test('routes a question read from a group image into the normal answer engine', 
   assert.equal(h.state.answers[0][3], 'د عکس پوښتنه څه ده؟');
 });
 
+test('allows a verified group admin to register moderation exemptions privately', async () => {
+  const registered = [];
+  const exemptPhones = new Set();
+  const h = createHarness({
+    socket: { ev: {}, user: { id: '15551230002:12@s.whatsapp.net' } },
+    extractText: () => 'استثنا ثبت کړه',
+    FULL_MODERATION_EXEMPT_PHONE_NUMBERS: exemptPhones,
+    persistModerationExemptPhones: async phones => { registered.push(...phones); },
+    resolveGroupSender: async () => ({
+      isAdmin: true,
+      participantKey: '15551230001@s.whatsapp.net',
+      phoneNumber: '15551230001',
+    }),
+  });
+  const adminMessage = message('12345@g.us', 'استثنا ثبت کړه', {
+    key: { participant: '15551230001@s.whatsapp.net' },
+  });
+
+  await h.handler({ type: 'notify', messages: [adminMessage] });
+
+  assert.deepEqual(registered, ['15551230001', '15551230002']);
+  assert.deepEqual([...exemptPhones], ['15551230001', '15551230002']);
+  assert.equal(h.state.deletions.length, 0);
+  assert.equal(h.state.answers.length, 0);
+  assert.match(h.state.sends[0].text, /مستثنا شوه/);
+});
+
+test('does not allow a non-admin to register a moderation exemption', async () => {
+  const registered = [];
+  const h = createHarness({
+    extractText: () => 'استثنا ثبت کړه',
+    persistModerationExemptPhones: async phones => { registered.push(...phones); },
+    resolveGroupSender: async () => ({
+      isAdmin: false,
+      participantKey: '15551230001@s.whatsapp.net',
+      phoneNumber: '15551230001',
+    }),
+  });
+
+  await h.handler({ type: 'notify', messages: [message('12345@g.us', 'استثنا ثبت کړه')] });
+
+  assert.deepEqual(registered, []);
+  assert.equal(h.state.answers.length, 0);
+  assert.match(h.state.sends[0].text, /یوازې د ګروپ مدیر/);
+});
+
 test('deletes a captionless Status image before the empty-image shortcut, even with sticker metadata', async () => {
   const statusPhoto = message('12345@g.us', '', {
     key: { remoteJid: '12345@g.us', id: 'status-photo', participant: '15551230000@s.whatsapp.net', fromMe: false },
