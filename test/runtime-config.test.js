@@ -45,6 +45,7 @@ test('loads feature flags, bounded limits, and private allowlists from environme
     PRIVATE_QA_ALLOWED_NUMBERS: '+1 (202) 555-0100, 0044123456789, bad',
     PRIVATE_QA_ALLOWED_LIDS: '123456789012345, 998877665544332@lid',
     FULL_MODERATION_EXEMPT_PHONE_NUMBER: '+1 (202) 555-0100',
+    FULL_MODERATION_EXEMPT_PHONE_NUMBERS: '0707285093, +93 74 400 3345',
   });
 
   assert.equal(config.features.groupQA, false);
@@ -59,6 +60,7 @@ test('loads feature flags, bounded limits, and private allowlists from environme
   assert.deepEqual([...config.security.privateQaAllowedNumbers], ['12025550100', '0044123456789']);
   assert.deepEqual([...config.security.privateQaAllowedLids], ['123456789012345', '998877665544332']);
   assert.equal(config.security.fullModerationExemptPhoneNumber, '12025550100');
+  assert.deepEqual([...config.security.fullModerationExemptPhoneNumbers], ['0707285093', '0744003345', '12025550100']);
 });
 
 test('loads the free creative model and optional Cloudflare image settings', () => {
