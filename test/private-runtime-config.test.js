@@ -23,6 +23,7 @@ test('reads only supported private settings from the server-side JSON file', () 
   const dir = makeConfigDirectory(JSON.stringify({
     PRIVATE_QA_ALLOWED_NUMBERS: '15551234567',
     FULL_MODERATION_EXEMPT_PHONE_NUMBER: '15557654321',
+    FULL_MODERATION_EXEMPT_PHONE_NUMBERS: '0707285093,0744003345',
     ALLOWED_LINK_SENDERS: '15551234567,15557654321',
     PRIVATE_QA_ALLOWED_LIDS: '123456789012345@lid',
     CLOUDFLARE_ACCOUNT_ID: 'test-account-id',
@@ -37,6 +38,7 @@ test('reads only supported private settings from the server-side JSON file', () 
     assert.deepEqual(readPrivateRuntimeConfig(dir), {
       PRIVATE_QA_ALLOWED_NUMBERS: '15551234567',
       FULL_MODERATION_EXEMPT_PHONE_NUMBER: '15557654321',
+      FULL_MODERATION_EXEMPT_PHONE_NUMBERS: '0707285093,0744003345',
       ALLOWED_LINK_SENDERS: '15551234567,15557654321',
       PRIVATE_QA_ALLOWED_LIDS: '123456789012345@lid',
       CLOUDFLARE_ACCOUNT_ID: 'test-account-id',
