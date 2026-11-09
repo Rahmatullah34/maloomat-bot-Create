@@ -132,6 +132,26 @@ test('isForwardedChannelMessage: اصلي پیغام نیسي، نقل شوې ب
   );
 });
 
+test('isWhatsAppStatusShare detects Status preview titles with a sender number prefix', () => {
+  for (const title of [
+    '+93 70 805 0290 • Status',
+    '+93 70 805 0290 · Status',
+    '+93 70 805 0290 | Status',
+  ]) {
+    assert.equal(
+      isWhatsAppStatusShare({
+        message: {
+          extendedTextMessage: {
+            contextInfo: { externalAdReply: { title, body: '(0:14)' } },
+          },
+        },
+      }),
+      true,
+      title
+    );
+  }
+});
+
 test('isWhatsAppStatusShare detects Status at the beginning of the message text', () => {
   assert.equal(isWhatsAppStatusShare({ message: { conversation: 'Status د دې ویډیو برخه ده' } }), true);
   assert.equal(isWhatsAppStatusShare({ message: { extendedTextMessage: { text: '  WhatsApp Status: ویډیو' } } }), true);
