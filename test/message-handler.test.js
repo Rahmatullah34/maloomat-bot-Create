@@ -264,7 +264,7 @@ test('allows a verified group admin to register moderation exemptions privately'
     }),
   });
   const adminMessage = message('12345@g.us', 'استثنا ثبت کړه', {
-    key: { participant: '15551230001@s.whatsapp.net' },
+    key: { remoteJid: '12345@g.us', id: 'admin-exemption', participant: '15551230001@s.whatsapp.net', fromMe: false },
   });
 
   await h.handler({ type: 'notify', messages: [adminMessage] });
@@ -288,7 +288,9 @@ test('does not allow a non-admin to register a moderation exemption', async () =
     }),
   });
 
-  await h.handler({ type: 'notify', messages: [message('12345@g.us', 'استثنا ثبت کړه')] });
+  await h.handler({ type: 'notify', messages: [message('12345@g.us', 'استثنا ثبت کړه', {
+    key: { remoteJid: '12345@g.us', id: 'non-admin-exemption', participant: '15551230001@s.whatsapp.net', fromMe: false },
+  })] });
 
   assert.deepEqual(registered, []);
   assert.equal(h.state.answers.length, 0);
