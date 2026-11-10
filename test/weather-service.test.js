@@ -30,6 +30,8 @@ test('resolves province aliases and district names to Afghanistan-only geocoding
   assert.equal(shahJoy.districtId, 'AF2606');
   assert.equal(shahJoy.latitude, 32.498);
   assert.equal(shahJoy.longitude, 67.395);
+  assert.equal(resolveLocationQuery('د ارزګان د خاص ارزګان ولسوالۍ هوا').districtId, 'AF2505');
+  assert.equal(resolveLocationQuery('د کونړ د چوکي ولسوالۍ هوا').districtId, 'AF1509');
   assert.equal(districts.districts.length, 401);
   assert.equal(resolveLocationQuery('د سروبي ولسوالۍ هوا').needsProvince, true);
   assert.equal(resolveLocationQuery('د افغانستان د هوا حالاتو معلومات'), null);
