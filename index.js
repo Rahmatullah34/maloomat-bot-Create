@@ -24,6 +24,7 @@ const { createCloudflareCreativeGenerator } = require('./lib/cloudflare-chat');
 const { createCloudflareImageGenerator } = require('./lib/cloudflare-image-generator');
 const { createMessageHandler } = require('./lib/message-handler');
 const { createImageQuestionExtractor } = require('./lib/image-question');
+const { createWeatherService } = require('./lib/weather-service');
 const { normalizePashto } = require('./lib/moderation');
 const {
   OFFLINE_KNOWLEDGE,
@@ -162,6 +163,9 @@ const generateImage = createCloudflareImageGenerator({
   dailyLimit: 50,
 });
 
+// د افغانستان لپاره د هوا ژوندی خدمت؛ د OpenRouter کیلي ته اړتیا نه لري.
+const getWeatherAnswer = createWeatherService();
+
 // د ځواب منطق د محلي معلوماتو، سرچینو او AI خدماتو ترمنځ همغږي کوي.
 const answerWithKnowledge = createAnswerEngine({
   ENABLE_GROUP_QA,
@@ -195,6 +199,7 @@ const answerWithKnowledge = createAnswerEngine({
   getAfghanistanDateContext,
   generateCreativeText,
   generateImage,
+  getWeatherAnswer,
 });
 
 
