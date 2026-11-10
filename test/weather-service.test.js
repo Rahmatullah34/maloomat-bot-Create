@@ -3,6 +3,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+const districts = require('../lib/afghanistan-districts.json');
+
 const {
   createWeatherService,
   isWeatherQuestion,
@@ -22,7 +24,13 @@ test('recognizes Pashto, Dari, and English weather requests without treating air
 test('resolves province aliases and district names to Afghanistan-only geocoding queries', () => {
   assert.equal(resolveLocationQuery('د کابل د نن ورځې هوا').query, 'Kabul, Afghanistan');
   assert.equal(resolveLocationQuery('د کندهار د هوا حالاتو معلومات').query, 'Kandahar, Afghanistan');
-  assert.equal(resolveLocationQuery('د زابل د شاه جوی ولسوالۍ د درې ورځو هوا').query, 'شاه جوی, زابل');
+  const shahJoy = resolveLocationQuery('د زابل د شاه جوی ولسوالۍ د درې ورځو هوا');
+  assert.equal(shahJoy.query, 'شاه جوی, زابل');
+  assert.equal(shahJoy.districtId, 'AF2606');
+  assert.equal(shahJoy.latitude, 32.498);
+  assert.equal(shahJoy.longitude, 67.395);
+  assert.equal(districts.districts.length, 401);
+  assert.equal(resolveLocationQuery('د سروبي ولسوالۍ هوا').needsProvince, true);
   assert.equal(resolveLocationQuery('د افغانستان د هوا حالاتو معلومات'), null);
 });
 
@@ -93,6 +101,10 @@ test('geocodes within Afghanistan and returns a detailed local forecast in Pasht
             relative_humidity_2m: 35,
             apparent_temperature: 11.1,
             precipitation: 0,
+            rain: 0,
+            showers: 0,
+            snowfall: 0,
+            is_day: 1,
             weather_code: 1,
             wind_speed_10m: 9.2,
             wind_direction_10m: 90,
@@ -103,9 +115,16 @@ test('geocodes within Afghanistan and returns a detailed local forecast in Pasht
           hourly: {
             time: ['2026-11-10T14:00', '2026-11-10T15:00'],
             temperature_2m: [12.4, 11.8],
+            dew_point_2m: [2.1, 2.4],
             precipitation_probability: [0, 10],
             precipitation: [0, 0],
+            rain: [0, 0],
+            showers: [0, 0],
+            snowfall: [0, 0],
             weather_code: [1, 1],
+            visibility: [24000, 23000],
+            uv_index: [2.5, 3.1],
+            is_day: [1, 1],
           },
           daily: {
             time: ['2026-11-10', '2026-11-11', '2026-11-12'],
@@ -113,8 +132,17 @@ test('geocodes within Afghanistan and returns a detailed local forecast in Pasht
             temperature_2m_max: [15, 14, 12],
             temperature_2m_min: [4, 3, 2],
             precipitation_sum: [0, 0.5, 1.2],
+            rain_sum: [0, 0.5, 1.2],
+            showers_sum: [0, 0, 0],
+            snowfall_sum: [0, 0, 0],
             precipitation_probability_max: [0, 20, 40],
+            precipitation_hours: [0, 1, 2],
             wind_speed_10m_max: [14, 16, 22],
+            wind_gusts_10m_max: [20, 22, 30],
+            wind_direction_10m_dominant: [90, 180, 270],
+            uv_index_max: [3.1, 3.4, 2.8],
+            sunshine_duration: [21600, 18000, 14400],
+            daylight_duration: [37800, 37800, 37800],
             sunrise: ['2026-11-10T06:30', '2026-11-11T06:31', '2026-11-12T06:32'],
             sunset: ['2026-11-10T17:00', '2026-11-11T16:59', '2026-11-12T16:58'],
           },
@@ -128,6 +156,11 @@ test('geocodes within Afghanistan and returns a detailed local forecast in Pasht
   assert.match(answer, /د کابل ولایت/);
   assert.match(answer, /تودوخه: 12°C/);
   assert.match(answer, /نسبي رطوبت: 35%/);
+  assert.match(answer, /د شبنم ټکی: 2\.1°C/);
+  assert.match(answer, /لید: 24\.0 km/);
+  assert.match(answer, /د UV شاخص: 2\.5/);
+  assert.match(answer, /واوره 0\.0 cm/);
+  assert.match(answer, /د UV اعظمي شاخص/);
   assert.match(answer, /د راتلونکو ورځو وړاندوینه/);
   assert.match(answer, /Open-Meteo/);
   assert.equal(requests.length, 2);
