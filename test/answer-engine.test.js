@@ -542,3 +542,25 @@ test('explains when the optional Cloudflare image generator is not configured', 
   assert.equal(handled, true);
   assert.match(context.messages[0], /CLOUDFLARE_ACCOUNT_ID/);
 });
+
+
+test('routes Afghanistan weather questions directly to the live weather service', async () => {
+  const context = makeDependencies({
+    getWeatherAnswer: async question => 'د هوا ازموینې ځواب: ' + question,
+    searchInternet: async () => {
+      throw new Error('weather must not fall through to general web search');
+    },
+  });
+  const answer = createAnswerEngine(context.dependencies);
+  const handled = await answer(
+    {},
+    'group@g.us',
+    'sender@s.whatsapp.net',
+    'د کابل د هوا ککړتیا څه ده؟',
+    'member',
+  );
+
+  assert.equal(handled, true);
+  assert.equal(context.state.searches, 0);
+  assert.match(context.messages[0], /د هوا ازموینې ځواب: د کابل د هوا ککړتیا/);
+});
