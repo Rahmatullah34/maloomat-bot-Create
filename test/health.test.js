@@ -95,3 +95,21 @@ test('never returns secret values or phone/LID identifiers from its config', () 
   assert.equal(output.includes('local-secret'), false);
   assert.equal(output.includes('env-secret'), false);
 });
+
+
+test('reports English course schedule without exposing group identifiers', () => {
+  const status = {
+    enabled: true,
+    timeZone: 'Asia/Kabul',
+    schedule: '20:00',
+    targetConfigured: true,
+    targetCount: 1,
+    started: false,
+    currentDay: 1,
+    running: true,
+    lastResult: 'waiting-for-next-slot',
+  };
+  const payload = buildHealthPayload(makeState({ englishCourse: status }));
+  assert.deepEqual(payload.englishCourse, status);
+  assert.equal(JSON.stringify(payload).includes('@g.us'), false);
+});
