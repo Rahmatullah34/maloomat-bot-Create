@@ -48,6 +48,8 @@ test('recognizes only the dedicated English course commands', () => {
   assert.equal(isCourseCommand('درس'), true);
   assert.equal(isCourseCommand('تمرین'), true);
   assert.equal(isCourseCommand('ځواب: 1 - Hello'), true);
+  assert.equal(isCourseCommand('I am fine, thank you - 2'), true);
+  assert.equal(isCourseCommand('2 - I am fine, thank you.'), true);
   assert.equal(isCourseCommand('سلام'), false);
   assert.equal(isCourseCommand('د زړه دنده څه ده؟'), false);
 });
@@ -133,6 +135,45 @@ test('routes course commands only in the configured group and evaluates numbered
 
     const progress = JSON.parse(fs.readFileSync(state.path, 'utf8'));
     assert.equal(progress.progress['12345-678@g.us']['15551234567@s.whatsapp.net']['1']['1'].points, 1);
+  } finally {
+    state.cleanup();
+  }
+});
+
+test('scores answer-first format such as I am fine, thank you - 2', async () => {
+  const state = temporaryState();
+  try {
+    const today = getKabulTimeParts(new Date()).dateKey;
+    fs.writeFileSync(state.path, JSON.stringify({
+      version: 1,
+      startDate: today,
+      posts: {},
+      progress: {},
+    }));
+    const sent = [];
+    const service = createEnglishCourseService({
+      statePath: state.path,
+      getConfig: () => ({ enabled: true, groupJid: '12345-678@g.us' }),
+      safeSend: async (_socket, jid, content) => {
+        sent.push({ jid, text: content.text });
+        return { key: { id: 'sent' } };
+      },
+    });
+
+    const handled = await service.handleCommand(
+      {},
+      '12345-678@g.us',
+      'I am fine, thank you - 2',
+      { participantKey: '15551234567@s.whatsapp.net' }
+    );
+    assert.equal(handled, true);
+    assert.match(sent[0].text, /ځواب مو سم دی/);
+    assert.match(sent[0].text, /نمرې: 1/);
+    const progress = JSON.parse(fs.readFileSync(state.path, 'utf8'));
+    assert.equal(
+      progress.progress['12345-678@g.us']['15551234567@s.whatsapp.net']['1']['2'].points,
+      1
+    );
   } finally {
     state.cleanup();
   }
