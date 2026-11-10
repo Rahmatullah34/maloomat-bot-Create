@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { createMessageHandler } = require('../lib/message-handler');
+const { createMessageHandler, hasTerminalQuestionMark } = require('../lib/message-handler');
 const { isWhatsAppStatusShare } = require('../lib/moderation');
 
 function createHarness(overrides = {}) {
@@ -466,5 +466,45 @@ test('passes quoted WhatsApp reply context on every owner private-chat follow-up
   assert.equal(h.state.answers.length, 2);
   assert.equal(h.state.answers[0][5].quotedText, 'د زړه دنده څه ده؟');
   assert.equal(h.state.answers[1][5].quotedText, 'زړه وینه ټول بدن ته پمپ کوي.');
+});
+
+test('requires a question mark at the very end of a message', () => {
+  assert.equal(hasTerminalQuestionMark('دا پوښتنه ده؟'), true);
+  assert.equal(hasTerminalQuestionMark('Is this a question?'), true);
+  assert.equal(hasTerminalQuestionMark('دا پوښتنه ده؟   '), true);
+  assert.equal(hasTerminalQuestionMark('Is this a question？'), true);
+  assert.equal(hasTerminalQuestionMark('دا عادي لیکنه ده.'), false);
+  assert.equal(hasTerminalQuestionMark('سلام'), false);
+  assert.equal(hasTerminalQuestionMark('دا پوښتنه ده؟ 😊'), false);
+});
+
+test('does not answer an ordinary group statement but still applies group moderation', async () => {
+  const h = createHarness({
+    extractText: () => 'دا عادي معلوماتي متن دی',
+  });
+  await h.handler({
+    type: 'notify',
+    messages: [message('12345@g.us', 'دا عادي معلوماتي متن دی')],
+  });
+  assert.equal(h.state.answers.length, 0);
+  assert.equal(h.state.sends.length, 0);
+  assert.equal(h.state.burstCalls, 1);
+  assert.equal(h.state.badWordCalls, 1);
+});
+
+test('does not automatically reply to an ordinary private greeting without a question mark', async () => {
+  const owner = '15551234567';
+  const h = createHarness({
+    classifyRemoteJid: () => 'private',
+    PRIVATE_QA_ALLOWED_NUMBERS: new Set([owner]),
+    FULL_MODERATION_EXEMPT_PHONE_NUMBER: owner,
+    extractText: () => 'سلام',
+  });
+  await h.handler({
+    type: 'notify',
+    messages: [message(owner + '@s.whatsapp.net', 'سلام')],
+  });
+  assert.equal(h.state.answers.length, 0);
+  assert.equal(h.state.sends.length, 0);
 });
 
