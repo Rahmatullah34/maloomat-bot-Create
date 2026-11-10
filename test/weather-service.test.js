@@ -169,7 +169,10 @@ test('geocodes within Afghanistan and returns a detailed local forecast in Pasht
   assert.match(answer, /واوره 0\.0 cm/);
   assert.match(answer, /د UV اعظمي شاخص/);
   assert.match(answer, /د راتلونکو ورځو وړاندوینه/);
-  assert.match(answer, /د شپې\/سهار ټیټه تودوخه/);
+  assert.match(answer, /لږترلږه تودوخه/);
+  assert.ok(answer.indexOf('*د راتلونکو ورځو وړاندوینه:*') < answer.indexOf('لږترلږه تودوخه'));
+  assert.ok(answer.indexOf('لږترلږه تودوخه') < answer.indexOf('*د هوا کیفیت (ماډلي اټکل):*'));
+  assert.ok(answer.lastIndexOf('Open-Meteo') > answer.indexOf('*د هوا کیفیت'));
   assert.match(answer, /اروپايي AQI: 35 \(د منلو وړ\)/);
   assert.match(answer, /PM2\.5: 8\.4 µg\/m³/);
   assert.match(answer, /PM10: 17\.2 µg\/m³/);
