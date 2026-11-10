@@ -508,3 +508,15 @@ test('does not automatically reply to an ordinary private greeting without a que
   assert.equal(h.state.sends.length, 0);
 });
 
+test('does not automatically reply to a group greeting without a question mark', async () => {
+  const h = createHarness({
+    extractText: () => 'سلام',
+  });
+  await h.handler({
+    type: 'notify',
+    messages: [message('12345@g.us', 'سلام')],
+  });
+  assert.equal(h.state.sends.length, 0);
+  assert.equal(h.state.answers.length, 0);
+});
+
