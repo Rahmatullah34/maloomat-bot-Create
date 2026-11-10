@@ -56,6 +56,7 @@ const {
 } = require('./lib/religious-source-policy');
 const { buildVerifiedQuranLongestWordAnswer } = require('./lib/quran-text-policy');
 const { startAutoPublisher, getAutoPublisherStatus } = require('./lib/auto-publisher');
+const { createEnglishCourseService } = require('./lib/english-course');
 
 // د نظم ساتنې خالصې کړنې او حالت له جلا ماډول اخیستل کیږي
 // (lib/moderation.js) څو په ازموینو کې و ازمویل شي.
@@ -224,6 +225,7 @@ app.get('/health', (_req, res) => {
     allowedGroups: allowedGroupsCount(),
     historyCleanup: isHistoryCleanupEnabled(),
     autoPublishing: getAutoPublisherStatus(),
+    englishCourse: englishCourse.getStatus(),
     aiKeyConfigured: activeAIConfigured,
     creativeTextConfigured: activeAIConfigured,
     imageGenerationConfigured: Boolean(
@@ -421,6 +423,9 @@ async function safeSend(
     return null;
   }
 }
+
+// د انګلیسي کورس خپل مهال‌وېش او د زده‌کوونکو امرونه؛ د عمومي معلوماتو مهال‌وېش نه بدلوي.
+const englishCourse = createEnglishCourseService({ safeSend });
 
 // ======================================================
 // 12. د منع شوي پیغام د حذف هڅه
@@ -1039,6 +1044,8 @@ async function startBot() {
       isLinkPermittedForSender,
       recordRepeatedMessage,
       rememberGroupMember,
+      handleEnglishCourseCommand: (courseSocket, groupJid, text, context) =>
+        englishCourse.handleCommand(courseSocket, groupJid, text, context),
     }));
 
   } catch (err) {
@@ -1061,6 +1068,7 @@ async function startBot() {
 // د مهالوېش سیستم د اوسني WhatsApp socket callback له لارې اداره کېږي.
 // دا مهال د SillyDev اصلي چلولو چاپېریال کارول کېږي؛ Render ته اړتیا نشته.
 startAutoPublisher(() => whatsappConnectionState === 'connected' ? currentSocket : null);
+englishCourse.start(() => whatsappConnectionState === 'connected' ? currentSocket : null);
 
 startBot().catch((err) => {
   console.error(
