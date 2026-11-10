@@ -87,8 +87,11 @@ test('formats lesson, practice and weekly quiz content from the 30-day source fi
     });
     assert.match(service.formatLesson(1, false), /سلام او روغبړ/);
     assert.match(service.formatLesson(1, false), /Hello/);
+    assert.match(service.formatLesson(1, false), /3 - Goodbye/);
     assert.match(service.formatPractice(1), /د انګلیسي تمرین/);
+    assert.match(service.formatPractice(1), /3 - Goodbye/);
     assert.match(service.formatQuiz(7), /د اونۍ ازموینه/);
+    assert.match(service.formatQuiz(7), /3 - Goodbye/);
     assert.match(service.formatQuiz(7), /10/);
     assert.equal(sent.length, 0);
   } finally {
@@ -119,7 +122,7 @@ test('routes course commands only in the configured group and evaluates numbered
     const wrongGroup = await service.handleCommand({}, '99999-888@g.us', 'درس', {});
     assert.equal(wrongGroup, false);
 
-    const handled = await service.handleCommand({}, '12345-678@g.us', 'ځواب: 1 - Good morning', {
+    const handled = await service.handleCommand({}, '12345-678@g.us', '1 - Good morning', {
       participantKey: '15551234567@s.whatsapp.net',
       name: 'زده‌کوونکی',
     });
@@ -127,7 +130,7 @@ test('routes course commands only in the configured group and evaluates numbered
     assert.match(sent[0].text, /ځواب مو سم دی/);
     assert.match(sent[0].text, /نمرې: 1/);
 
-    const duplicate = await service.handleCommand({}, '12345-678@g.us', 'ځواب: 1 - Good morning', {
+    const duplicate = await service.handleCommand({}, '12345-678@g.us', '1 - Good morning', {
       participantKey: '15551234567@s.whatsapp.net',
     });
     assert.equal(duplicate, true);
