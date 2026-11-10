@@ -215,6 +215,7 @@ test('uses the checked Shah Joy district coordinates without a fuzzy geocoding g
   assert.equal(Number(forecastUrl.searchParams.get('longitude')), 67.395);
   assert.match(answer, /شاه جوی ولسوالي/);
   assert.match(answer, /Open-Meteo/);
+  assert.match(answer, /Open Admin Data/);
 });
 
 test('does not return weather for a geocoding result outside Afghanistan', async () => {
