@@ -520,3 +520,48 @@ test('does not automatically reply to a group greeting without a question mark',
   assert.equal(h.state.answers.length, 0);
 });
 
+
+
+test('routes English course commands before the terminal question-mark gate', async () => {
+  const routed = [];
+  const h = createHarness({
+    extractText: () => 'درس',
+    handleEnglishCourseCommand: async (...args) => {
+      routed.push(args);
+      return true;
+    },
+  });
+
+  await h.handler({
+    type: 'notify',
+    messages: [message('12345@g.us', 'درس')],
+  });
+
+  assert.equal(routed.length, 1);
+  assert.equal(routed[0][1], '12345@g.us');
+  assert.equal(routed[0][2], 'درس');
+  assert.equal(h.state.answers.length, 0);
+  assert.equal(h.state.burstCalls, 1);
+  assert.equal(h.state.badWordCalls, 1);
+});
+
+test('routes numbered English exercise answers without treating them as ordinary AI chat', async () => {
+  const routed = [];
+  const h = createHarness({
+    extractText: () => 'ځواب: 1 - Good morning',
+    handleEnglishCourseCommand: async (...args) => {
+      routed.push(args);
+      return true;
+    },
+  });
+
+  await h.handler({
+    type: 'notify',
+    messages: [message('12345@g.us', 'ځواب: 1 - Good morning')],
+  });
+
+  assert.equal(routed.length, 1);
+  assert.match(routed[0][2], /^ځواب:/u);
+  assert.equal(h.state.answers.length, 0);
+  assert.equal(h.state.sends.length, 0);
+});
