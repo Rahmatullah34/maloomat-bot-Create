@@ -492,6 +492,77 @@ test('does not answer an ordinary group statement but still applies group modera
   assert.equal(h.state.badWordCalls, 1);
 });
 
+test('routes answer-first English exercise messages to the course handler', async () => {
+  const routed = [];
+  const h = createHarness({
+    extractText: () => 'I am fine, thank you - 2',
+    handleEnglishCourseCommand: async (...args) => {
+      routed.push(args);
+      return true;
+    },
+  });
+
+  await h.handler({
+    type: 'notify',
+    messages: [message('12345@g.us', 'I am fine, thank you - 2')],
+  });
+
+  assert.equal(routed.length, 1);
+  assert.equal(routed[0][2], 'I am fine, thank you - 2');
+  assert.equal(h.state.answers.length, 0);
+});
+
+test('does not apply burst or repeated-spam deletion to the connected bot number', async () => {
+  let repeatedCalls = 0;
+  const h = createHarness({
+    BOT_PHONE_NUMBER: '15551230000',
+    extractText: () => 'A normal group message',
+    resolveGroupSender: async () => ({
+      isAdmin: false,
+      participantKey: '15551230000@s.whatsapp.net',
+      phoneNumber: '15551230000',
+    }),
+    recordRepeatedMessage: () => {
+      repeatedCalls += 1;
+      return { shouldDelete: false, shouldWarn: false };
+    },
+  });
+
+  await h.handler({
+    type: 'notify',
+    messages: [message('12345@g.us', 'A normal group message')],
+  });
+
+  assert.equal(h.state.burstCalls, 0);
+  assert.equal(repeatedCalls, 0);
+  assert.equal(h.state.deletions.length, 0);
+});
+
+test('does not apply burst or repeated-spam deletion to verified group admins', async () => {
+  let repeatedCalls = 0;
+  const h = createHarness({
+    extractText: () => 'A normal group message',
+    resolveGroupSender: async () => ({
+      isAdmin: true,
+      participantKey: '15551230000@s.whatsapp.net',
+      phoneNumber: '15551230000',
+    }),
+    recordRepeatedMessage: () => {
+      repeatedCalls += 1;
+      return { shouldDelete: false, shouldWarn: false };
+    },
+  });
+
+  await h.handler({
+    type: 'notify',
+    messages: [message('12345@g.us', 'A normal group message')],
+  });
+
+  assert.equal(h.state.burstCalls, 0);
+  assert.equal(repeatedCalls, 0);
+  assert.equal(h.state.deletions.length, 0);
+});
+
 test('does not automatically reply to an ordinary private greeting without a question mark', async () => {
   const owner = '15551234567';
   const h = createHarness({
