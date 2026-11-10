@@ -85,7 +85,7 @@ test('formats lesson, practice and weekly quiz content from the 30-day source fi
     });
     assert.match(service.formatLesson(1, false), /سلام او روغبړ/);
     assert.match(service.formatLesson(1, false), /Hello/);
-    assert.match(service.formatPractice(1), /د نن ورځې تمرین/);
+    assert.match(service.formatPractice(1), /د انګلیسي تمرین/);
     assert.match(service.formatQuiz(7), /د اونۍ ازموینه/);
     assert.match(service.formatQuiz(7), /10/);
     assert.equal(sent.length, 0);
@@ -123,7 +123,7 @@ test('routes course commands only in the configured group and evaluates numbered
     });
     assert.equal(handled, true);
     assert.match(sent[0].text, /ځواب مو سم دی/);
-    assert.match(sent[0].text, /۱/);
+    assert.match(sent[0].text, /نمرې: 1/);
 
     const duplicate = await service.handleCommand({}, '12345-678@g.us', 'ځواب: 1 - Good morning', {
       participantKey: '15551234567@s.whatsapp.net',
