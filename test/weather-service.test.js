@@ -18,7 +18,8 @@ test('recognizes Pashto, Dari, and English weather requests without treating air
   assert.equal(isWeatherQuestion('د کابل د درې ورځو هوا'), true);
   assert.equal(isWeatherQuestion('در هرات فردا باران می‌شود؟'), true);
   assert.equal(isWeatherQuestion('weather forecast for Kabul'), true);
-  assert.equal(isWeatherQuestion('د کابل د هوا ککړتیا څه ده؟'), false);
+  assert.equal(isWeatherQuestion('د کابل د هوا ککړتیا څه ده؟'), true);
+  assert.equal(isWeatherQuestion('په کابل کې د PM2.5 کچه څومره ده؟'), true);
 });
 
 test('resolves province aliases and district names to Afghanistan-only geocoding queries', () => {
@@ -39,7 +40,7 @@ test('limits forecast-day requests to supported forecast ranges', () => {
   assert.equal(requestedForecastDays('د پنځه ورځو هوا'), 5);
   assert.equal(requestedForecastDays('د اوونۍ هوا'), 7);
   assert.equal(requestedForecastDays('سبا د کابل هوا'), 2);
-  assert.equal(requestedForecastDays('د کابل هوا'), 5);
+  assert.equal(requestedForecastDays('د کابل هوا'), 7);
 });
 
 test('maps WMO forecast codes to Pashto descriptions', () => {
@@ -70,6 +71,10 @@ test('geocodes within Afghanistan and returns a detailed local forecast in Pasht
     fetchImpl: async (url) => {
       const parsed = new URL(url);
       requests.push(parsed);
+
+      if (parsed.hostname === 'air-quality-api.open-meteo.com') {
+        return { ok: true, json: async () => ({ timezone: 'Asia/Kabul', current: { time: '2026-11-10T14:00', european_aqi: 35, us_aqi: 42, pm2_5: 8.4, pm10: 17.2 } }) };
+      }
 
       if (parsed.hostname === 'geocoding-api.open-meteo.com') {
         return {
@@ -162,12 +167,20 @@ test('geocodes within Afghanistan and returns a detailed local forecast in Pasht
   assert.match(answer, /واوره 0\.0 cm/);
   assert.match(answer, /د UV اعظمي شاخص/);
   assert.match(answer, /د راتلونکو ورځو وړاندوینه/);
+  assert.match(answer, /د شپې\/سهار ټیټه تودوخه/);
+  assert.match(answer, /اروپايي AQI: 35 \(د منلو وړ\)/);
+  assert.match(answer, /PM2\.5: 8\.4 µg\/m³/);
+  assert.match(answer, /PM10: 17\.2 µg\/m³/);
+  assert.match(answer, /CAMS نړیوال ماډل/);
   assert.match(answer, /Open-Meteo/);
-  assert.equal(requests.length, 2);
+  assert.equal(requests.length, 3);
   assert.equal(requests[0].searchParams.get('countryCode'), 'AF');
   assert.equal(requests[0].searchParams.get('name'), 'Kabul, Afghanistan');
-  assert.equal(requests[1].searchParams.get('forecast_days'), '3');
-  assert.equal(requests[1].searchParams.get('timezone'), 'auto');
+  const forecastRequest = requests.find(request => request.hostname === 'api.open-meteo.com');
+  const airRequest = requests.find(request => request.hostname === 'air-quality-api.open-meteo.com');
+  assert.equal(forecastRequest.searchParams.get('forecast_days'), '3');
+  assert.equal(forecastRequest.searchParams.get('timezone'), 'auto');
+  assert.equal(airRequest.searchParams.get('current'), 'european_aqi,us_aqi,pm10,pm2_5');
 });
 
 
@@ -175,7 +188,11 @@ test('uses the checked Shah Joy district coordinates without a fuzzy geocoding g
   let forecastUrl = null;
   const getWeatherAnswer = createWeatherService({
     fetchImpl: async (url) => {
-      forecastUrl = new URL(url);
+      const parsed = new URL(url);
+      if (parsed.hostname === 'air-quality-api.open-meteo.com') {
+        return { ok: true, json: async () => ({ current: { time: '2026-11-10T14:00', european_aqi: 22, pm2_5: 5.1, pm10: 11 } }) };
+      }
+      forecastUrl = parsed;
       return {
         ok: true,
         json: async () => ({
@@ -214,6 +231,7 @@ test('uses the checked Shah Joy district coordinates without a fuzzy geocoding g
   assert.equal(Number(forecastUrl.searchParams.get('latitude')), 32.498);
   assert.equal(Number(forecastUrl.searchParams.get('longitude')), 67.395);
   assert.match(answer, /شاه جوی ولسوالي/);
+  assert.match(answer, /اروپايي AQI: 22/);
   assert.match(answer, /Open-Meteo/);
   assert.match(answer, /Open Admin Data/);
 });
@@ -237,4 +255,26 @@ test('does not return weather for a geocoding result outside Afghanistan', async
   const answer = await getWeatherAnswer('د کابل هوا');
   assert.match(answer, /په افغانستان کې/);
   assert.equal(calls, 1);
+});
+
+
+test('keeps the weather forecast when air-quality data are temporarily unavailable', async () => {
+  const getWeatherAnswer = createWeatherService({
+    fetchImpl: async (url) => {
+      const parsed = new URL(url);
+      if (parsed.hostname === 'geocoding-api.open-meteo.com') {
+        return { ok: true, json: async () => ({ results: [{ name: 'Kabul', country_code: 'AF', admin1: 'Kabul', latitude: 34.53, longitude: 69.17, timezone: 'Asia/Kabul' }] }) };
+      }
+      if (parsed.hostname === 'air-quality-api.open-meteo.com') throw new Error('temporary AQI outage');
+      return { ok: true, json: async () => ({
+        timezone: 'Asia/Kabul',
+        current: { time: '2026-11-10T14:00', temperature_2m: 12, relative_humidity_2m: 30, apparent_temperature: 11, precipitation: 0, rain: 0, showers: 0, snowfall: 0, weather_code: 0, is_day: 1, wind_speed_10m: 5, wind_direction_10m: 90, wind_gusts_10m: 8, cloud_cover: 0, pressure_msl: 1018 },
+        hourly: { time: ['2026-11-10T14:00'], dew_point_2m: [1], visibility: [30000], uv_index: [3] },
+        daily: { time: ['2026-11-10'], temperature_2m_min: [4], temperature_2m_max: [15], weather_code: [0] },
+      }) };
+    },
+  });
+  const answer = await getWeatherAnswer('د کابل هوا');
+  assert.match(answer, /اسمان صاف/);
+  assert.match(answer, /د هوا د کیفیت شاخص دا ځل له سرچینې ترلاسه نه شو/);
 });
