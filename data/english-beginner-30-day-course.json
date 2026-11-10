@@ -1,0 +1,2568 @@
+{
+  "course_name": "Maloomat AI – English Learning Class",
+  "language": "Pashto explanations with English examples",
+  "level": "Beginner",
+  "timezone": "Asia/Kabul",
+  "daily_start": "20:00",
+  "duration_minutes": 30,
+  "days_per_week": 7,
+  "pronunciation_note": "Pashto-script pronunciation is approximate support, not exact phonetic transcription. Audio practice is recommended when available.",
+  "lesson_timing": [
+    {
+      "minutes": "0–3",
+      "activity": "سلام، د ګډونوالو چمتووالی او د تېر درس یوه لنډه پوښتنه"
+    },
+    {
+      "minutes": "3–13",
+      "activity": "د نوې موضوع تشریح او د لغتونو زده کړه"
+    },
+    {
+      "minutes": "13–18",
+      "activity": "د بېلګو او مکالمې لوستل"
+    },
+    {
+      "minutes": "18–25",
+      "activity": "د زده‌کوونکو تمرینونه او د ځوابونو ارزونه"
+    },
+    {
+      "minutes": "25–30",
+      "activity": "لنډه بیاکتنه، کورنۍ دنده او د بل درس اعلان"
+    }
+  ],
+  "bot_commands": {
+    "درس": "د نن ورځې درس خپروي یا بېرته یې ښکاره کوي.",
+    "تمرین": "د هماغې ورځې تمرینونه وړاندې کوي.",
+    "ځواب: <متن>": "د تمرین ځواب ارزوي؛ د دې امر پیغام باید د تعلیمي امر په توګه وپېژندل شي، نه د عادي AI چټ په توګه.",
+    "ازموینه": "د اونۍ یا وروستۍ ازموینې پوښتنې وړاندې کوي.",
+    "تکرار": "د تېر درس یا د ټاکلې اونۍ مواد بیا ښيي.",
+    "مرسته": "د تعلیمي امرونو لنډ لارښود ښيي."
+  },
+  "assessment": {
+    "daily": "هره ورځ 3 بنسټیز تمرینونه؛ وړاندیز شوې نمرې 3، هر سم ځواب 1 نمره.",
+    "weekly": "د 7، 14، 21 او 28 ورځو ازموینه: 10 پوښتنې، هره پوښتنه 2 نمرې، ټولې 20 نمرې.",
+    "final": "د 30مې ورځې ازموینه: 16 پوښتنې، د پوښتنو ثابت نمره‌وېش یې په lessons[29].mark_plan کې ثبت دی؛ ټولې 50 نمرې. د 16مې پوښتنې لپاره د ځان پېژندنې 3–4 جملې لیکل کېږي."
+  },
+  "moderation_and_safety": [
+    "د ګروپ عادي پیغامونه د AI ځواب نه غواړي، مګر ځانګړي درسي امرونه باید ومنل شي.",
+    "د زده‌کوونکي نمرې په ګروپ کې د هغه له اجازې پرته مه خپروئ؛ د شخصي پایلو لپاره د خصوصي پیغام یا عمومي بې‌نومه راپور لاره وکاروئ.",
+    "د سم ځواب تر څنګ لنډ دلیل او د تېروتنې اصلاح ولیکئ.",
+    "د تمرین د ارزونې لپاره د منلو وړ بدیل سمې جملې هم وپېژنئ؛ یوازې یوه عیني جمله مه منئ.",
+    "د زده‌کوونکي لیکدود، لوی/کوچني توري او نښې په داسې حال کې مه نمره کموئ چې معنا او ګرامر سم وي؛ خو اړوند تېروتنه په ادب اصلاح کړئ."
+  ],
+  "lessons": [
+    {
+      "day": 1,
+      "week": 1,
+      "topic": "سلام او روغبړ (Greetings)",
+      "goal": "زده‌کوونکی سلام کول، د حال پوښتنه او د مخه ښې ساده عبارتونه کارولای شي.",
+      "vocab": [
+        [
+          "Hello",
+          "سلام",
+          "هېلو"
+        ],
+        [
+          "Hi",
+          "سلام (غیررسمي)",
+          "های"
+        ],
+        [
+          "Good morning",
+          "سهار مو پخیر",
+          "ګُډ مارنینګ"
+        ],
+        [
+          "Good evening",
+          "ماښام مو پخیر",
+          "ګُډ ایونینګ"
+        ],
+        [
+          "How are you?",
+          "څنګه یې؟",
+          "هاو آر یو"
+        ],
+        [
+          "I am fine, thank you.",
+          "زه ښه یم، مننه.",
+          "آی اَم فاین، ثېنک یو"
+        ],
+        [
+          "Goodbye",
+          "خدای پامان",
+          "ګُډبای"
+        ]
+      ],
+      "grammar": "د سلام لپاره Hello یا Hi کاروو. د حال پوښتنه How are you? ده. د ځواب یوه ساده بڼه I am fine, thank you ده. د سهار او ماښام له مخې Good morning او Good evening وایو.",
+      "examples": [
+        "Hello! How are you? — I am fine, thank you.",
+        "Good morning, teacher.",
+        "Goodbye, see you tomorrow."
+      ],
+      "dialogue": [
+        "A: Hello!",
+        "B: Hi!",
+        "A: How are you?",
+        "B: I am fine, thank you. And you?",
+        "A: I am fine too. Goodbye!",
+        "B: Goodbye!"
+      ],
+      "exercises": [
+        [
+          "د «سهار مو پخیر» انګلیسي ولیکئ.",
+          "Good morning."
+        ],
+        [
+          "د How are you? مناسب ځواب ولیکئ.",
+          "I am fine, thank you."
+        ],
+        [
+          "د «خدای پامان» انګلیسي ولیکئ.",
+          "Goodbye."
+        ]
+      ],
+      "homework": "درې ځله د سلام او حال پوښتنې مکالمه په لوړ غږ ولولئ او له یوه ملګري سره یې تمرین کړئ."
+    },
+    {
+      "day": 2,
+      "week": 1,
+      "topic": "د ځان پېژندنه (Introducing Yourself)",
+      "goal": "زده‌کوونکی خپل نوم، د اوسېدو ځای او زده‌کوونکي‌والی په ساده جملو بیانولای شي.",
+      "vocab": [
+        [
+          "My name is ...",
+          "زما نوم ... دی.",
+          "مای نېم اِز"
+        ],
+        [
+          "What is your name?",
+          "ستاسو نوم څه دی؟",
+          "واټ اِز یور نېم"
+        ],
+        [
+          "I am from Afghanistan.",
+          "زه د افغانستان یم.",
+          "آی اَم فرام اَفغانېستان"
+        ],
+        [
+          "I live in Kabul.",
+          "زه په کابل کې اوسېږم.",
+          "آی لِو اِن کابُل"
+        ],
+        [
+          "I am a student.",
+          "زه زده‌کوونکی یم.",
+          "آی اَم اَ سټوډنټ"
+        ],
+        [
+          "Nice to meet you.",
+          "له لیدو مو خوښ شوم.",
+          "نایس ټو میټ یو"
+        ]
+      ],
+      "grammar": "د ځان پېژندنې لپاره My name is ... کاروو. د نوم پوښتنه What is your name? ده. د ځای د بیان لپاره I am from ... (زه د ... یم) او I live in ... (زه په ... کې اوسېږم) کاروو.",
+      "examples": [
+        "My name is Ahmad.",
+        "I am from Afghanistan.",
+        "I live in Herat.",
+        "I am a student."
+      ],
+      "dialogue": [
+        "A: Hello! What is your name?",
+        "B: My name is Ahmad.",
+        "A: Where are you from?",
+        "B: I am from Afghanistan.",
+        "A: Nice to meet you.",
+        "B: Nice to meet you too."
+      ],
+      "exercises": [
+        [
+          "«زما نوم مریم دی» وژباړئ.",
+          "My name is Maryam."
+        ],
+        [
+          "«زه په کندهار کې اوسېږم» وژباړئ.",
+          "I live in Kandahar."
+        ],
+        [
+          "د What is your name? معنا ولیکئ.",
+          "ستاسو نوم څه دی؟"
+        ]
+      ],
+      "homework": "د خپل نوم، ولایت او د زده‌کوونکي‌والي په اړه څلور ساده انګلیسي جملې ولیکئ."
+    },
+    {
+      "day": 3,
+      "week": 1,
+      "topic": "د انګلیسي الفبا (English Alphabet)",
+      "goal": "زده‌کوونکی د انګلیسي ۲۶ توري پېژني او خپل نوم په انګلیسي تورو ویلی او لیکلی شي.",
+      "vocab": [
+        [
+          "A a",
+          "اې",
+          "اې"
+        ],
+        [
+          "B b",
+          "بي",
+          "بي"
+        ],
+        [
+          "C c",
+          "سي",
+          "سي"
+        ],
+        [
+          "D d",
+          "ډي",
+          "ډي"
+        ],
+        [
+          "E e",
+          "اي",
+          "اي"
+        ],
+        [
+          "F f",
+          "اېف",
+          "اېف"
+        ],
+        [
+          "G g",
+          "جي",
+          "جي"
+        ],
+        [
+          "H h",
+          "اېچ",
+          "اېچ"
+        ],
+        [
+          "I i",
+          "آی",
+          "آی"
+        ],
+        [
+          "J j",
+          "جې",
+          "جې"
+        ],
+        [
+          "K k",
+          "کې",
+          "کې"
+        ],
+        [
+          "L l",
+          "اېل",
+          "اېل"
+        ],
+        [
+          "M m",
+          "اېم",
+          "اېم"
+        ],
+        [
+          "N n",
+          "اېن",
+          "اېن"
+        ],
+        [
+          "O o",
+          "او",
+          "او"
+        ],
+        [
+          "P p",
+          "پي",
+          "پي"
+        ],
+        [
+          "Q q",
+          "کیو",
+          "کیو"
+        ],
+        [
+          "R r",
+          "آر",
+          "آر"
+        ],
+        [
+          "S s",
+          "اېس",
+          "اېس"
+        ],
+        [
+          "T t",
+          "ټي",
+          "ټي"
+        ],
+        [
+          "U u",
+          "یو",
+          "یو"
+        ],
+        [
+          "V v",
+          "وي",
+          "وي"
+        ],
+        [
+          "W w",
+          "ډبل یو",
+          "ډبل یو"
+        ],
+        [
+          "X x",
+          "اېکس",
+          "اېکس"
+        ],
+        [
+          "Y y",
+          "وای",
+          "وای"
+        ],
+        [
+          "Z z",
+          "زېډ / زي",
+          "زېډ / زي"
+        ]
+      ],
+      "grammar": "الفبا ۲۶ توري لري. هر توری لوی (capital) او کوچنی (small) شکل لري؛ لکه A a او B b. د نوم د تورو ویلو ته spelling ویل کېږي. د تورو نومونه او په کلمو کې غږونه تل یو شان نه وي؛ نن د تورو نومونه زده کوو.",
+      "examples": [
+        "A – M – A – N: د Aman نوم توري جلا جلا ووایئ.",
+        "My name is Ali. A-L-I.",
+        "English has 26 letters."
+      ],
+      "dialogue": [
+        "A: How do you spell Ali?",
+        "B: A-L-I.",
+        "A: Thank you.",
+        "B: You are welcome."
+      ],
+      "exercises": [
+        [
+          "د انګلیسي الفبا د تورو شمېر څو دی؟",
+          "۲۶ توري."
+        ],
+        [
+          "د CAT کلمې توري جلا ولیکئ.",
+          "C-A-T."
+        ],
+        [
+          "خپل نوم په انګلیسي تورو ولیکئ.",
+          "د زده‌کوونکي د خپل نوم مطابق ارزول کېږي."
+        ]
+      ],
+      "homework": "خپل نوم او د یوه ملګري نوم په انګلیسي ولیکئ او د هر نوم توري جلا جلا ووایئ. د تلفظ پښتو بڼه یوازې نږدې لارښود دی."
+    },
+    {
+      "day": 4,
+      "week": 1,
+      "topic": "شمېرې او عمر (Numbers and Age)",
+      "goal": "زده‌کوونکی له ۱ تر ۲۰ شمېرل او د عمر پوښتنه او ځواب کولای شي.",
+      "vocab": [
+        [
+          "one",
+          "یو",
+          "وَن"
+        ],
+        [
+          "two",
+          "دوه",
+          "ټو"
+        ],
+        [
+          "three",
+          "درې",
+          "ثري"
+        ],
+        [
+          "four",
+          "څلور",
+          "فور"
+        ],
+        [
+          "five",
+          "پنځه",
+          "فایو"
+        ],
+        [
+          "six",
+          "شپږ",
+          "سِکس"
+        ],
+        [
+          "seven",
+          "اووه",
+          "سېوَن"
+        ],
+        [
+          "eight",
+          "اته",
+          "اېټ"
+        ],
+        [
+          "nine",
+          "نهه",
+          "ناین"
+        ],
+        [
+          "ten",
+          "لس",
+          "ټِن"
+        ],
+        [
+          "eleven",
+          "یوولس",
+          "اِلېوَن"
+        ],
+        [
+          "twelve",
+          "دولس",
+          "ټوېلو"
+        ],
+        [
+          "thirteen",
+          "دیارلس",
+          "ثَرتین"
+        ],
+        [
+          "fourteen",
+          "څوارلس",
+          "فورټین"
+        ],
+        [
+          "fifteen",
+          "پنځلس",
+          "فِفټین"
+        ],
+        [
+          "sixteen",
+          "شپاړس",
+          "سِکسټین"
+        ],
+        [
+          "seventeen",
+          "اوولس",
+          "سېوَنټین"
+        ],
+        [
+          "eighteen",
+          "اتلس",
+          "اېټین"
+        ],
+        [
+          "nineteen",
+          "نولس",
+          "ناینټین"
+        ],
+        [
+          "twenty",
+          "شل",
+          "ټوېنټي"
+        ],
+        [
+          "How old are you?",
+          "څو کلن/کلنه یې؟",
+          "هاو اولډ آر یو"
+        ],
+        [
+          "I am 18 years old.",
+          "زه ۱۸ کلن/کلنه یم.",
+          "آی اَم اېټین ییرز اولډ"
+        ]
+      ],
+      "grammar": "د عمر پوښتنه How old are you? ده. د ځواب بڼه I am + شمېر + years old ده. د مثال په توګه: I am 18 years old. د عمر لپاره د کلونو کلمه years کاروو.",
+      "examples": [
+        "I am ten years old.",
+        "She is twelve years old.",
+        "How old are you? — I am fifteen years old."
+      ],
+      "dialogue": [
+        "A: How old are you?",
+        "B: I am eighteen years old.",
+        "A: Thank you.",
+        "B: You are welcome."
+      ],
+      "exercises": [
+        [
+          "د ۷ شمېره په انګلیسي ولیکئ.",
+          "Seven."
+        ],
+        [
+          "د ۱۴ شمېره په انګلیسي ولیکئ.",
+          "Fourteen."
+        ],
+        [
+          "«زه ۲۰ کلن یم» وژباړئ.",
+          "I am twenty years old."
+        ]
+      ],
+      "homework": "له ۱ تر ۲۰ شمېرې ولیکئ او خپل عمر په یوه بشپړه انګلیسي جمله کې ولیکئ."
+    },
+    {
+      "day": 5,
+      "week": 1,
+      "topic": "د اونۍ ورځې او میاشتې (Days and Months)",
+      "goal": "زده‌کوونکی د اونۍ ورځې او د کال د میاشتو نومونه پېژني او د نن ورځې پوښتنه کوي.",
+      "vocab": [
+        [
+          "Monday",
+          "دوشنبه",
+          "مَنډې"
+        ],
+        [
+          "Tuesday",
+          "سې‌شنبه",
+          "ټیوزډې"
+        ],
+        [
+          "Wednesday",
+          "چهارشنبه",
+          "وېنزډې"
+        ],
+        [
+          "Thursday",
+          "پنجشنبه",
+          "ثَرزډې"
+        ],
+        [
+          "Friday",
+          "جمعه",
+          "فرایډې"
+        ],
+        [
+          "Saturday",
+          "شنبه",
+          "سَټَردې"
+        ],
+        [
+          "Sunday",
+          "یکشنبه",
+          "سَنډې"
+        ],
+        [
+          "today",
+          "نن",
+          "ټوډې"
+        ],
+        [
+          "tomorrow",
+          "سبا",
+          "ټومارو"
+        ],
+        [
+          "What day is it today?",
+          "نن د اونۍ کومه ورځ ده؟",
+          "واټ ډې اِز اِټ ټوډې"
+        ],
+        [
+          "January",
+          "جنوري",
+          "جَنیوېري"
+        ],
+        [
+          "February",
+          "فبروري",
+          "فېبروېري"
+        ],
+        [
+          "March",
+          "مارچ",
+          "مارچ"
+        ],
+        [
+          "April",
+          "اپرېل",
+          "اېپرِل"
+        ],
+        [
+          "May",
+          "مې",
+          "مې"
+        ],
+        [
+          "June",
+          "جون",
+          "جون"
+        ],
+        [
+          "July",
+          "جولای",
+          "جولای"
+        ],
+        [
+          "August",
+          "اګست",
+          "اګَسټ"
+        ],
+        [
+          "September",
+          "سپتمبر",
+          "سېپټمبر"
+        ],
+        [
+          "October",
+          "اکتوبر",
+          "اَکټووبر"
+        ],
+        [
+          "November",
+          "نومبر",
+          "نَوېمبر"
+        ],
+        [
+          "December",
+          "ډسمبر",
+          "ډسېمبر"
+        ]
+      ],
+      "grammar": "د ورځو او میاشتو نومونه په انګلیسي کې د جملې په منځ کې هم په لوی توري پیلېږي؛ لکه Monday او January. د نن ورځې پوښتنه What day is it today? ده. ځواب: Today is Monday.",
+      "examples": [
+        "Today is Friday.",
+        "Tomorrow is Saturday.",
+        "My birthday is in May."
+      ],
+      "dialogue": [
+        "A: What day is it today?",
+        "B: Today is Monday.",
+        "A: What month is it?",
+        "B: It is November."
+      ],
+      "exercises": [
+        [
+          "د جمعې ورځ په انګلیسي ولیکئ.",
+          "Friday."
+        ],
+        [
+          "د اکتوبر میاشت په انګلیسي ولیکئ.",
+          "October."
+        ],
+        [
+          "«سبا یکشنبه ده» وژباړئ.",
+          "Tomorrow is Sunday."
+        ]
+      ],
+      "homework": "د اونۍ اوو ورځې په ترتیب ولیکئ. د خپلې زېږېدنې میاشت هم په انګلیسي ولیکئ."
+    },
+    {
+      "day": 6,
+      "week": 1,
+      "topic": "د ټولګي عامې جملې (Classroom English)",
+      "goal": "زده‌کوونکی د ښوونکي ساده لارښوونې درک او په ټولګي کې عامې جملې کارولای شي.",
+      "vocab": [
+        [
+          "Listen",
+          "واورئ",
+          "لېسَن"
+        ],
+        [
+          "Repeat",
+          "تکرار کړئ",
+          "رېپیټ"
+        ],
+        [
+          "Read",
+          "ولولئ",
+          "رېډ"
+        ],
+        [
+          "Write",
+          "ولیکئ",
+          "رایټ"
+        ],
+        [
+          "Open your book.",
+          "خپل کتاب خلاص کړئ.",
+          "اوپَن یور بُک"
+        ],
+        [
+          "Close your book.",
+          "خپل کتاب بند کړئ.",
+          "کلوز یور بُک"
+        ],
+        [
+          "Sit down.",
+          "کښېنئ.",
+          "سېټ ډاون"
+        ],
+        [
+          "Stand up.",
+          "ودرېږئ.",
+          "سټېنډ اَپ"
+        ],
+        [
+          "Please",
+          "مهرباني وکړئ",
+          "پلیز"
+        ],
+        [
+          "Thank you",
+          "مننه",
+          "ثېنک یو"
+        ]
+      ],
+      "grammar": "د لارښوونې لپاره فعل په پیل کې راځي: Open, Read, Write. د ادب لپاره Please ورسره زیاتولای شو؛ لکه Please open your book. د مننې ځواب You are welcome دی.",
+      "examples": [
+        "Please listen.",
+        "Repeat after me.",
+        "Open your book, please.",
+        "Write your name."
+      ],
+      "dialogue": [
+        "Teacher: Please open your book.",
+        "Student: Yes, teacher.",
+        "Teacher: Read the first sentence.",
+        "Student: Okay.",
+        "Teacher: Thank you.",
+        "Student: You are welcome."
+      ],
+      "exercises": [
+        [
+          "«خپل کتاب خلاص کړئ» وژباړئ.",
+          "Open your book."
+        ],
+        [
+          "د «ولیکئ» انګلیسي څه ده؟",
+          "Write."
+        ],
+        [
+          "«مهرباني وکړئ کښېنئ» وژباړئ.",
+          "Please sit down."
+        ]
+      ],
+      "homework": "پنځه لارښوونې په انګلیسي ولیکئ او د ټولګي له یوه ملګري سره یې تمرین کړئ."
+    },
+    {
+      "day": 7,
+      "week": 1,
+      "topic": "د لومړۍ اونۍ تکرار او ازموینه",
+      "goal": "زده‌کوونکی د سلام، ځان پېژندنې، الفبا، شمېرو، ورځو او ټولګي جملې بیا کاروي.",
+      "vocab": [],
+      "grammar": "نن نوې قاعده نه شته. د لومړۍ اونۍ موضوعات تکراروو: Greetings، Introducing yourself، Alphabet، Numbers، Days and Months، Classroom English.",
+      "examples": [
+        "Hello. My name is Ahmad. I am from Afghanistan.",
+        "Today is Friday.",
+        "Please open your book."
+      ],
+      "dialogue": [
+        "A: Hello! What is your name?",
+        "B: My name is Laila.",
+        "A: How old are you?",
+        "B: I am fifteen years old.",
+        "A: Nice to meet you.",
+        "B: Nice to meet you too."
+      ],
+      "exercises": [
+        [
+          "د «سهار مو پخیر» ژباړه ولیکئ.",
+          "Good morning."
+        ],
+        [
+          "«زه د افغانستان یم» وژباړئ.",
+          "I am from Afghanistan."
+        ],
+        [
+          "د انګلیسي الفبا څو توري لري؟",
+          "۲۶."
+        ],
+        [
+          "د ۱۲ شمېره په انګلیسي ولیکئ.",
+          "Twelve."
+        ],
+        [
+          "د پنجشنبې ورځ په انګلیسي ولیکئ.",
+          "Thursday."
+        ],
+        [
+          "«کتاب مو خلاص کړئ» وژباړئ.",
+          "Open your book."
+        ],
+        [
+          "د How are you? ځواب ولیکئ.",
+          "I am fine, thank you."
+        ],
+        [
+          "«زما نوم علي دی» وژباړئ.",
+          "My name is Ali."
+        ],
+        [
+          "د یکشنبې ورځ په انګلیسي ولیکئ.",
+          "Sunday."
+        ],
+        [
+          "«ولیکئ» په انګلیسي ولیکئ.",
+          "Write."
+        ]
+      ],
+      "homework": "خپله پېژندنه په پنځو جملو کې ولیکئ او د لومړۍ اونۍ ټول لغتونه بیا ولولئ.",
+      "quiz": true
+    },
+    {
+      "day": 8,
+      "week": 2,
+      "topic": "شخصي ضمیرونه (Subject Pronouns)",
+      "goal": "زده‌کوونکی د I, you, he, she, it, we او they ضمیرونه پېژني او په جملو کې یې کاروي.",
+      "vocab": [
+        [
+          "I",
+          "زه",
+          "آی"
+        ],
+        [
+          "You",
+          "ته / تاسو",
+          "یو"
+        ],
+        [
+          "He",
+          "هغه (نارینه)",
+          "هي"
+        ],
+        [
+          "She",
+          "هغه (ښځینه)",
+          "شي"
+        ],
+        [
+          "It",
+          "هغه (شی یا حیوان)",
+          "اِټ"
+        ],
+        [
+          "We",
+          "موږ",
+          "وي"
+        ],
+        [
+          "They",
+          "هغوی",
+          "ذې"
+        ],
+        [
+          "teacher",
+          "ښوونکی",
+          "ټیچر"
+        ],
+        [
+          "student",
+          "زده‌کوونکی",
+          "سټوډنټ"
+        ]
+      ],
+      "grammar": "ضمیر د نوم پر ځای کارېږي. I د ځان لپاره، You د مخاطب لپاره، He د نارینه لپاره، She د ښځینه لپاره، It د شي یا حیوان لپاره، We د موږ لپاره او They د هغوی لپاره دی. د انسانانو لپاره د جنسیت مطابق He او She کاروو.",
+      "examples": [
+        "I am a student.",
+        "He is a teacher.",
+        "She is my sister.",
+        "We are friends.",
+        "They are students."
+      ],
+      "dialogue": [
+        "A: Who is he?",
+        "B: He is my teacher.",
+        "A: Who is she?",
+        "B: She is my sister."
+      ],
+      "exercises": [
+        [
+          "د «موږ» انګلیسي ضمیر ولیکئ.",
+          "We."
+        ],
+        [
+          "د یوې ښځې لپاره کوم ضمیر کاروو؟",
+          "She."
+        ],
+        [
+          "«هغوی زده‌کوونکي دي» وژباړئ.",
+          "They are students."
+        ]
+      ],
+      "homework": "د هر ضمیر لپاره یوه ساده جمله ولیکئ. ټولې اووه جملې جوړې کړئ."
+    },
+    {
+      "day": 9,
+      "week": 2,
+      "topic": "Am / Is / Are",
+      "goal": "زده‌کوونکی د am، is او are مناسب استعمال پېژني.",
+      "vocab": [
+        [
+          "am",
+          "یم",
+          "اَم"
+        ],
+        [
+          "is",
+          "دی / ده",
+          "اِز"
+        ],
+        [
+          "are",
+          "یاست / دي",
+          "آر"
+        ],
+        [
+          "happy",
+          "خوښ",
+          "هېپي"
+        ],
+        [
+          "ready",
+          "چمتو",
+          "رېډي"
+        ],
+        [
+          "tired",
+          "ستړی",
+          "ټایرډ"
+        ],
+        [
+          "at home",
+          "په کور کې",
+          "اَټ هوم"
+        ]
+      ],
+      "grammar": "Am یوازې له I سره راځي: I am. Is له He, She, It او مفرد نوم سره راځي: He is, The book is. Are له You, We, They او جمع نومونو سره راځي: You are, They are. د دې فعلونو پښتو معنا د جملې له مخې بدلېدای شي.",
+      "examples": [
+        "I am happy.",
+        "He is ready.",
+        "She is at home.",
+        "You are a student.",
+        "They are tired."
+      ],
+      "dialogue": [
+        "A: Are you ready?",
+        "B: Yes, I am.",
+        "A: Is Ali at home?",
+        "B: No, he is not."
+      ],
+      "exercises": [
+        [
+          "تش ځای ډک کړئ: I ___ a student.",
+          "am."
+        ],
+        [
+          "تش ځای ډک کړئ: She ___ happy.",
+          "is."
+        ],
+        [
+          "تش ځای ډک کړئ: They ___ ready.",
+          "are."
+        ]
+      ],
+      "homework": "د am، is او are په کارولو درې مثبتې جملې ولیکئ."
+    },
+    {
+      "day": 10,
+      "week": 2,
+      "topic": "مثبتې ساده جملې (Affirmative Sentences)",
+      "goal": "زده‌کوونکی د am/is/are په مرسته د خلکو او شیانو په اړه مثبتې جملې جوړوي.",
+      "vocab": [
+        [
+          "doctor",
+          "ډاکټر",
+          "ډاکټر"
+        ],
+        [
+          "driver",
+          "موټرچلوونکی",
+          "ډرایوَر"
+        ],
+        [
+          "book",
+          "کتاب",
+          "بُک"
+        ],
+        [
+          "new",
+          "نوی",
+          "نیو"
+        ],
+        [
+          "old",
+          "زوړ",
+          "اولډ"
+        ],
+        [
+          "big",
+          "لوی",
+          "بېګ"
+        ],
+        [
+          "small",
+          "کوچنی",
+          "سمال"
+        ]
+      ],
+      "grammar": "د am/is/are مثبت جوړښت داسې دی: فاعل + am/is/are + پاتې جمله. مثال: I am a student. د مفرد شي لپاره The book is new. او د جمع لپاره The books are new. کاروو.",
+      "examples": [
+        "I am a teacher.",
+        "My father is a driver.",
+        "The book is new.",
+        "The students are happy."
+      ],
+      "dialogue": [
+        "A: Is your father a teacher?",
+        "B: No, he is a driver.",
+        "A: Are your books new?",
+        "B: Yes, they are."
+      ],
+      "exercises": [
+        [
+          "«زما پلار ډاکټر دی» وژباړئ.",
+          "My father is a doctor."
+        ],
+        [
+          "«کتاب نوی دی» وژباړئ.",
+          "The book is new."
+        ],
+        [
+          "«زده‌کوونکي خوښ دي» وژباړئ.",
+          "The students are happy."
+        ]
+      ],
+      "homework": "د خپل کور یا ټولګي په اړه پنځه مثبتې جملې ولیکئ."
+    },
+    {
+      "day": 11,
+      "week": 2,
+      "topic": "منفي جملې (Negative Sentences)",
+      "goal": "زده‌کوونکی د am not، is not او are not په مرسته منفي جملې جوړوي.",
+      "vocab": [
+        [
+          "not",
+          "نه",
+          "ناټ"
+        ],
+        [
+          "busy",
+          "بوخت",
+          "بېزي"
+        ],
+        [
+          "sick",
+          "ناروغ",
+          "سِک"
+        ],
+        [
+          "here",
+          "دلته",
+          "هیر"
+        ],
+        [
+          "there",
+          "هلته",
+          "ذېر"
+        ],
+        [
+          "isn't",
+          "is not لنډه بڼه",
+          "اِزَنټ"
+        ],
+        [
+          "aren't",
+          "are not لنډه بڼه",
+          "آرنټ"
+        ]
+      ],
+      "grammar": "د منفي جملې لپاره د am/is/are وروسته not راځي: I am not tired. He is not here. They are not busy. لنډې بڼې یې isn’t او aren’t دي. له I سره عموماً I’m not وایو.",
+      "examples": [
+        "I am not tired.",
+        "She is not at home.",
+        "They are not busy.",
+        "He isn’t sick."
+      ],
+      "dialogue": [
+        "A: Is Ahmad here?",
+        "B: No, he is not here.",
+        "A: Are you busy?",
+        "B: No, I am not busy."
+      ],
+      "exercises": [
+        [
+          "«زه ستړی نه یم» وژباړئ.",
+          "I am not tired."
+        ],
+        [
+          "«هغه دلته نه ده» وژباړئ.",
+          "She is not here."
+        ],
+        [
+          "تش ځای ډک کړئ: They ___ not ready.",
+          "are."
+        ]
+      ],
+      "homework": "د خپل ځان او دوو نورو کسانو په اړه درې منفي جملې ولیکئ."
+    },
+    {
+      "day": 12,
+      "week": 2,
+      "topic": "د Am / Is / Are پوښتنې",
+      "goal": "زده‌کوونکی د am/is/are په مخکې کولو پوښتنې او لنډ ځوابونه جوړوي.",
+      "vocab": [
+        [
+          "Are you...?",
+          "ایا ته ... یې؟",
+          "آر یو"
+        ],
+        [
+          "Is he...?",
+          "ایا هغه ... دی؟",
+          "اِز هي"
+        ],
+        [
+          "Yes, I am.",
+          "هو، زه یم.",
+          "یېس، آی اَم"
+        ],
+        [
+          "No, I am not.",
+          "نه، زه نه یم.",
+          "نو، آی اَم ناټ"
+        ],
+        [
+          "Yes, she is.",
+          "هو، هغه ده.",
+          "یېس، شي اِز"
+        ],
+        [
+          "No, they are not.",
+          "نه، هغوی نه دي.",
+          "نو، ذې آر ناټ"
+        ]
+      ],
+      "grammar": "د پوښتنې لپاره am/is/are د جملې پیل ته راوړو: You are ready. → Are you ready? ځوابونه: Yes, I am. / No, I am not. د He لپاره Yes, he is. او No, he is not. کاروو.",
+      "examples": [
+        "Are you a student? — Yes, I am.",
+        "Is she your sister? — No, she is not.",
+        "Are they at school? — Yes, they are."
+      ],
+      "dialogue": [
+        "A: Are you from Kabul?",
+        "B: No, I am not. I am from Herat.",
+        "A: Is your brother a student?",
+        "B: Yes, he is."
+      ],
+      "exercises": [
+        [
+          "پوښتنه جوړه کړئ: She is happy.",
+          "Is she happy?"
+        ],
+        [
+          "لنډ ځواب ولیکئ: Are you ready? (هو)",
+          "Yes, I am."
+        ],
+        [
+          "پوښتنه جوړه کړئ: They are students.",
+          "Are they students?"
+        ]
+      ],
+      "homework": "له یوه ملګري څخه د نوم، زده‌کوونکي‌والي او چمتووالي په اړه درې پوښتنې وکړئ او ځوابونه یې ولیکئ."
+    },
+    {
+      "day": 13,
+      "week": 2,
+      "topic": "کورنۍ (Family)",
+      "goal": "زده‌کوونکی د کورنۍ د غړو نومونه او د My په مرسته خپلوي بیانولای شي.",
+      "vocab": [
+        [
+          "father",
+          "پلار",
+          "فاذَر"
+        ],
+        [
+          "mother",
+          "مور",
+          "ماذَر"
+        ],
+        [
+          "brother",
+          "ورور",
+          "براذَر"
+        ],
+        [
+          "sister",
+          "خور",
+          "سېسټر"
+        ],
+        [
+          "son",
+          "زوی",
+          "سَن"
+        ],
+        [
+          "daughter",
+          "لور",
+          "ډاټر"
+        ],
+        [
+          "parents",
+          "مور او پلار",
+          "پېرنټس"
+        ],
+        [
+          "family",
+          "کورنۍ",
+          "فېمِلي"
+        ],
+        [
+          "my",
+          "زما",
+          "مای"
+        ]
+      ],
+      "grammar": "My د «زما» معنا لري او د نوم تر مخه راځي: my father، my sister. د معرفي کولو لپاره This is my father. (دا زما پلار دی.) وایو. د یو کس لپاره is کاروو.",
+      "examples": [
+        "This is my mother.",
+        "My brother is a student.",
+        "My parents are at home."
+      ],
+      "dialogue": [
+        "A: Who is this?",
+        "B: This is my sister.",
+        "A: What is her name?",
+        "B: Her name is Sara."
+      ],
+      "exercises": [
+        [
+          "«زما مور» وژباړئ.",
+          "My mother."
+        ],
+        [
+          "«دا زما ورور دی» وژباړئ.",
+          "This is my brother."
+        ],
+        [
+          "«زما مور او پلار په کور کې دي» وژباړئ.",
+          "My parents are at home."
+        ]
+      ],
+      "homework": "د خپلې کورنۍ په اړه پنځه جملې ولیکئ؛ یوازې هغه معلومات وکاروئ چې شریکول یې درته مناسب وي."
+    },
+    {
+      "day": 14,
+      "week": 2,
+      "topic": "د دویمې اونۍ تکرار او ازموینه",
+      "goal": "زده‌کوونکی ضمیرونه، am/is/are، مثبتې او منفي جملې، پوښتنې او د کورنۍ لغتونه بیا کاروي.",
+      "vocab": [],
+      "grammar": "د دویمې اونۍ ټولې قاعدې تکرار کړئ: Subject Pronouns، am/is/are، مثبتې او منفي جملې، پوښتنې او My.",
+      "examples": [
+        "I am a student.",
+        "She is not tired.",
+        "Are they ready? — Yes, they are."
+      ],
+      "dialogue": [
+        "A: Is this your brother?",
+        "B: Yes, he is.",
+        "A: Is he a student?",
+        "B: No, he is not. He is a teacher."
+      ],
+      "exercises": [
+        [
+          "I ___ happy. (am/is/are)",
+          "am."
+        ],
+        [
+          "He ___ a doctor. (am/is/are)",
+          "is."
+        ],
+        [
+          "We ___ students. (am/is/are)",
+          "are."
+        ],
+        [
+          "«زه بوخت نه یم» وژباړئ.",
+          "I am not busy."
+        ],
+        [
+          "پوښتنه جوړه کړئ: She is ready.",
+          "Is she ready?"
+        ],
+        [
+          "د «هغوی» انګلیسي ضمیر ولیکئ.",
+          "They."
+        ],
+        [
+          "«دا زما مور ده» وژباړئ.",
+          "This is my mother."
+        ],
+        [
+          "د brother معنا ولیکئ.",
+          "ورور."
+        ],
+        [
+          "لنډ ځواب: Are you a student? (هو)",
+          "Yes, I am."
+        ],
+        [
+          "لنډ ځواب: Is he here? (نه)",
+          "No, he is not."
+        ]
+      ],
+      "homework": "د ځان او کورنۍ په اړه شپږ جملې ولیکئ؛ دوه مثبتې، دوه منفي او دوه پوښتنې.",
+      "quiz": true
+    },
+    {
+      "day": 15,
+      "week": 3,
+      "topic": "عام ورځني فعلونه (Common Verbs)",
+      "goal": "زده‌کوونکی لس عام فعلونه پېژني او له I سره ساده جملې جوړوي.",
+      "vocab": [
+        [
+          "go",
+          "تلل",
+          "ګو"
+        ],
+        [
+          "eat",
+          "خوړل",
+          "ایټ"
+        ],
+        [
+          "drink",
+          "څښل",
+          "ډرېنک"
+        ],
+        [
+          "read",
+          "لوستل",
+          "رېډ"
+        ],
+        [
+          "write",
+          "لیکل",
+          "رایټ"
+        ],
+        [
+          "work",
+          "کار کول",
+          "وَک"
+        ],
+        [
+          "study",
+          "زده‌کړه کول",
+          "سټَډي"
+        ],
+        [
+          "play",
+          "لوبې کول",
+          "پلې"
+        ],
+        [
+          "sleep",
+          "ویده کېدل",
+          "سلیپ"
+        ],
+        [
+          "speak",
+          "خبرې کول",
+          "سپیک"
+        ]
+      ],
+      "grammar": "فعل د کار یا عمل نوم دی. د نن ورځې په تمرین کې له I سره ساده جملې جوړوو: I read. I study English. I drink water. په دې پړاو کې له I سره فعل په اصلي بڼه کارېږي.",
+      "examples": [
+        "I read a book.",
+        "I drink water.",
+        "I study English.",
+        "I play football."
+      ],
+      "dialogue": [
+        "A: What do you study?",
+        "B: I study English.",
+        "A: Do you read books?",
+        "B: Yes, I do."
+      ],
+      "exercises": [
+        [
+          "د eat معنا ولیکئ.",
+          "خوړل."
+        ],
+        [
+          "«زه اوبه څښم» وژباړئ.",
+          "I drink water."
+        ],
+        [
+          "«زه انګلیسي زده کوم» وژباړئ.",
+          "I study English."
+        ]
+      ],
+      "homework": "له لسو فعلونو څخه لږ تر لږه پنځه وټاکئ او له I سره جملې جوړې کړئ."
+    },
+    {
+      "day": 16,
+      "week": 3,
+      "topic": "ورځنی مهالوېش (Daily Routine)",
+      "goal": "زده‌کوونکی خپل سهار، ورځ او ماښام په ساده جملو بیانولای شي.",
+      "vocab": [
+        [
+          "wake up",
+          "له خوبه پاڅېدل",
+          "وېک اَپ"
+        ],
+        [
+          "get up",
+          "له بستره پورته کېدل",
+          "ګېټ اَپ"
+        ],
+        [
+          "wash",
+          "مینځل",
+          "واش"
+        ],
+        [
+          "eat breakfast",
+          "سهارنۍ خوړل",
+          "ایټ برېکفَسټ"
+        ],
+        [
+          "go to school",
+          "ښوونځي ته تلل",
+          "ګو ټو سکول"
+        ],
+        [
+          "come home",
+          "کور ته راتلل",
+          "کَم هوم"
+        ],
+        [
+          "do homework",
+          "کورنی کار کول",
+          "ډو هوم‌وَک"
+        ],
+        [
+          "at night",
+          "د شپې",
+          "اَټ نایټ"
+        ]
+      ],
+      "grammar": "د ورځني کارونو د بیان لپاره ساده اوسنی زمان کاروو: I wake up. I go to school. د وخت د بیان لپاره in the morning (سهار)، in the afternoon (ماسپښین) او at night (شپه) کاروو.",
+      "examples": [
+        "I wake up in the morning.",
+        "I go to school.",
+        "I do my homework in the evening.",
+        "I sleep at night."
+      ],
+      "dialogue": [
+        "A: What do you do in the morning?",
+        "B: I wake up and eat breakfast.",
+        "A: Do you go to school?",
+        "B: Yes, I do."
+      ],
+      "exercises": [
+        [
+          "«زه سهار پاڅېږم» وژباړئ.",
+          "I wake up in the morning."
+        ],
+        [
+          "د «کورنی کار کول» انګلیسي ولیکئ.",
+          "Do homework."
+        ],
+        [
+          "«زه ښوونځي ته ځم» وژباړئ.",
+          "I go to school."
+        ]
+      ],
+      "homework": "د خپل ورځني ژوند په اړه له سهاره تر شپې پنځه جملې ولیکئ."
+    },
+    {
+      "day": 17,
+      "week": 3,
+      "topic": "ساده اوسنی زمان – مثبتې جملې (Present Simple)",
+      "goal": "زده‌کوونکی د عادتونو او تکراري کارونو لپاره مثبتې جملې جوړوي.",
+      "vocab": [
+        [
+          "every day",
+          "هره ورځ",
+          "اېوري ډې"
+        ],
+        [
+          "usually",
+          "معمولاً",
+          "یوجُولي"
+        ],
+        [
+          "sometimes",
+          "کله ناکله",
+          "سم‌ټایمز"
+        ],
+        [
+          "always",
+          "تل",
+          "اول‌وېز"
+        ],
+        [
+          "learn",
+          "زده کول",
+          "لَرن"
+        ],
+        [
+          "teach",
+          "ښوول",
+          "ټیچ"
+        ]
+      ],
+      "grammar": "Present Simple د عادتونو او تکراري کارونو لپاره کارېږي. له I/You/We/They سره عادي فعل راځي: I study every day. له He/She/It سره د ډېرو فعلونو په پای کې s یا es زیاتېږي: He studies. She reads. ځینې فعلونه ځانګړې بڼه لري؛ هغه به وروسته زده کوو.",
+      "examples": [
+        "I study English every day.",
+        "We play football.",
+        "He reads a book.",
+        "She teaches English."
+      ],
+      "dialogue": [
+        "A: Do you study English every day?",
+        "B: Yes, I do.",
+        "A: Does your brother study English?",
+        "B: Yes, he does."
+      ],
+      "exercises": [
+        [
+          "سمه بڼه وټاکئ: He (read/reads) a book.",
+          "reads."
+        ],
+        [
+          "«موږ هره ورځ زده‌کړه کوو» وژباړئ.",
+          "We study every day."
+        ],
+        [
+          "سمه جمله وټاکئ: She study / She studies.",
+          "She studies."
+        ]
+      ],
+      "homework": "د خپلو درې عادتونو په اړه جملې ولیکئ؛ یوه جمله له He یا She سره هم جوړه کړئ."
+    },
+    {
+      "day": 18,
+      "week": 3,
+      "topic": "Do / Does پوښتنې او منفي ځوابونه",
+      "goal": "زده‌کوونکی په Present Simple کې د Do او Does په مرسته پوښتنې او منفي جملې جوړوي.",
+      "vocab": [
+        [
+          "Do you...?",
+          "ایا ته ...؟",
+          "ډو یو"
+        ],
+        [
+          "Does he...?",
+          "ایا هغه ...؟",
+          "ډَز هي"
+        ],
+        [
+          "Yes, I do.",
+          "هو.",
+          "یېس، آی ډو"
+        ],
+        [
+          "No, I do not.",
+          "نه.",
+          "نو، آی ډو ناټ"
+        ],
+        [
+          "does not / doesn’t",
+          "نه کوي",
+          "ډَزَنټ"
+        ],
+        [
+          "do not / don’t",
+          "نه کوم/نه کوي",
+          "ډوَنټ"
+        ]
+      ],
+      "grammar": "له I/You/We/They سره د پوښتنې په پیل کې Do راځي: Do you study? له He/She/It سره Does راځي: Does he study? له Does وروسته فعل بېرته اصلي بڼه اخلي؛ سمه بڼه Does he study? ده، نه Does he studies? منفي بڼې don’t او doesn’t دي.",
+      "examples": [
+        "Do you read books? — Yes, I do.",
+        "Does she work? — No, she does not.",
+        "I do not play tennis.",
+        "He doesn’t drink coffee."
+      ],
+      "dialogue": [
+        "A: Do you speak English?",
+        "B: A little.",
+        "A: Does your friend speak English?",
+        "B: Yes, he does."
+      ],
+      "exercises": [
+        [
+          "پوښتنه جوړه کړئ: You study English.",
+          "Do you study English?"
+        ],
+        [
+          "پوښتنه جوړه کړئ: She reads books.",
+          "Does she read books?"
+        ],
+        [
+          "منفي کړئ: I play football.",
+          "I do not play football. / I don’t play football."
+        ]
+      ],
+      "homework": "درې Do پوښتنې او درې Does پوښتنې ولیکئ او د هرې یوې لنډ ځواب هم ورسره ولیکئ."
+    },
+    {
+      "day": 19,
+      "week": 3,
+      "topic": "وخت او ساعت (Time)",
+      "goal": "زده‌کوونکی د ساعت ساده وختونه پوښتل او ویلای شي.",
+      "vocab": [
+        [
+          "What time is it?",
+          "اوس څو بجې دي؟",
+          "واټ ټایم اِز اِټ"
+        ],
+        [
+          "It is seven o'clock.",
+          "اووه بجې دي.",
+          "اِټ اِز سېوَن اَکلاک"
+        ],
+        [
+          "half past eight",
+          "اته نیمې بجې",
+          "هاف پاسټ اېټ"
+        ],
+        [
+          "quarter past three",
+          "درې بجې او پنځلس دقیقې",
+          "کوارټر پاسټ ثري"
+        ],
+        [
+          "quarter to five",
+          "پنځه بجو ته پنځلس دقیقې پاتې دي",
+          "کوارټر ټو فایو"
+        ],
+        [
+          "early",
+          "وختي",
+          "ارلي"
+        ],
+        [
+          "late",
+          "ناوخته",
+          "لېټ"
+        ]
+      ],
+      "grammar": "د ساعت د پوښتنې لپاره What time is it? وایو. د پوره ساعت لپاره It is + number + o’clock کاروو: It is seven o’clock. نیم ساعت ته half past او د پنځلسو دقیقو لپاره quarter past کارېږي. نن لومړی پوره ساعتونه تمرین کړئ؛ نورې بڼې د پېژندنې لپاره دي.",
+      "examples": [
+        "It is six o'clock.",
+        "It is nine o'clock.",
+        "I go to school at seven o’clock."
+      ],
+      "dialogue": [
+        "A: What time is it?",
+        "B: It is eight o’clock.",
+        "A: Thank you.",
+        "B: You are welcome."
+      ],
+      "exercises": [
+        [
+          "«اوس درې بجې دي» وژباړئ.",
+          "It is three o’clock."
+        ],
+        [
+          "د ساعت پوښتنه په انګلیسي ولیکئ.",
+          "What time is it?"
+        ],
+        [
+          "«زه په اوو بجو ښوونځي ته ځم» وژباړئ.",
+          "I go to school at seven o’clock."
+        ]
+      ],
+      "homework": "د ورځې د درې فعالیتونو وخت په انګلیسي ولیکئ؛ لکه I wake up at six o’clock."
+    },
+    {
+      "day": 20,
+      "week": 3,
+      "topic": "په ښوونځي کې (At School)",
+      "goal": "زده‌کوونکی د ښوونځي د چاپېریال لغتونه او ساده جملې کاروي.",
+      "vocab": [
+        [
+          "school",
+          "ښوونځی",
+          "سکول"
+        ],
+        [
+          "classroom",
+          "ټولګی",
+          "کلاس‌روم"
+        ],
+        [
+          "teacher",
+          "ښوونکی",
+          "ټیچر"
+        ],
+        [
+          "student",
+          "زده‌کوونکی",
+          "سټوډنټ"
+        ],
+        [
+          "lesson",
+          "درس",
+          "لېسَن"
+        ],
+        [
+          "subject",
+          "مضمون",
+          "سَبجېکټ"
+        ],
+        [
+          "English",
+          "انګلیسي",
+          "اېنګلېش"
+        ],
+        [
+          "mathematics",
+          "ریاضي",
+          "مېثَمېټکس"
+        ],
+        [
+          "homework",
+          "کورنی کار",
+          "هوم‌وَک"
+        ],
+        [
+          "exam",
+          "ازموینه",
+          "اېګزام"
+        ]
+      ],
+      "grammar": "د زده‌کړې د مضمون لپاره study کاروو: I study English. د ښوونځي ځای ته at school وایو: I am at school. د عادت لپاره Present Simple کاروو: We study every day.",
+      "examples": [
+        "I am a student.",
+        "I study English at school.",
+        "Our teacher gives us homework.",
+        "We have an exam on Friday."
+      ],
+      "dialogue": [
+        "A: What do you study?",
+        "B: I study English and mathematics.",
+        "A: Where do you study?",
+        "B: I study at school."
+      ],
+      "exercises": [
+        [
+          "د «ټولګی» انګلیسي ولیکئ.",
+          "Classroom."
+        ],
+        [
+          "«زه په ښوونځي کې انګلیسي زده کوم» وژباړئ.",
+          "I study English at school."
+        ],
+        [
+          "د «ازموینه» انګلیسي ولیکئ.",
+          "Exam."
+        ]
+      ],
+      "homework": "د خپل ښوونځي او مضمونونو په اړه پنځه انګلیسي جملې ولیکئ."
+    },
+    {
+      "day": 21,
+      "week": 3,
+      "topic": "د درېیمې اونۍ تکرار او ازموینه",
+      "goal": "زده‌کوونکی ورځني فعلونه، عادتونه، Present Simple، Do/Does او وخت بیا کاروي.",
+      "vocab": [],
+      "grammar": "د درېیمې اونۍ موضوعات تکرار کړئ: عام فعلونه، Daily Routine، Present Simple مثبتې جملې، Do/Does پوښتنې او د ساعت بیان.",
+      "examples": [
+        "I wake up at six.",
+        "She studies English every day.",
+        "Do you read books?"
+      ],
+      "dialogue": [
+        "A: What time do you wake up?",
+        "B: I wake up at six o’clock.",
+        "A: Do you study English every day?",
+        "B: Yes, I do."
+      ],
+      "exercises": [
+        [
+          "د «لوستل» انګلیسي ولیکئ.",
+          "Read."
+        ],
+        [
+          "سمه بڼه: He (study/studies) English.",
+          "studies."
+        ],
+        [
+          "پوښتنه جوړه کړئ: You work.",
+          "Do you work?"
+        ],
+        [
+          "پوښتنه جوړه کړئ: He plays football.",
+          "Does he play football?"
+        ],
+        [
+          "منفي کړئ: I drink tea.",
+          "I do not drink tea. / I don’t drink tea."
+        ],
+        [
+          "«زه سهار پاڅېږم» وژباړئ.",
+          "I wake up in the morning."
+        ],
+        [
+          "«اوس څو بجې دي؟» وژباړئ.",
+          "What time is it?"
+        ],
+        [
+          "«ښوونځی» په انګلیسي ولیکئ.",
+          "School."
+        ],
+        [
+          "«هغې هره ورځ کتاب لولي» وژباړئ.",
+          "She reads a book every day."
+        ],
+        [
+          "لنډ ځواب: Do you study English? (هو)",
+          "Yes, I do."
+        ]
+      ],
+      "homework": "د خپل ورځني مهالوېش په اړه اووه جملې ولیکئ او د اونۍ د ټولو درسونو لغتونه تکرار کړئ.",
+      "quiz": true
+    },
+    {
+      "day": 22,
+      "week": 4,
+      "topic": "کور او د کور شیان (Home and Objects)",
+      "goal": "زده‌کوونکی د کور د شیانو نومونه پېژني او د This is / That is جملې جوړوي.",
+      "vocab": [
+        [
+          "house",
+          "کور",
+          "هاوس"
+        ],
+        [
+          "room",
+          "کوټه",
+          "روم"
+        ],
+        [
+          "door",
+          "دروازه",
+          "ډور"
+        ],
+        [
+          "window",
+          "کړکۍ",
+          "وېنډو"
+        ],
+        [
+          "table",
+          "مېز",
+          "ټېبَل"
+        ],
+        [
+          "chair",
+          "څوکۍ",
+          "چېیر"
+        ],
+        [
+          "bed",
+          "کټ",
+          "بېډ"
+        ],
+        [
+          "kitchen",
+          "پخلنځی",
+          "کېچَن"
+        ],
+        [
+          "This is...",
+          "دا ... دی/ده.",
+          "ذِس اِز"
+        ],
+        [
+          "That is...",
+          "هغه ... دی/ده.",
+          "ذَټ اِز"
+        ]
+      ],
+      "grammar": "This is د نږدې یوه شي د ښودلو لپاره کارېږي: This is a chair. That is د لرې یوه شي لپاره دی: That is a door. د یوه شمېرېدونکي شي له نوم مخکې a کاروو: a table، a chair.",
+      "examples": [
+        "This is a table.",
+        "That is a window.",
+        "My house is big.",
+        "The kitchen is clean."
+      ],
+      "dialogue": [
+        "A: What is this?",
+        "B: This is a chair.",
+        "A: What is that?",
+        "B: That is a window."
+      ],
+      "exercises": [
+        [
+          "«دا یو مېز دی» وژباړئ.",
+          "This is a table."
+        ],
+        [
+          "د «کړکۍ» انګلیسي ولیکئ.",
+          "Window."
+        ],
+        [
+          "«هغه یوه دروازه ده» وژباړئ.",
+          "That is a door."
+        ]
+      ],
+      "homework": "د خپلې کوټې د پنځو شیانو نومونه په انګلیسي ولیکئ او د هر یوه لپاره This is a/an جمله جوړه کړئ."
+    },
+    {
+      "day": 23,
+      "week": 4,
+      "topic": "خواړه او څښاک (Food and Drinks)",
+      "goal": "زده‌کوونکی د خوړو نومونه پېژني او د خوښې او نه خوښې څرګندونه کوي.",
+      "vocab": [
+        [
+          "bread",
+          "ډوډۍ",
+          "برېډ"
+        ],
+        [
+          "rice",
+          "وریجې",
+          "رایس"
+        ],
+        [
+          "water",
+          "اوبه",
+          "واټر"
+        ],
+        [
+          "tea",
+          "چای",
+          "ټي"
+        ],
+        [
+          "milk",
+          "شیدې",
+          "مِلک"
+        ],
+        [
+          "apple",
+          "مڼه",
+          "اېپَل"
+        ],
+        [
+          "banana",
+          "کېله",
+          "بَنانا"
+        ],
+        [
+          "meat",
+          "غوښه",
+          "میټ"
+        ],
+        [
+          "I like...",
+          "زه ... خوښوم.",
+          "آی لایک"
+        ],
+        [
+          "I don’t like...",
+          "زه ... نه خوښوم.",
+          "آی ډونټ لایک"
+        ]
+      ],
+      "grammar": "د خوښې لپاره I like + نوم کاروو: I like tea. د نه خوښې لپاره I do not like یا I don’t like کاروو. له like وروسته د خوښې شی نوم راځي.",
+      "examples": [
+        "I like apples.",
+        "I like tea.",
+        "I don’t like coffee.",
+        "We eat rice."
+      ],
+      "dialogue": [
+        "A: Do you like tea?",
+        "B: Yes, I do.",
+        "A: Do you like coffee?",
+        "B: No, I don’t."
+      ],
+      "exercises": [
+        [
+          "«زه چای خوښوم» وژباړئ.",
+          "I like tea."
+        ],
+        [
+          "«زه شیدې نه خوښوم» وژباړئ.",
+          "I do not like milk. / I don’t like milk."
+        ],
+        [
+          "د «وریجې» انګلیسي ولیکئ.",
+          "Rice."
+        ]
+      ],
+      "homework": "د هغو پنځو خوړو نومونه ولیکئ چې خوښوئ او د دوو هغو چې نه مو خوښېږي، د انګلیسي جملو په بڼه یادونه وکړئ."
+    },
+    {
+      "day": 24,
+      "week": 4,
+      "topic": "په بازار کې (At the Market)",
+      "goal": "زده‌کوونکی د اخیستلو ساده مکالمه او د بیې پوښتنه کولای شي.",
+      "vocab": [
+        [
+          "market",
+          "بازار",
+          "مارکېټ"
+        ],
+        [
+          "price",
+          "بیه",
+          "پرایس"
+        ],
+        [
+          "How much is this?",
+          "دا په څو دی؟",
+          "هاو مَچ اِز ذِس"
+        ],
+        [
+          "It is 100 Afghanis.",
+          "۱۰۰ افغانۍ دی.",
+          "اِټ اِز وَن هَنډرډ اَفغانیز"
+        ],
+        [
+          "I want...",
+          "زه ... غواړم.",
+          "آی وانټ"
+        ],
+        [
+          "Please give me...",
+          "مهرباني وکړئ ... راکړئ.",
+          "پلیز ګېو مي"
+        ],
+        [
+          "cheap",
+          "ارزانه",
+          "چیپ"
+        ],
+        [
+          "expensive",
+          "ګران",
+          "اېکسپېنسِو"
+        ],
+        [
+          "Here you are.",
+          "دا واخلئ.",
+          "هیر یو آر"
+        ]
+      ],
+      "grammar": "د یوه شي د بیې پوښتنه How much is this? ده. د غوښتنې لپاره I want ... کاروو. مهرباني لپاره Please ورزیاتوو: Please give me one apple. د یوه شي لپاره is کاروو.",
+      "examples": [
+        "How much is this book?",
+        "I want two apples.",
+        "This bag is expensive.",
+        "Please give me a kilo of rice."
+      ],
+      "dialogue": [
+        "Seller: Hello. What do you want?",
+        "Customer: I want two apples, please.",
+        "Seller: Here you are.",
+        "Customer: How much is this?",
+        "Seller: It is 100 Afghanis.",
+        "Customer: Thank you."
+      ],
+      "exercises": [
+        [
+          "«دا په څو دی؟» وژباړئ.",
+          "How much is this?"
+        ],
+        [
+          "«زه یوه مڼه غواړم» وژباړئ.",
+          "I want one apple."
+        ],
+        [
+          "د «ارزانه» انګلیسي ولیکئ.",
+          "Cheap."
+        ]
+      ],
+      "homework": "د پېرودونکي او پلورونکي ترمنځ یوه شپږ کرښیزه مکالمه ولیکئ."
+    },
+    {
+      "day": 25,
+      "week": 4,
+      "topic": "رنګونه او د شیانو بیان (Colors and Descriptions)",
+      "goal": "زده‌کوونکی د رنګونو نومونه او د ساده صفتونو په مرسته د شیانو بیانولای شي.",
+      "vocab": [
+        [
+          "red",
+          "سور",
+          "رېډ"
+        ],
+        [
+          "blue",
+          "آبي",
+          "بلو"
+        ],
+        [
+          "green",
+          "شین",
+          "ګرین"
+        ],
+        [
+          "yellow",
+          "ژېړ",
+          "یېلو"
+        ],
+        [
+          "black",
+          "تور",
+          "بلاک"
+        ],
+        [
+          "white",
+          "سپین",
+          "وایټ"
+        ],
+        [
+          "brown",
+          "نسواري",
+          "براون"
+        ],
+        [
+          "beautiful",
+          "ښکلی",
+          "بیوټیفُل"
+        ],
+        [
+          "clean",
+          "پاک",
+          "کلین"
+        ],
+        [
+          "dirty",
+          "چټل",
+          "ډَرتي"
+        ]
+      ],
+      "grammar": "په انګلیسي کې صفت عموماً د نوم تر مخه راځي: a red bag، a blue pen. د شي د بیان لپاره This bag is red. هم ویلای شو. د a/an کارول د نوم له غږ سره تړاو لري؛ نن یوازې د عامو بېلګو تمرین کوو.",
+      "examples": [
+        "This is a red bag.",
+        "My pen is blue.",
+        "The room is clean.",
+        "The house is beautiful."
+      ],
+      "dialogue": [
+        "A: What color is your bag?",
+        "B: It is black.",
+        "A: Is your pen blue?",
+        "B: Yes, it is."
+      ],
+      "exercises": [
+        [
+          "د «شین» انګلیسي ولیکئ.",
+          "Green."
+        ],
+        [
+          "«زما قلم آبي دی» وژباړئ.",
+          "My pen is blue."
+        ],
+        [
+          "د رنګ په وسیله د book لپاره یوه جمله جوړه کړئ.",
+          "مثال: This is a red book. / The book is red."
+        ]
+      ],
+      "homework": "په خپل چاپېریال کې د پنځو شیانو رنګونه په انګلیسي جملو کې بیان کړئ."
+    },
+    {
+      "day": 26,
+      "week": 4,
+      "topic": "Can / Cannot – وړتیا",
+      "goal": "زده‌کوونکی د can او cannot په مرسته خپله وړتیا او ناتواني بیانوي.",
+      "vocab": [
+        [
+          "can",
+          "کولای شم/شي",
+          "کَن"
+        ],
+        [
+          "cannot / can’t",
+          "نه شم کولای",
+          "کَن ناټ / کانټ"
+        ],
+        [
+          "swim",
+          "لامبو وهل",
+          "سوېم"
+        ],
+        [
+          "run",
+          "منډه وهل",
+          "رَن"
+        ],
+        [
+          "drive",
+          "موټر چلول",
+          "ډرایو"
+        ],
+        [
+          "cook",
+          "پخلی کول",
+          "کُک"
+        ],
+        [
+          "sing",
+          "سندرې ویل",
+          "سېنګ"
+        ],
+        [
+          "Can you...?",
+          "ایا ته کولای شې؟",
+          "کَن یو"
+        ]
+      ],
+      "grammar": "Can د وړتیا لپاره کارېږي او له ټولو ضمیرونو سره یو شان بڼه لري: I can swim. She can swim. منفي بڼه cannot یا can’t ده. له can وروسته فعل په اصلي بڼه راځي؛ سمه جمله She can drive ده، نه She can drives.",
+      "examples": [
+        "I can read English.",
+        "She can cook.",
+        "He cannot swim.",
+        "Can you speak English?"
+      ],
+      "dialogue": [
+        "A: Can you speak English?",
+        "B: Yes, I can speak a little.",
+        "A: Can you drive?",
+        "B: No, I cannot."
+      ],
+      "exercises": [
+        [
+          "«زه لامبو وهلی شم» وژباړئ.",
+          "I can swim."
+        ],
+        [
+          "«هغه موټر نه شي چلولای» وژباړئ.",
+          "He cannot drive. / He can’t drive."
+        ],
+        [
+          "پوښتنه جوړه کړئ: You can cook.",
+          "Can you cook?"
+        ]
+      ],
+      "homework": "د هغو درې کارونو جملې ولیکئ چې کولای یې شئ، او د دوو کارونو جملې چې نه یې شئ کولای."
+    },
+    {
+      "day": 27,
+      "week": 4,
+      "topic": "ځایونه او د ځای توري (Places and Prepositions)",
+      "goal": "زده‌کوونکی د ځایونو نومونه او in، on، under، near کاروي.",
+      "vocab": [
+        [
+          "school",
+          "ښوونځی",
+          "سکول"
+        ],
+        [
+          "mosque",
+          "جومات",
+          "ماسک"
+        ],
+        [
+          "hospital",
+          "روغتون",
+          "هاسپېټَل"
+        ],
+        [
+          "shop",
+          "دوکان",
+          "شاپ"
+        ],
+        [
+          "park",
+          "پارک",
+          "پارک"
+        ],
+        [
+          "in",
+          "دننه / په",
+          "اِن"
+        ],
+        [
+          "on",
+          "پر",
+          "آن"
+        ],
+        [
+          "under",
+          "لاندې",
+          "اَنډَر"
+        ],
+        [
+          "near",
+          "نږدې",
+          "نیر"
+        ],
+        [
+          "next to",
+          "څنګ ته",
+          "نېکسټ ټو"
+        ]
+      ],
+      "grammar": "In د دننه ځای لپاره: The book is in the bag. On د سطحې پر مخ لپاره: The book is on the table. Under د لاندې لپاره، near د نږدې لپاره او next to د څنګ ته لپاره کارېږي.",
+      "examples": [
+        "The book is on the table.",
+        "The pen is in the bag.",
+        "The cat is under the chair.",
+        "The school is near my house."
+      ],
+      "dialogue": [
+        "A: Where is the book?",
+        "B: It is on the table.",
+        "A: Where is the school?",
+        "B: It is near the mosque."
+      ],
+      "exercises": [
+        [
+          "«قلم په بکس کې دی» وژباړئ.",
+          "The pen is in the bag."
+        ],
+        [
+          "«کتاب د مېز پر سر دی» وژباړئ.",
+          "The book is on the table."
+        ],
+        [
+          "د «لاندې» انګلیسي ولیکئ.",
+          "Under."
+        ]
+      ],
+      "homework": "د خپلې کوټې د شیانو موقعیت په پنځو جملو کې بیان کړئ."
+    },
+    {
+      "day": 28,
+      "week": 4,
+      "topic": "د څلورمې اونۍ تکرار او ازموینه",
+      "goal": "زده‌کوونکی د کور، خوړو، بازار، رنګونو، can او د ځای توري بیا کاروي.",
+      "vocab": [],
+      "grammar": "د څلورمې اونۍ ټولې موضوعګانې تکرار کړئ: This/That، I like، د بیې پوښتنه، رنګونه او صفتونه، Can/Can’t، او in/on/under/near.",
+      "examples": [
+        "This is a red bag.",
+        "I like tea.",
+        "Can you swim?",
+        "The book is on the table."
+      ],
+      "dialogue": [
+        "A: How much is this bag?",
+        "B: It is 500 Afghanis.",
+        "A: Is it black?",
+        "B: No, it is blue.",
+        "A: Thank you.",
+        "B: You are welcome."
+      ],
+      "exercises": [
+        [
+          "«دا یوه څوکۍ ده» وژباړئ.",
+          "This is a chair."
+        ],
+        [
+          "«زه مڼه خوښوم» وژباړئ.",
+          "I like apples. / I like an apple."
+        ],
+        [
+          "د بیې پوښتنه په انګلیسي ولیکئ.",
+          "How much is this?"
+        ],
+        [
+          "«زما قلم تور دی» وژباړئ.",
+          "My pen is black."
+        ],
+        [
+          "«زه موټر چلولای شم» وژباړئ.",
+          "I can drive."
+        ],
+        [
+          "د «روغتون» انګلیسي ولیکئ.",
+          "Hospital."
+        ],
+        [
+          "«کتاب د مېز لاندې دی» وژباړئ.",
+          "The book is under the table."
+        ],
+        [
+          "«هغه لامبو نه شي وهلی» وژباړئ.",
+          "He cannot swim."
+        ],
+        [
+          "د «ارزانه» انګلیسي ولیکئ.",
+          "Cheap."
+        ],
+        [
+          "«ښوونځی زما کور ته نږدې دی» وژباړئ.",
+          "The school is near my house."
+        ]
+      ],
+      "homework": "د یوې خیالي پېرودنې مکالمه ولیکئ او د څلورمې اونۍ لغتونه تکرار کړئ.",
+      "quiz": true
+    },
+    {
+      "day": 29,
+      "week": 5,
+      "topic": "د ورځني ژوند ګډې مکالمې (Everyday Conversations)",
+      "goal": "زده‌کوونکی زده کړې شوې قاعدې په درې عامو حالاتو کې یوځای کاروي.",
+      "vocab": [
+        [
+          "Excuse me.",
+          "بښنه غواړم.",
+          "اېکسکیوز مي"
+        ],
+        [
+          "I need help.",
+          "مرستې ته اړتیا لرم.",
+          "آی نیډ هېلپ"
+        ],
+        [
+          "Can you help me?",
+          "ایا مرسته راسره کولای شئ؟",
+          "کَن یو هېلپ مي"
+        ],
+        [
+          "I understand.",
+          "زه پوه شوم.",
+          "آی اَنډر‌سټېنډ"
+        ],
+        [
+          "I do not understand.",
+          "زه نه پوهېږم.",
+          "آی ډو ناټ اَنډر‌سټېنډ"
+        ],
+        [
+          "Please speak slowly.",
+          "مهرباني وکړئ ورو خبرې وکړئ.",
+          "پلیز سپیک سلوولي"
+        ],
+        [
+          "See you tomorrow.",
+          "سبا به سره ګورو.",
+          "سي یو ټومارو"
+        ]
+      ],
+      "grammar": "نن نوې لویه قاعده نه زده کوو؛ پخوانۍ قاعدې په واقعي مکالمو کې کاروو. د ادب لپاره Excuse me او Please، د مرستې لپاره Can you help me? او د نه پوهېدو لپاره I do not understand کاروو.",
+      "examples": [
+        "Excuse me, can you help me?",
+        "I do not understand. Please speak slowly.",
+        "I study English every day.",
+        "See you tomorrow."
+      ],
+      "dialogue": [
+        "A: Excuse me. Can you help me?",
+        "B: Yes, of course.",
+        "A: I do not understand this word.",
+        "B: It means “کتاب”.",
+        "A: Thank you.",
+        "B: You are welcome. See you tomorrow."
+      ],
+      "exercises": [
+        [
+          "«مهرباني وکړئ ورو خبرې وکړئ» وژباړئ.",
+          "Please speak slowly."
+        ],
+        [
+          "«زه مرستې ته اړتیا لرم» وژباړئ.",
+          "I need help."
+        ],
+        [
+          "د «زه نه پوهېږم» انګلیسي ولیکئ.",
+          "I do not understand."
+        ]
+      ],
+      "homework": "د سلام، ځان پېژندنې، ښوونځي او بازار په اړه یوه ګډه مکالمه ولیکئ. لږ تر لږه ۱۰ کرښې دې ولري."
+    },
+    {
+      "day": 30,
+      "week": 5,
+      "topic": "وروستۍ ازموینه او د پرمختګ ارزونه (Final Test)",
+      "goal": "زده‌کوونکی د ۳۰ ورځو بنسټیز لغتونه، جملې او مهمې قاعدې په عملي توګه کاروي.",
+      "vocab": [],
+      "grammar": "وروستۍ ارزونه د کورس له ټولو موضوعاتو ده: سلام او ځان پېژندنه، الفبا او شمېرې، ضمیرونه، am/is/are، مثبتې او منفي جملې، Present Simple، Do/Does، وخت، خواړه، بازار، Can او د ځای توري.",
+      "examples": [
+        "My name is Ali. I am from Afghanistan.",
+        "I study English every day.",
+        "Can you help me?"
+      ],
+      "dialogue": [
+        "A: Hello! What is your name?",
+        "B: My name is Sara.",
+        "A: Do you study English every day?",
+        "B: Yes, I do.",
+        "A: Can you speak English?",
+        "B: I can speak a little."
+      ],
+      "exercises": [
+        [
+          "«زما نوم احمد دی» وژباړئ.",
+          "My name is Ahmad."
+        ],
+        [
+          "د ۱۶ شمېره په انګلیسي ولیکئ.",
+          "Sixteen."
+        ],
+        [
+          "I ___ a student. (am/is/are)",
+          "am."
+        ],
+        [
+          "منفي کړئ: She is happy.",
+          "She is not happy. / She isn’t happy."
+        ],
+        [
+          "پوښتنه جوړه کړئ: You study English.",
+          "Do you study English?"
+        ],
+        [
+          "سمه بڼه وټاکئ: He (read/reads) every day.",
+          "reads."
+        ],
+        [
+          "«زه اوبه څښم» وژباړئ.",
+          "I drink water."
+        ],
+        [
+          "«اوس څو بجې دي؟» وژباړئ.",
+          "What time is it?"
+        ],
+        [
+          "«زه چای نه خوښوم» وژباړئ.",
+          "I do not like tea. / I don’t like tea."
+        ],
+        [
+          "«دا یوه سره مڼه ده» وژباړئ.",
+          "This is a red apple."
+        ],
+        [
+          "«ایا ته لامبو وهلی شې؟» وژباړئ.",
+          "Can you swim?"
+        ],
+        [
+          "«کتاب په بکس کې دی» وژباړئ.",
+          "The book is in the bag."
+        ],
+        [
+          "د «ښوونځی» انګلیسي ولیکئ.",
+          "School."
+        ],
+        [
+          "«هغوی زده‌کوونکي دي» وژباړئ.",
+          "They are students."
+        ],
+        [
+          "«مهرباني وکړئ مرسته راسره وکړئ» وژباړئ.",
+          "Please help me. / Can you help me, please."
+        ],
+        [
+          "په ۳–۴ انګلیسي جملو کې ځان معرفي کړئ.",
+          "My name is Ahmad. I am from Afghanistan. I live in Kabul. I am a student."
+        ]
+      ],
+      "mark_plan": [
+        4,
+        2,
+        2,
+        3,
+        3,
+        2,
+        4,
+        2,
+        4,
+        4,
+        4,
+        4,
+        2,
+        2,
+        2,
+        6
+      ],
+      "homework": "د خپلې زده‌کړې لنډه ارزونه ولیکئ: کومې جملې په اسانۍ ویلای شئ، کومې قاعدې لا تمرین ته اړتیا لري، او په راتلونکي پړاو کې څه زده کول غواړئ؟",
+      "final": true
+    }
+  ]
+}
