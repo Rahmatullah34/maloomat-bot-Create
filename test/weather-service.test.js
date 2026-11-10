@@ -170,6 +170,53 @@ test('geocodes within Afghanistan and returns a detailed local forecast in Pasht
   assert.equal(requests[1].searchParams.get('timezone'), 'auto');
 });
 
+
+test('uses the checked Shah Joy district coordinates without a fuzzy geocoding guess', async () => {
+  let forecastUrl = null;
+  const getWeatherAnswer = createWeatherService({
+    fetchImpl: async (url) => {
+      forecastUrl = new URL(url);
+      return {
+        ok: true,
+        json: async () => ({
+          timezone: 'Asia/Kabul',
+          current: {
+            time: '2026-11-10T14:00',
+            temperature_2m: 10,
+            relative_humidity_2m: 30,
+            apparent_temperature: 9,
+            precipitation: 0,
+            rain: 0,
+            showers: 0,
+            snowfall: 0,
+            weather_code: 0,
+            wind_speed_10m: 5,
+            wind_direction_10m: 90,
+            wind_gusts_10m: 8,
+            cloud_cover: 0,
+            pressure_msl: 1018,
+            is_day: 1,
+          },
+          hourly: {
+            time: ['2026-11-10T14:00'],
+            dew_point_2m: [1],
+            visibility: [30000],
+            uv_index: [3],
+          },
+          daily: { time: [] },
+        }),
+      };
+    },
+  });
+
+  const answer = await getWeatherAnswer('د زابل د شاه جوی ولسوالۍ د هوا حالاتو معلومات');
+  assert.equal(forecastUrl.hostname, 'api.open-meteo.com');
+  assert.equal(Number(forecastUrl.searchParams.get('latitude')), 32.498);
+  assert.equal(Number(forecastUrl.searchParams.get('longitude')), 67.395);
+  assert.match(answer, /شاه جوی ولسوالي/);
+  assert.match(answer, /Open-Meteo/);
+});
+
 test('does not return weather for a geocoding result outside Afghanistan', async () => {
   let calls = 0;
   const getWeatherAnswer = createWeatherService({
