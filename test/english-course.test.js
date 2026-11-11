@@ -103,15 +103,17 @@ test('routes course commands only in the configured group and evaluates numbered
   const state = temporaryState();
   try {
     const today = getKabulTimeParts(new Date()).dateKey;
+    const courseNow = new Date(today + 'T20:05:00+04:30');
     fs.writeFileSync(state.path, JSON.stringify({
       version: 1,
       startDate: today,
-      posts: {},
+      posts: { [today + '@20:00']: { status: 'sent', day: 1 } },
       progress: {},
     }));
     const sent = [];
     const service = createEnglishCourseService({
       statePath: state.path,
+      getNow: () => courseNow,
       getConfig: () => ({ enabled: true, groupJid: '12345-678@g.us' }),
       safeSend: async (_socket, jid, content) => {
         sent.push({ jid, text: content.text });
@@ -147,15 +149,17 @@ test('scores answer-first format such as I am fine, thank you - 2', async () => 
   const state = temporaryState();
   try {
     const today = getKabulTimeParts(new Date()).dateKey;
+    const courseNow = new Date(today + 'T20:05:00+04:30');
     fs.writeFileSync(state.path, JSON.stringify({
       version: 1,
       startDate: today,
-      posts: {},
+      posts: { [today + '@20:00']: { status: 'sent', day: 1 } },
       progress: {},
     }));
     const sent = [];
     const service = createEnglishCourseService({
       statePath: state.path,
+      getNow: () => courseNow,
       getConfig: () => ({ enabled: true, groupJid: '12345-678@g.us' }),
       safeSend: async (_socket, jid, content) => {
         sent.push({ jid, text: content.text });
@@ -189,8 +193,12 @@ test('posts the first lesson once at 20:00 Kabul time and will not duplicate it'
     const service = createEnglishCourseService({
       statePath: state.path,
       getConfig: () => ({ enabled: true, groupJid: '12345-678@g.us' }),
+      generateAudioParts: async (lesson) => [{
+        label: 'Vocabulary',
+        buffer: Buffer.alloc(128, Number(lesson.day)),
+      }],
       safeSend: async (_socket, jid, content) => {
-        sent.push({ jid, text: content.text });
+        sent.push({ jid, content });
         return { key: { id: 'scheduled-message' } };
       },
     });
@@ -200,11 +208,104 @@ test('posts the first lesson once at 20:00 Kabul time and will not duplicate it'
     await service.tick(getSocket, scheduled);
     await service.tick(getSocket, scheduled);
 
-    assert.equal(sent.length, 1);
-    assert.match(sent[0].text, /ورځ: 1 له ۳۰ څخه/);
+    assert.equal(sent.length, 3);
+    assert.match(sent[0].content.text, /ورځ: 1 له ۳۰ څخه/);
+    assert.match(sent[1].content.text, /غږیز تلفظ/);
+    assert.ok(Buffer.isBuffer(sent[2].content.audio));
+    assert.equal(sent[2].content.mimetype, 'audio/mpeg');
     const progress = JSON.parse(fs.readFileSync(state.path, 'utf8'));
     assert.equal(progress.startDate, '2026-11-10');
     assert.equal(progress.posts['2026-11-10@20:00'].status, 'sent');
+    assert.equal(progress.posts['2026-11-10@20:00'].audioStatus, 'sent');
+    assert.equal(progress.posts['2026-11-10@20:00'].audioParts, 1);
+  } finally {
+    state.cleanup();
+  }
+});
+
+
+test('keeps the last published lesson until the next 20:00 post, without skipping missed days', async () => {
+  const state = temporaryState();
+  try {
+    fs.writeFileSync(state.path, JSON.stringify({
+      version: 1,
+      startDate: '2026-11-09',
+      posts: {
+        '2026-11-09@20:00': { status: 'sent', day: 1 },
+      },
+      progress: {},
+    }));
+
+    let now = new Date('2026-11-11T19:59:00+04:30');
+    const sent = [];
+    const generatedDays = [];
+    const service = createEnglishCourseService({
+      statePath: state.path,
+      getNow: () => now,
+      getConfig: () => ({ enabled: true, groupJid: '12345-678@g.us' }),
+      generateAudioParts: async (lesson) => {
+        generatedDays.push(lesson.day);
+        return [{
+          label: 'Vocabulary',
+          buffer: Buffer.alloc(128, Number(lesson.day)),
+        }];
+      },
+      safeSend: async (_socket, jid, content) => {
+        sent.push({ jid, content });
+        return { key: { id: 'sent-' + sent.length } };
+      },
+    });
+
+    await service.handleCommand({}, '12345-678@g.us', 'درس', {});
+    assert.match(sent[0].content.text, /ورځ: 1 له ۳۰ څخه/);
+    assert.equal(sent[2].content.audio[0], 1);
+
+    // د ۲۰:۰۰ له رسېدو وروسته، خو د اتومات خپرېدو تر ثبت مخکې هم نوی درس نه ښکاري.
+    now = new Date('2026-11-11T20:01:00+04:30');
+    await service.handleCommand({}, '12345-678@g.us', 'درس', {});
+    assert.match(sent[3].content.text, /ورځ: 1 له ۳۰ څخه/);
+    assert.equal(sent[5].content.audio[0], 1);
+
+    // د ۱۰مې نېټې د له لاسه تېرېدو له امله ورځ ۳ نه خپرېږي؛ بل بریالی درس ورځ ۲ وي.
+    const socket = {};
+    await service.tick(() => socket, now);
+    const progress = JSON.parse(fs.readFileSync(state.path, 'utf8'));
+    assert.equal(progress.posts['2026-11-11@20:00'].day, 2);
+    assert.equal(progress.posts['2026-11-11@20:00'].status, 'sent');
+    assert.equal(progress.posts['2026-11-11@20:00'].audioStatus, 'sent');
+
+    await service.handleCommand({}, '12345-678@g.us', 'درس', {});
+    const latestLessonMessage = sent.filter((item) =>
+      typeof item.content.text === 'string' && item.content.text.includes('ورځ: 2 له ۳۰ څخه')
+    );
+    assert.ok(latestLessonMessage.length >= 2);
+    assert.deepEqual(generatedDays, [1, 2]);
+    const audioMessages = sent.filter((item) => Buffer.isBuffer(item.content.audio));
+    assert.equal(audioMessages[audioMessages.length - 1].content.audio[0], 2);
+  } finally {
+    state.cleanup();
+  }
+});
+
+test('does not reveal the first lesson before its first scheduled publication', async () => {
+  const state = temporaryState();
+  try {
+    const sent = [];
+    const now = new Date('2026-11-11T19:59:00+04:30');
+    const service = createEnglishCourseService({
+      statePath: state.path,
+      getNow: () => now,
+      getEnv: () => ({ ENGLISH_COURSE_START_DATE: '2026-11-11' }),
+      getConfig: () => ({ enabled: true, groupJid: '12345-678@g.us' }),
+      safeSend: async (_socket, jid, content) => {
+        sent.push({ jid, content });
+        return { key: { id: 'sent' } };
+      },
+    });
+
+    await service.handleCommand({}, '12345-678@g.us', 'درس', {});
+    assert.match(sent[0].content.text, /لا نوی درس نه دی خپور شوی/);
+    assert.equal(sent.length, 1);
   } finally {
     state.cleanup();
   }
