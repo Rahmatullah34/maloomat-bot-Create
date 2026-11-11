@@ -72,7 +72,7 @@ test('parses Google speech response as JSON without evaluating returned text', a
   const expected = Buffer.alloc(256, 7);
   const base64 = expected.toString('base64');
   const nested = JSON.stringify([base64]);
-  const envelope = [[['wrb.fr', 'jQ1olc', JSON.stringify(nested)]]];
+  const envelope = [['wrb.fr', 'jQ1olc', JSON.stringify(nested)]];
   let requestUrl = '';
   let requestBody = '';
 
