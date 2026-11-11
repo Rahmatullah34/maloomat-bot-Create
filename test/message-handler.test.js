@@ -563,7 +563,7 @@ test('does not apply burst or repeated-spam deletion to verified group admins', 
   assert.equal(h.state.deletions.length, 0);
 });
 
-test('does not automatically reply to an ordinary private greeting without a question mark', async () => {
+test('replies to an authorized private greeting without a question mark', async () => {
   const owner = '15551234567';
   const h = createHarness({
     classifyRemoteJid: () => 'private',
@@ -576,10 +576,11 @@ test('does not automatically reply to an ordinary private greeting without a que
     messages: [message(owner + '@s.whatsapp.net', 'سلام')],
   });
   assert.equal(h.state.answers.length, 0);
-  assert.equal(h.state.sends.length, 0);
+  assert.equal(h.state.sends.length, 1);
+  assert.match(h.state.sends[0].text, /وعلیکم السلام/);
 });
 
-test('does not automatically reply to a group greeting without a question mark', async () => {
+test('replies to a group greeting without a question mark', async () => {
   const h = createHarness({
     extractText: () => 'سلام',
   });
@@ -587,8 +588,25 @@ test('does not automatically reply to a group greeting without a question mark',
     type: 'notify',
     messages: [message('12345@g.us', 'سلام')],
   });
-  assert.equal(h.state.sends.length, 0);
+  assert.equal(h.state.sends.length, 1);
+  assert.match(h.state.sends[0].text, /وعلیکم السلام/);
   assert.equal(h.state.answers.length, 0);
+});
+
+test('still ignores a non-greeting private statement without a question mark', async () => {
+  const owner = '15551234567';
+  const h = createHarness({
+    classifyRemoteJid: () => 'private',
+    PRIVATE_QA_ALLOWED_NUMBERS: new Set([owner]),
+    FULL_MODERATION_EXEMPT_PHONE_NUMBER: owner,
+    extractText: () => 'دا یوازې یوه عادي خبره ده',
+  });
+  await h.handler({
+    type: 'notify',
+    messages: [message(owner + '@s.whatsapp.net', 'دا یوازې یوه عادي خبره ده')],
+  });
+  assert.equal(h.state.answers.length, 0);
+  assert.equal(h.state.sends.length, 0);
 });
 
 
