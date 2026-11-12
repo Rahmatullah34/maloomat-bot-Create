@@ -33,6 +33,7 @@ test('reads only supported private settings from the server-side JSON file', () 
     ELEVENLABS_VOICE_ID: 'test-pashto-male-voice',
     ELEVENLABS_TTS_ENABLED: 'true',
     ELEVENLABS_TTS_MODEL: 'eleven_v3',
+    ENGLISH_COURSE_AUDIO_PAUSED: 'true',
     AI_PROVIDER: 'cloudflare',
     CLOUDFLARE_AI_TEXT_MODEL: '@cf/zai-org/glm-4.7-flash',
     UNRECOGNIZED_SETTING: 'must-not-be-loaded',
@@ -52,6 +53,7 @@ test('reads only supported private settings from the server-side JSON file', () 
       ELEVENLABS_VOICE_ID: 'test-pashto-male-voice',
       ELEVENLABS_TTS_ENABLED: 'true',
       ELEVENLABS_TTS_MODEL: 'eleven_v3',
+      ENGLISH_COURSE_AUDIO_PAUSED: 'true',
       AI_PROVIDER: 'cloudflare',
       CLOUDFLARE_AI_TEXT_MODEL: '@cf/zai-org/glm-4.7-flash',
     });
@@ -67,6 +69,7 @@ test('non-empty environment values override the private file and blank values fa
     OPENROUTER_API_KEY: 'private-openrouter-key',
     ELEVENLABS_API_KEY: 'private-elevenlabs-key',
     ELEVENLABS_TTS_ENABLED: 'true',
+    ENGLISH_COURSE_AUDIO_PAUSED: 'true',
   }));
 
   try {
@@ -85,6 +88,13 @@ test('non-empty environment values override the private file and blank values fa
     assert.equal(getPrivateRuntimeValue('OPENROUTER_API_KEY', {}, dir), 'private-openrouter-key');
     assert.equal(getPrivateRuntimeValue('ELEVENLABS_API_KEY', {}, dir), 'private-elevenlabs-key');
     assert.equal(getPrivateRuntimeValue('ELEVENLABS_TTS_ENABLED', {}, dir), 'true');
+    assert.equal(getPrivateRuntimeValue('ENGLISH_COURSE_AUDIO_PAUSED', {}, dir), 'true');
+    assert.equal(
+      getPrivateRuntimeValue('ENGLISH_COURSE_AUDIO_PAUSED', {
+        ENGLISH_COURSE_AUDIO_PAUSED: 'false',
+      }, dir),
+      'false'
+    );
     assert.equal(
       getPrivateRuntimeValue('ELEVENLABS_API_KEY', { ELEVENLABS_API_KEY: 'environment-elevenlabs-key' }, dir),
       'environment-elevenlabs-key'
