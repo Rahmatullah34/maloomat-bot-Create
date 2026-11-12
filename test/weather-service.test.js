@@ -30,6 +30,18 @@ test('resolves province aliases and district names to Afghanistan-only geocoding
   assert.equal(shahJoy.districtId, 'AF2606');
   assert.equal(shahJoy.latitude, 32.498);
   assert.equal(shahJoy.longitude, 67.395);
+
+  for (const query of [
+    'د زابل ولايت دشاجوی ولسوالي دهوا حالات؟',
+    'د زابل ولایت د شاهجوی ولسوالۍ هوا',
+    'د شاه‌جوی ولسوالۍ هوا په زابل کې؟',
+    'Weather in Shajoy district, Zabul',
+  ]) {
+    const resolved = resolveLocationQuery(query);
+    assert.equal(resolved.districtId, 'AF2606', query);
+    assert.equal(resolved.latitude, 32.498, query);
+    assert.equal(resolved.longitude, 67.395, query);
+  }
   assert.equal(resolveLocationQuery('د ارزګان د خاص ارزګان ولسوالۍ هوا').districtId, 'AF2505');
   assert.equal(resolveLocationQuery('د کونړ د چوکي ولسوالۍ هوا').districtId, 'AF1509');
   assert.equal(districts.districts.length, 401);
