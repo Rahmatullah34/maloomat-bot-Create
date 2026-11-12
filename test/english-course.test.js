@@ -192,6 +192,10 @@ test('posts the first lesson once at 20:00 Kabul time and will not duplicate it'
     const sent = [];
     const service = createEnglishCourseService({
       statePath: state.path,
+      getEnv: () => ({
+        ENGLISH_COURSE_AUDIO_PAUSED: 'false',
+        ENGLISH_COURSE_AUDIO_ENABLED: 'true',
+      }),
       getConfig: () => ({ enabled: true, groupJid: '12345-678@g.us' }),
       generateAudioParts: async (lesson) => [{
         label: 'Vocabulary',
@@ -224,6 +228,43 @@ test('posts the first lesson once at 20:00 Kabul time and will not duplicate it'
 });
 
 
+test('keeps lesson audio generation and upload paused by default', async () => {
+  const state = temporaryState();
+  try {
+    const today = '2026-11-10';
+    fs.writeFileSync(state.path, JSON.stringify({
+      version: 1,
+      startDate: today,
+      posts: { [today + '@20:00']: { status: 'sent', day: 1 } },
+      progress: {},
+    }));
+    const sent = [];
+    let generated = 0;
+    const service = createEnglishCourseService({
+      statePath: state.path,
+      getNow: () => new Date('2026-11-10T15:35:00.000Z'),
+      getConfig: () => ({ enabled: true, groupJid: '12345-678@g.us' }),
+      generateAudioParts: async () => {
+        generated += 1;
+        return [{ label: 'Vocabulary', buffer: Buffer.alloc(128) }];
+      },
+      safeSend: async (_socket, jid, content) => {
+        sent.push({ jid, content });
+        return { key: { id: 'sent' } };
+      },
+    });
+
+    await service.handleCommand({}, '12345-678@g.us', 'درس', {});
+    assert.equal(sent.length, 1);
+    assert.match(sent[0].content.text, /غږیز تلفظ برخه اوس موقتي بنده ده/);
+    assert.equal(generated, 0);
+    assert.equal(service.getStatus().audioEnabled, false);
+  } finally {
+    state.cleanup();
+  }
+});
+
+
 test('keeps the last published lesson until the next 20:00 post, without skipping missed days', async () => {
   const state = temporaryState();
   try {
@@ -242,6 +283,10 @@ test('keeps the last published lesson until the next 20:00 post, without skippin
     const service = createEnglishCourseService({
       statePath: state.path,
       getNow: () => now,
+      getEnv: () => ({
+        ENGLISH_COURSE_AUDIO_PAUSED: 'false',
+        ENGLISH_COURSE_AUDIO_ENABLED: 'true',
+      }),
       getConfig: () => ({ enabled: true, groupJid: '12345-678@g.us' }),
       generateAudioParts: async (lesson) => {
         generatedDays.push(lesson.day);
