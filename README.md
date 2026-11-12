@@ -63,6 +63,27 @@
 
 د اړوندو برخو ازموینې په `npm test` سره اجرا کېږي؛ د دې ازموینو لپاره ژوندی WhatsApp اتصال ته اړتیا نشته.
 
+## د ElevenLabs غږیز درس لپاره محرم فایل
+
+که د SillyDev په Environment Variables/Secrets برخه کې خپل‌سری متغیر نه شې زیاتولای، د پروژې د اصلي فولډر په Files برخه کې دا فایل جوړ یا سم کړه:
+
+`private-runtime-config.json`
+
+د فایل په موجود منځپانګه کې دا څلور کرښې ورزیاتې کړه؛ که فایل له مخکې شته، نور تنظیمات مه حذفوه:
+
+```json
+{
+  "ELEVENLABS_API_KEY": "دلته-خپل-پټ-API-Key",
+  "ELEVENLABS_VOICE_ID": "zHPHAoaYvoRg7Pu3lOMr",
+  "ELEVENLABS_TTS_ENABLED": "true",
+  "ELEVENLABS_TTS_MODEL": "eleven_v3"
+}
+```
+
+که په فایل کې نور تنظیمات هم وي، ټول باید د یوه JSON object دننه وي او د هرې کرښې ترمنځ کامه سمه وي. د `private-runtime-config.example.json` نمونه فایل د مثال لپاره دی؛ حقیقي API Key پکې مه لیکه. اصلي `private-runtime-config.json` په `.gitignore` کې شامل دی او باید GitHub ته پورته نه شي. د فایل له خوندي کولو وروسته SillyDev سرور Restart کړه.
+
+د دې فایل لاره د Environment Variables بدیل دی: که په دواړو ځایونو کې یو ارزښت موجود وي، غیرتش Environment Variable لومړیتوب لري. که دواړه تش وي، د محرم فایل ارزښت کارول کېږي. د غږیز خدمت فعالولو ارزښت `ELEVENLABS_TTS_ENABLED` دی؛ تر هغې چې `true` نه وي، نوی ElevenLabs غږیز مسیر نه فعالېږي.
+
 ## د محرمو تنظیماتو مهمه یادونه
 
 د شخصي چټ اجازه یوازې د مالک یوې شمېرې ته محدوده ده. په SillyDev کې `FULL_MODERATION_EXEMPT_PHONE_NUMBER` او `PRIVATE_QA_ALLOWED_NUMBERS` دواړه د خپل همدې یوه WhatsApp شمېرې په بشپړ هېواد-کوډ سره برابر کړئ. `PRIVATE_QA_ALLOWED_NUMBERS` باید یوازې یو ارزښت ولري؛ `PRIVATE_QA_ALLOWED_LIDS` تش پرېږدئ. که د مالک شمېره نه وي ټاکل شوې، دواړه ارزښتونه سره برابر نه وي، یا څو شمېرې ثبت وي، شخصي چټ په اوتومات ډول بند پاتې کېږي. LID پخپله اجازه نه لري؛ یوازې د WhatsApp له خوا د مالک شمېرې ته د سمون وروسته منل کېږي.
