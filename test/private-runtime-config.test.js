@@ -29,6 +29,10 @@ test('reads only supported private settings from the server-side JSON file', () 
     CLOUDFLARE_ACCOUNT_ID: 'test-account-id',
     CLOUDFLARE_API_TOKEN: 'test-cloudflare-token',
     OPENROUTER_API_KEY: 'test-openrouter-token',
+    ELEVENLABS_API_KEY: 'test-elevenlabs-token',
+    ELEVENLABS_VOICE_ID: 'test-pashto-male-voice',
+    ELEVENLABS_TTS_ENABLED: 'true',
+    ELEVENLABS_TTS_MODEL: 'eleven_v3',
     AI_PROVIDER: 'cloudflare',
     CLOUDFLARE_AI_TEXT_MODEL: '@cf/zai-org/glm-4.7-flash',
     UNRECOGNIZED_SETTING: 'must-not-be-loaded',
@@ -44,6 +48,10 @@ test('reads only supported private settings from the server-side JSON file', () 
       CLOUDFLARE_ACCOUNT_ID: 'test-account-id',
       CLOUDFLARE_API_TOKEN: 'test-cloudflare-token',
       OPENROUTER_API_KEY: 'test-openrouter-token',
+      ELEVENLABS_API_KEY: 'test-elevenlabs-token',
+      ELEVENLABS_VOICE_ID: 'test-pashto-male-voice',
+      ELEVENLABS_TTS_ENABLED: 'true',
+      ELEVENLABS_TTS_MODEL: 'eleven_v3',
       AI_PROVIDER: 'cloudflare',
       CLOUDFLARE_AI_TEXT_MODEL: '@cf/zai-org/glm-4.7-flash',
     });
@@ -57,6 +65,8 @@ test('non-empty environment values override the private file and blank values fa
     PRIVATE_QA_ALLOWED_NUMBERS: '15551234567',
     ALLOWED_LINK_SENDERS: '15557654321',
     OPENROUTER_API_KEY: 'private-openrouter-key',
+    ELEVENLABS_API_KEY: 'private-elevenlabs-key',
+    ELEVENLABS_TTS_ENABLED: 'true',
   }));
 
   try {
@@ -73,6 +83,12 @@ test('non-empty environment values override the private file and blank values fa
       '15550001111'
     );
     assert.equal(getPrivateRuntimeValue('OPENROUTER_API_KEY', {}, dir), 'private-openrouter-key');
+    assert.equal(getPrivateRuntimeValue('ELEVENLABS_API_KEY', {}, dir), 'private-elevenlabs-key');
+    assert.equal(getPrivateRuntimeValue('ELEVENLABS_TTS_ENABLED', {}, dir), 'true');
+    assert.equal(
+      getPrivateRuntimeValue('ELEVENLABS_API_KEY', { ELEVENLABS_API_KEY: 'environment-elevenlabs-key' }, dir),
+      'environment-elevenlabs-key'
+    );
     assert.equal(
       getPrivateRuntimeValue('OPENROUTER_API_KEY', { OPENROUTER_API_KEY: 'environment-openrouter-key' }, dir),
       'environment-openrouter-key'
