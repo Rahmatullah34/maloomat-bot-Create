@@ -228,16 +228,18 @@ test('posts the first lesson once at 20:00 Kabul time and will not duplicate it'
 });
 
 
-test('keeps lesson audio generation and upload paused by default', async () => {
+test('enables lesson audio by default and allows an explicit opt-out', async () => {
   const state = temporaryState();
+  const pausedState = temporaryState();
   try {
     const today = '2026-11-10';
-    fs.writeFileSync(state.path, JSON.stringify({
+    const stateData = {
       version: 1,
       startDate: today,
       posts: { [today + '@20:00']: { status: 'sent', day: 1 } },
       progress: {},
-    }));
+    };
+    fs.writeFileSync(state.path, JSON.stringify(stateData));
     const sent = [];
     let generated = 0;
     const service = createEnglishCourseService({
@@ -255,12 +257,39 @@ test('keeps lesson audio generation and upload paused by default', async () => {
     });
 
     await service.handleCommand({}, '12345-678@g.us', 'درس', {});
-    assert.equal(sent.length, 1);
-    assert.match(sent[0].content.text, /غږیز تلفظ برخه اوس موقتي بنده ده/);
-    assert.equal(generated, 0);
-    assert.equal(service.getStatus().audioEnabled, false);
+    assert.equal(sent.length, 3);
+    assert.match(sent[0].content.text, /غږیز تلفظ هم ورسره لېږل کېږي/);
+    assert.match(sent[1].content.text, /غږیز تلفظ/);
+    assert.ok(Buffer.isBuffer(sent[2].content.audio));
+    assert.equal(generated, 1);
+    assert.equal(service.getStatus().audioEnabled, true);
+
+    fs.writeFileSync(pausedState.path, JSON.stringify(stateData));
+    const pausedSent = [];
+    let pausedGenerated = 0;
+    const pausedService = createEnglishCourseService({
+      statePath: pausedState.path,
+      getNow: () => new Date('2026-11-10T15:35:00.000Z'),
+      getEnv: () => ({ ENGLISH_COURSE_AUDIO_ENABLED: 'false' }),
+      getConfig: () => ({ enabled: true, groupJid: '12345-678@g.us' }),
+      generateAudioParts: async () => {
+        pausedGenerated += 1;
+        return [{ label: 'Vocabulary', buffer: Buffer.alloc(128) }];
+      },
+      safeSend: async (_socket, jid, content) => {
+        pausedSent.push({ jid, content });
+        return { key: { id: 'sent' } };
+      },
+    });
+
+    await pausedService.handleCommand({}, '12345-678@g.us', 'درس', {});
+    assert.equal(pausedSent.length, 1);
+    assert.match(pausedSent[0].content.text, /غږیز تلفظ برخه اوس موقتي بنده ده/);
+    assert.equal(pausedGenerated, 0);
+    assert.equal(pausedService.getStatus().audioEnabled, false);
   } finally {
     state.cleanup();
+    pausedState.cleanup();
   }
 });
 
