@@ -34,7 +34,7 @@ test('daily topic rotation is deterministic and covers configured subjects', () 
     getTopicForSlot('2026-10-27', '19:00'),
   ];
   assert.equal(topics.length, 3);
-  assert.ok(topics.every((topic) => ['علم', 'تاریخ', 'ټکنالوژي', 'روغتیا', 'عمومي معلومات'].includes(topic)));
+  assert.ok(topics.every((topic) => ['علم', 'تاریخ', 'ټکنالوژي', 'اسلامي معلومات', 'روغتیا', 'عمومي معلومات'].includes(topic)));
   assert.equal(getTopicForSlot('2026-10-27', '08:00'), getTopicForSlot('2026-10-27', '08:00'));
 });
 
@@ -55,6 +55,17 @@ test('post formatting includes title, topic, source and Afghanistan time', () =>
   assert.match(text, /موضوع: علم/);
   assert.match(text, /https:\/\/example\.org/);
   assert.match(text, /08:00/);
+  const expanded = formatPost({
+    title: 'اسلامي ازمایښتي سرلیک',
+    body: 'اصلي معلومات',
+    details: 'نور وضاحت',
+    takeaway: 'د زده کړې پیغام',
+    topic: 'اسلامي معلومات',
+    source: 'https://example.org/quran',
+  }, { key: '19:00' });
+  assert.match(expanded, /نور وضاحت/);
+  assert.match(expanded, /د زده کړې پیغام/);
+  assert.match(expanded, /موضوع: اسلامي معلومات/);
 });
 
 test('content selection chooses from the requested topic and tracks recent IDs', () => {
@@ -65,5 +76,7 @@ test('content selection chooses from the requested topic and tracks recent IDs',
   const second = selectNextPost(state, 'تاریخ');
   assert.equal(second.topic, 'تاریخ');
   assert.notEqual(second.id, first.id);
-  assert.ok(CONTENT_COUNT >= 18);
+  const islamic = selectNextPost(state, 'اسلامي معلومات');
+  assert.equal(islamic.topic, 'اسلامي معلومات');
+  assert.ok(CONTENT_COUNT >= 30);
 });
