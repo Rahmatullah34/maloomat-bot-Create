@@ -654,3 +654,66 @@ test('routes numbered English exercise answers without treating them as ordinary
   assert.equal(h.state.answers.length, 0);
   assert.equal(h.state.sends.length, 0);
 });
+ 
+test('only the designated approver can grant a one-time rejoin permission', async () => {
+  const authorized = [];
+  const h = createHarness({
+    extractText: () => 'بېرته اجازه 0701111222',
+    GROUP_REJOIN_APPROVER_PHONE: '0707285093',
+    hasMatchingPhoneNumber: (identifiers, expected) =>
+      identifiers.some(value => String(value).includes('93707285093') || String(value) === '0707285093') &&
+      expected === '0707285093',
+    groupRejoinControl: {
+      authorizeReturn: (groupJid, phone, approvedBy) => {
+        authorized.push({ groupJid, phone, approvedBy });
+        return true;
+      },
+    },
+    resolveGroupSender: async (_socket, _groupJid, identifiers) => ({
+      isAdmin: false,
+      participantKey: identifiers[0],
+      phoneNumber: '0707285093',
+    }),
+  });
+
+  await h.handler({
+    type: 'notify',
+    messages: [message('12345@g.us', 'بېرته اجازه 0701111222', {
+      key: { remoteJid: '12345@g.us', participant: '93707285093@s.whatsapp.net', fromMe: false },
+    })],
+  });
+
+  assert.deepEqual(authorized, [{
+    groupJid: '12345@g.us',
+    phone: '0701111222',
+    approvedBy: '0707285093',
+  }]);
+  assert.equal(h.state.sends.length, 1);
+  assert.match(h.state.sends[0].text, /یو ځل د بېرته ننوتلو اجازه ثبت شوه/);
+  assert.equal(h.state.answers.length, 0);
+});
+
+test('rejects a rejoin approval command from anyone other than the designated number', async () => {
+  let called = false;
+  const h = createHarness({
+    extractText: () => 'بېرته اجازه 0701111222',
+    GROUP_REJOIN_APPROVER_PHONE: '0707285093',
+    hasMatchingPhoneNumber: () => false,
+    groupRejoinControl: {
+      authorizeReturn: () => {
+        called = true;
+        return true;
+      },
+    },
+  });
+
+  await h.handler({
+    type: 'notify',
+    messages: [message('12345@g.us', 'بېرته اجازه 0701111222')],
+  });
+
+  assert.equal(called, false);
+  assert.equal(h.state.sends.length, 1);
+  assert.match(h.state.sends[0].text, /یوازې ټاکل شوی مدیر/);
+  assert.equal(h.state.answers.length, 0);
+});
