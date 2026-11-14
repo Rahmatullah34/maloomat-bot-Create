@@ -1136,8 +1136,7 @@ async function startBot() {
             const identifiers = await resolveGroupParticipantIdentity(socket, participant);
             if (!identifiers.length) continue;
 
-            const botPhone = normalizeExemptPhone(socket.user?.id) ||
-              normalizeExemptPhone(runtimeConfig.whatsapp.phone);
+            const botPhone = socket.user?.id || runtimeConfig.whatsapp.phone;
             if (botPhone && hasMatchingPhoneNumber(identifiers, botPhone)) continue;
 
             if (groupRejoinControl.recordDeparture(groupJid, identifiers)) {
