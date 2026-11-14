@@ -670,7 +670,7 @@ test('only the designated approver can grant a one-time rejoin permission', asyn
       },
     },
     resolveGroupSender: async (_socket, _groupJid, identifiers) => ({
-      isAdmin: false,
+      isAdmin: true,
       participantKey: identifiers[0],
       phoneNumber: '0707285093',
     }),
@@ -698,7 +698,12 @@ test('rejects a rejoin approval command from anyone other than the designated nu
   const h = createHarness({
     extractText: () => 'بېرته اجازه 0701111222',
     GROUP_REJOIN_APPROVER_PHONE: '0707285093',
-    hasMatchingPhoneNumber: () => false,
+    hasMatchingPhoneNumber: () => true,
+    resolveGroupSender: async (_socket, _groupJid, identifiers) => ({
+      isAdmin: false,
+      participantKey: identifiers[0],
+      phoneNumber: '0707285093',
+    }),
     groupRejoinControl: {
       authorizeReturn: () => {
         called = true;
