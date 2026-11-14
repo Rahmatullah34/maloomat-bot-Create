@@ -27,3 +27,7 @@ private-runtime-config.json
 
 # Generated lesson audio cache; do not commit or upload audio files
 data/english-course-audio/
+
+# Persisted group departure and one-time rejoin approvals; never commit member data
+data/group-rejoin-control.json
+data/group-rejoin-control.json.*.tmp
