@@ -990,7 +990,7 @@ async function startBot() {
         if (!identifiers.length || !groupRejoinControl.hasDeparted(event.id, identifiers)) return;
 
         const participantJid = event.participantPn || event.participant;
-        const approved = groupRejoinControl.consumeApproval(event.id, identifiers);
+        const approved = groupRejoinControl.hasApproval(event.id, identifiers);
         if (typeof socket.groupRequestParticipantsUpdate !== 'function' || !participantJid) {
           throw new Error('د غړیتوب غوښتنې د تایید/رد طریقه موجوده نه ده.');
         }
@@ -1000,6 +1000,7 @@ async function startBot() {
           [participantJid],
           approved ? 'approve' : 'reject'
         );
+        if (approved) groupRejoinControl.consumeApproval(event.id, identifiers);
         await safeSend(socket, event.id, {
           text: approved
             ? '✅ د ټاکل شوي مدیر اجازه تایید شوه او د پخواني غړي غوښتنه ومنل شوه.'
