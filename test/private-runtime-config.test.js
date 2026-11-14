@@ -34,6 +34,7 @@ test('reads only supported private settings from the server-side JSON file', () 
     ELEVENLABS_TTS_ENABLED: 'true',
     ELEVENLABS_TTS_MODEL: 'eleven_v3',
     ENGLISH_COURSE_AUDIO_PAUSED: 'true',
+    GROUP_REJOIN_APPROVER_PHONE: '0707285093',
     AI_PROVIDER: 'cloudflare',
     CLOUDFLARE_AI_TEXT_MODEL: '@cf/zai-org/glm-4.7-flash',
     UNRECOGNIZED_SETTING: 'must-not-be-loaded',
@@ -54,6 +55,7 @@ test('reads only supported private settings from the server-side JSON file', () 
       ELEVENLABS_TTS_ENABLED: 'true',
       ELEVENLABS_TTS_MODEL: 'eleven_v3',
       ENGLISH_COURSE_AUDIO_PAUSED: 'true',
+      GROUP_REJOIN_APPROVER_PHONE: '0707285093',
       AI_PROVIDER: 'cloudflare',
       CLOUDFLARE_AI_TEXT_MODEL: '@cf/zai-org/glm-4.7-flash',
     });
