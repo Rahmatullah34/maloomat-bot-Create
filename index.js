@@ -9,6 +9,7 @@ const {
   DisconnectReason,
   fetchLatestBaileysVersion,
   downloadMediaMessage,
+  WAMessageStubType,
 } = require('@whiskeysockets/baileys');
 
 const P = require('pino');
@@ -57,6 +58,7 @@ const {
 const { buildVerifiedQuranLongestWordAnswer } = require('./lib/quran-text-policy');
 const { startAutoPublisher, getAutoPublisherStatus } = require('./lib/auto-publisher');
 const { createEnglishCourseService } = require('./lib/english-course');
+const { createGroupRejoinControl } = require('./lib/group-rejoin-control');
 
 // د نظم ساتنې خالصې کړنې او حالت له جلا ماډول اخیستل کیږي
 // (lib/moderation.js) څو په ازموینو کې و ازمویل شي.
@@ -110,6 +112,7 @@ const PRIVATE_QA_OWNER_CLAIM_CODE = runtimeConfig.security.privateQaOwnerClaimCo
 const PRIVATE_QA_OWNER_CLAIMED = runtimeConfig.security.privateQaOwnerClaimed;
 const FULL_MODERATION_EXEMPT_PHONE_NUMBER = runtimeConfig.security.fullModerationExemptPhoneNumber;
 const FULL_MODERATION_EXEMPT_PHONE_NUMBERS = runtimeConfig.security.fullModerationExemptPhoneNumbers;
+const GROUP_REJOIN_APPROVER_PHONE = runtimeConfig.security.groupRejoinApproverPhone;
 const PRIVATE_QA_OWNER_NUMBER = String(FULL_MODERATION_EXEMPT_PHONE_NUMBER || '').replace(/\D/g, '');
 const PRIVATE_QA_OWNER_ONLY = Boolean(
   PRIVATE_QA_OWNER_NUMBER.length >= 7 &&
@@ -426,6 +429,7 @@ async function safeSend(
 
 // د انګلیسي کورس خپل مهال‌وېش او د زده‌کوونکو امرونه؛ د عمومي معلوماتو مهال‌وېش نه بدلوي.
 const englishCourse = createEnglishCourseService({ safeSend });
+const groupRejoinControl = createGroupRejoinControl();
 
 // ======================================================
 // 12. د منع شوي پیغام د حذف هڅه
@@ -559,6 +563,50 @@ async function getGroupMetadataCached(socket, groupJid) {
 
 // د هر پیغام لپاره اډمین رول او ثابت پېژندپاڼه له یوه metadata غوښتنې څخه ترلاسه کړه.
 // یوازې د WhatsApp تایید شوی admin role د سپم له معافیت سره تړلی دی؛ ښکاره نوم نه کارول کېږي.
+function getParticipantPrimaryJid(participant) {
+  if (typeof participant === 'string') return participant;
+  return participant?.id || participant?.jid || participant?.phoneNumber ||
+    participant?.lid || participant?.participantPn || participant?.pn || '';
+}
+
+async function resolveGroupParticipantIdentity(socket, participant) {
+  const identifiers = typeof participant === 'object' && participant
+    ? [
+        participant.id,
+        participant.jid,
+        participant.lid,
+        participant.phoneNumber,
+        participant.phone,
+        participant.participantPn,
+        participant.pn,
+      ]
+    : [participant];
+  const result = identifiers.filter((value) => typeof value === 'string' && value.trim());
+  const mapping = socket?.signalRepository?.lidMapping;
+  if (mapping && typeof mapping.getPNForLID === 'function') {
+    for (const identifier of [...result]) {
+      if (!/@lid$/iu.test(identifier)) continue;
+      try {
+        const phoneJid = await mapping.getPNForLID(identifier);
+        if (typeof phoneJid === 'string' && phoneJid) result.push(phoneJid);
+      } catch (error) {
+        console.warn('⚠️ د ګروپ د غړي د LID/شمېرې پېژندنه ناکامه شوه:', error?.message || error);
+      }
+    }
+  }
+  return [...new Set(result)];
+}
+
+function parseParticipantStubValue(value) {
+  if (value && typeof value === 'object') return value;
+  if (typeof value !== 'string') return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
 async function resolveGroupSender(socket, groupJid, senderIdentifiers) {
   let participants = [];
   try {
@@ -860,43 +908,107 @@ async function startBot() {
         try {
           // د اډمین د لوړولو/ټیټولو یا د غړو د بدلون وروسته زوړ رول مه کاروه.
           if (event?.id) GROUP_METADATA_CACHE.delete(String(event.id));
-
           if (
             event.action !== 'add' ||
             !Array.isArray(event.participants) ||
             !isGroupAllowed(event.id)
-          ) {
-            return;
-          }
+          ) return;
 
-          for (
-            const participant of event.participants
-          ) {
-            const number =
-              String(participant).split('@')[0];
+          for (const participant of event.participants) {
+            const participantJid = getParticipantPrimaryJid(participant);
+            const identifiers = await resolveGroupParticipantIdentity(socket, participant);
+            if (!participantJid || !identifiers.length) continue;
 
-            await safeSend(
-              socket,
-              event.id,
-              {
-                text:
-                  `👋 سلام @${number} جانه! ګروپ ته ښه راغلاست. ❤️\n` +
-                  '📜 مهرباني وکړئ قوانین مراعات کړئ: کنځل، سپم او نامجاز لینکونه منع دي.\n' +
-                  'د قوانینو لوستلو لپاره «قوانین» ولیکئ.',
+            // یوازې هغه کسان محدود دي چې پخپله یې ګروپ پرې ایښی وي؛ نوي غړي عادي ښه راغلاست اخلي.
+            let wasDeparted = false;
+            try {
+              wasDeparted = groupRejoinControl.hasDeparted(event.id, identifiers);
+            } catch (stateError) {
+              console.error('❌ د پخوانیو وتلو حالت ونه لوستل شو؛ د نوي غړي د داخلېدو مخه نه نیول کېږي:', stateError?.message || stateError);
+            }
 
-                mentions: [participant],
+            if (wasDeparted) {
+              let approved = false;
+              try {
+                approved = groupRejoinControl.consumeApproval(event.id, identifiers);
+              } catch (stateError) {
+                console.error('❌ د بېرته ننوتلو اجازه ونه لوستل شوه:', stateError?.message || stateError);
               }
-            );
-          }
 
+              if (!approved) {
+                try {
+                  if (typeof socket.groupParticipantsUpdate !== 'function') {
+                    throw new Error('د Baileys د غړي ایستلو طریقه موجوده نه ده.');
+                  }
+                  await socket.groupParticipantsUpdate(event.id, [participantJid], 'remove');
+                  await safeSend(socket, event.id, {
+                    text:
+                      '⛔ دا غړی مخکې پخپله له ګروپ څخه وتلی و. د بېرته داخلېدو لپاره باید ټاکل شوی مدیر لومړی اجازه ورکړي.\n' +
+                      'د اجازې امر: «بېرته اجازه 07XXXXXXXXX»',
+                  });
+                  console.log('🛡️ د پخواني وتلي غړي بې‌اجازې بېرته ننوتل لغوه شول.');
+                } catch (removeError) {
+                  console.error('❌ پخوانی وتلی غړی ونه ایستل شو؛ بوټ ته د مدیر اجازه وګورئ:', removeError?.message || removeError);
+                  await safeSend(socket, event.id, {
+                    text: '⚠️ یو پخوانی وتلی غړی بېرته ورزیات شو، خو بوټ یې د ایستلو اجازه ونه لرله. مهرباني وکړئ د بوټ مدیرتوب وګورئ.',
+                  });
+                }
+                continue;
+              }
+
+              console.log('✅ د ټاکل شوي مدیر یو ځل اجازه ومنل شوه؛ پخوانی غړی بېرته داخل شو.');
+            }
+
+            const number = String(participantJid).split('@')[0];
+            await safeSend(socket, event.id, {
+              text:
+                `👋 سلام @${number} جانه! ګروپ ته ښه راغلاست. ❤️\n` +
+                '📜 مهرباني وکړئ قوانین مراعات کړئ: کنځل، سپم او نامجاز لینکونه منع دي.\n' +
+                'د قوانینو لوستلو لپاره «قوانین» ولیکئ.',
+              mentions: [participantJid],
+            });
+          }
         } catch (err) {
-          console.error(
-            '❌ د ښه راغلاست پیغام ستونزه:',
-            err?.message || err
-          );
+          console.error('❌ د ګروپ د غړو د بدلون اداره ناکامه شوه:', err?.message || err);
         }
       }
     );
+
+    // د بلنې لینک له لارې د پخواني وتلي غړي غوښتنه هم د اجازې له مخې اداره کېږي.
+    socket.ev.on('group.join-request', async (event) => {
+      try {
+        if (
+          event?.action !== 'created' ||
+          !event?.id ||
+          !isGroupAllowed(event.id)
+        ) return;
+
+        const identifiers = await resolveGroupParticipantIdentity(socket, {
+          id: event.participant,
+          phoneNumber: event.participantPn,
+        });
+        if (!identifiers.length || !groupRejoinControl.hasDeparted(event.id, identifiers)) return;
+
+        const participantJid = event.participantPn || event.participant;
+        const approved = groupRejoinControl.consumeApproval(event.id, identifiers);
+        if (typeof socket.groupRequestParticipantsUpdate !== 'function' || !participantJid) {
+          throw new Error('د غړیتوب غوښتنې د تایید/رد طریقه موجوده نه ده.');
+        }
+
+        await socket.groupRequestParticipantsUpdate(
+          event.id,
+          [participantJid],
+          approved ? 'approve' : 'reject'
+        );
+        await safeSend(socket, event.id, {
+          text: approved
+            ? '✅ د ټاکل شوي مدیر اجازه تایید شوه او د پخواني غړي غوښتنه ومنل شوه.'
+            : '⛔ د پخواني وتلي غړي د بېرته ننوتلو غوښتنه رد شوه؛ د اجازې لپاره ټاکلي مدیر ته مراجعه وکړئ.',
+        });
+      } catch (err) {
+        console.error('❌ د پخواني وتلي غړي د ننوتلو غوښتنه اداره نه شوه:', err?.message || err);
+      }
+    });
 
     // ==================================================
     // 17.5 د همغږي شوي پخواني تاریخ د لینکونو پاکول
@@ -1003,6 +1115,41 @@ async function startBot() {
       }
     });
 
+    // د Baileys له اصلي Stub څخه یوازې د خپل سر وتل ثبتېږي؛ د اډمین له خوا ایستل ثبت نه کېږي.
+    socket.ev.on('messages.upsert', async (event) => {
+      try {
+        const messages = Array.isArray(event?.messages) ? event.messages : [];
+        for (const msg of messages) {
+          if (
+            !msg?.messageStubType ||
+            msg.messageStubType !== WAMessageStubType.GROUP_PARTICIPANT_LEAVE
+          ) continue;
+
+          const groupJid = String(msg.key?.remoteJid || '');
+          if (!groupJid.endsWith('@g.us') || !isGroupAllowed(groupJid)) continue;
+
+          const participants = Array.isArray(msg.messageStubParameters)
+            ? msg.messageStubParameters
+            : [];
+          for (const rawParticipant of participants) {
+            const participant = parseParticipantStubValue(rawParticipant);
+            const identifiers = await resolveGroupParticipantIdentity(socket, participant);
+            if (!identifiers.length) continue;
+
+            const botPhone = normalizeExemptPhone(socket.user?.id) ||
+              normalizeExemptPhone(runtimeConfig.whatsapp.phone);
+            if (botPhone && hasMatchingPhoneNumber(identifiers, botPhone)) continue;
+
+            if (groupRejoinControl.recordDeparture(groupJid, identifiers)) {
+              console.log('🛡️ د ګروپ خپل‌سری وتل ثبت شول؛ بېرته ننوتل به د ټاکلي مدیر اجازې ته اړتیا ولري.');
+            }
+          }
+        }
+      } catch (err) {
+        console.error('❌ د ګروپ څخه د وتلو ثبت ناکام شو:', err?.message || err);
+      }
+    });
+
     // ==================================================
     // 18. د ګروپ پیغامونه
     // ==================================================
@@ -1020,6 +1167,9 @@ async function startBot() {
       PRIVATE_QA_OWNER_CLAIMED,
       FULL_MODERATION_EXEMPT_PHONE_NUMBER,
       FULL_MODERATION_EXEMPT_PHONE_NUMBERS,
+      GROUP_REJOIN_APPROVER_PHONE,
+      groupRejoinControl,
+      hasMatchingPhoneNumber,
       BOT_PHONE_NUMBER: runtimeConfig.whatsapp.phone,
       rememberMessage,
       extractText,
