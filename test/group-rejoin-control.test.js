@@ -62,7 +62,9 @@ test('a departed member can return only after a one-time explicit approval', () 
     assert.equal(control.consumeApproval(group, leaver), false);
     assert.equal(control.authorizeReturn(group, '0702222333'), false);
     assert.equal(control.authorizeReturn(group, '93701111222', '0707285093'), true);
+    assert.equal(control.hasApproval(group, leaver), true);
     assert.equal(control.consumeApproval(group, leaver), true);
+    assert.equal(control.hasApproval(group, leaver), false);
     assert.equal(control.hasDeparted(group, leaver), false);
     assert.equal(control.consumeApproval(group, leaver), false);
   } finally {
