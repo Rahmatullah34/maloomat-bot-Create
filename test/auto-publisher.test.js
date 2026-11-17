@@ -46,37 +46,54 @@ test('validates group and channel IDs without accepting arbitrary chats', () => 
   assert.equal(isValidChannelJid('123456789-123456@g.us'), false);
 });
 
-test('post formatting includes title, topic, source and Afghanistan time', () => {
+test('post formatting is natural and avoids decorative or repeated boilerplate', () => {
   const text = formatPost(
     { title: 'ازمایښتي سرلیک', body: 'ازمایښتي متن', topic: 'علم', source: 'https://example.org' },
     { key: '08:00' },
   );
-  assert.match(text, /ازمایښتي سرلیک/);
-  assert.match(text, /موضوع: علم/);
-  assert.match(text, /https:\/\/example\.org/);
-  assert.match(text, /08:00/);
+  assert.match(text, /^\*ازمایښتي سرلیک\*/);
+  assert.match(text, /ازمایښتي متن/);
+  assert.match(text, /سرچینه: https:\/\/example\.org/);
+  assert.doesNotMatch(text, /Maloomat AI|موضوع:|08:00|📚|📌|🌟|💡|د زده کړې پیغام/);
+
   const expanded = formatPost({
     title: 'اسلامي ازمایښتي سرلیک',
     body: 'اصلي معلومات',
     details: 'نور وضاحت',
-    takeaway: 'د زده کړې پیغام',
+    takeaway: 'دا د اصلي معلوماتو تکرار دی',
     topic: 'اسلامي معلومات',
     source: 'https://example.org/quran',
   }, { key: '19:00' });
   assert.match(expanded, /نور وضاحت/);
-  assert.match(expanded, /د زده کړې پیغام/);
-  assert.match(expanded, /موضوع: اسلامي معلومات/);
+  assert.match(expanded, /سرچینه: https:\/\/example\.org\/quran/);
+  assert.doesNotMatch(expanded, /دا د اصلي معلوماتو تکرار دی|د زده کړې پیغام|موضوع:|19:00/);
 });
 
-test('content selection chooses from the requested topic and tracks recent IDs', () => {
-  const state = { recentContentIds: [], contentCursor: 0 };
+test('content selection never repeats and falls back to another unused topic', () => {
+  const state = {
+    recentContentIds: [],
+    publishedContentIds: [],
+    publishedContentKeys: [],
+    contentCursor: 0,
+  };
+
   const first = selectNextPost(state, 'علم');
   assert.equal(first.topic, 'علم');
-  assert.equal(state.recentContentIds.includes(first.id), true);
+  assert.equal(state.publishedContentIds.includes(first.id), true);
+
   const second = selectNextPost(state, 'تاریخ');
   assert.equal(second.topic, 'تاریخ');
   assert.notEqual(second.id, first.id);
-  const islamic = selectNextPost(state, 'اسلامي معلومات');
-  assert.equal(islamic.topic, 'اسلامي معلومات');
+
+  const seen = new Set([first.id, second.id]);
+  let next;
+  while ((next = selectNextPost(state, 'علم'))) {
+    assert.equal(seen.has(next.id), false, 'a published post must never be selected again');
+    seen.add(next.id);
+  }
+
+  assert.equal(seen.size, CONTENT_COUNT);
+  assert.equal(state.publishedContentIds.length, CONTENT_COUNT);
+  assert.equal(selectNextPost(state, 'تاریخ'), null);
   assert.ok(CONTENT_COUNT >= 30);
 });
