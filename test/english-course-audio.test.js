@@ -2,10 +2,16 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
 const {
+  DEFAULT_VOICE,
+  DEFAULT_LANG,
+  DEFAULT_RATE,
   buildLessonSpeechChunks,
   createLessonAudioParts,
-  requestGoogleTtsAudio,
+  requestEdgeTtsAudio,
 } = require('../lib/english-course-audio');
 
 test('builds English-only speech chunks and removes mixed Pashto explanations', () => {
@@ -47,6 +53,37 @@ test('uses examples and dialogue when a review lesson has no vocabulary list', (
   assert.ok(chunks.every((part) => part.text.length <= 180));
 });
 
+test('uses the pleasant male Microsoft Edge voice with a learner-friendly pace', async () => {
+  let configuration = null;
+  let outputPath = null;
+  const expected = Buffer.alloc(256, 7);
+
+  class FakeEdgeTTS {
+    constructor(options) {
+      configuration = options;
+    }
+
+    async ttsPromise(text, filePath) {
+      assert.equal(text, 'Hello there.');
+      outputPath = filePath;
+      await fs.writeFile(filePath, expected);
+    }
+  }
+
+  const actual = await requestEdgeTtsAudio('Hello there.', {
+    EdgeTTS: FakeEdgeTTS,
+    timeoutMs: 1000,
+  });
+
+  assert.equal(actual.toString('hex'), expected.toString('hex'));
+  assert.equal(configuration.voice, DEFAULT_VOICE);
+  assert.equal(configuration.lang, DEFAULT_LANG);
+  assert.equal(configuration.rate, DEFAULT_RATE);
+  assert.equal(configuration.outputFormat, 'audio-24khz-48kbitrate-mono-mp3');
+  assert.ok(configuration.timeout >= 5000);
+  await assert.rejects(fs.access(path.dirname(outputPath)));
+});
+
 test('creates a separate audio part for each lesson chunk without mixing days', async () => {
   const requested = [];
   const parts = await createLessonAudioParts({
@@ -63,34 +100,13 @@ test('creates a separate audio part for each lesson chunk without mixing days', 
 
   assert.ok(parts.length >= 2);
   assert.equal(requested.length, parts.length);
-  assert.ok(requested.every((item) => item.options.lang === 'en'));
-  assert.ok(requested.every((item) => item.options.slow === true));
+  assert.ok(requested.every((item) => item.options.voice === DEFAULT_VOICE));
+  assert.ok(requested.every((item) => item.options.lang === DEFAULT_LANG));
+  assert.ok(requested.every((item) => item.options.rate === DEFAULT_RATE));
   assert.ok(parts.every((part) => Buffer.isBuffer(part.buffer) && part.buffer[0] === 2));
 });
 
-test('parses Google speech response as JSON without evaluating returned text', async () => {
-  const expected = Buffer.alloc(256, 7);
-  const base64 = expected.toString('base64');
-  const nested = JSON.stringify([base64]);
-  const envelope = [['wrb.fr', 'jQ1olc', nested]];
-  let requestUrl = '';
-  let requestBody = '';
-
-  const actual = await requestGoogleTtsAudio('Hello there.', {
-    host: 'https://translate.google.com',
-    timeoutMs: 1000,
-    fetchImpl: async (url, init) => {
-      requestUrl = url;
-      requestBody = init.body;
-      return {
-        ok: true,
-        status: 200,
-        text: async () => ")]}'\n" + JSON.stringify(envelope),
-      };
-    },
-  });
-
-  assert.equal(actual.toString('hex'), expected.toString('hex'));
-  assert.match(requestUrl, /translate\.google\.com\/_\/TranslateWebserverUi\/data\/batchexecute/u);
-  assert.match(requestBody, /^f\.req=/u);
+test('does not create audio when a lesson has no English text', async () => {
+  const parts = await createLessonAudioParts({ vocab: [], examples: [], dialogue: [] });
+  assert.deepEqual(parts, []);
 });
