@@ -65,28 +65,15 @@
 
 ## د انګلیسي کورس غږیزه برخه
 
-**غږ جوړول او WhatsApp ته د غږ پورته کول اوس موقتي بند دي.** دا بندیز د `ENGLISH_COURSE_AUDIO_PAUSED` له لارې فعال دی او ډیفالټ ارزښت یې `true` دی؛ له دې امله د پخوانیو `ENGLISH_COURSE_AUDIO_ENABLED` یا ElevenLabs تنظیماتو باوجود غږ نه جوړېږي او نه لېږل کېږي. لیکلي درسونه او د کورس نورې برخې عادي کار کوي. د بېرته فعالولو پر وخت دا ارزښت په محرم فایل یا Environment Variables کې `false` کړئ.
+د انګلیسي درسونو غږ د Microsoft Edge د آنلاین Read Aloud خدمت له لارې د `node-edge-tts` کتابتون په مرسته جوړېږي. دا د ElevenLabs بدیل دی؛ د ElevenLabs API key او کریډیټ نه غواړي.
 
-## د ElevenLabs غږیز درس لپاره محرم فایل
+- **غږ:** `en-US-GuyNeural` — د انګلیسي نارینه غږ.
+- **سرعت:** `-5%` — د زده‌کوونکو لپاره لږ ورو او روښانه تلفظ.
+- **بڼه:** MP3، چې WhatsApp ته د عادي غږیز فایل په توګه لېږل کېږي.
+- **فعال حالت:** غږیز درسونه په ډیفالټ فعال دي. د بندولو لپاره `ENGLISH_COURSE_AUDIO_ENABLED=false` وټاکئ.
+- **اختیاري بدلونونه:** `ENGLISH_COURSE_TTS_VOICE` د غږ نوم او `ENGLISH_COURSE_TTS_RATE` د سرعت د بدلولو لپاره کارېږي؛ که نه وي، پورته ډیفالټ ارزښتونه کارول کېږي.
 
-که د SillyDev په Environment Variables/Secrets برخه کې خپل‌سری متغیر نه شې زیاتولای، د پروژې د اصلي فولډر په Files برخه کې دا فایل جوړ یا سم کړه:
-
-`private-runtime-config.json`
-
-د فایل په موجود منځپانګه کې دا څلور کرښې ورزیاتې کړه؛ که فایل له مخکې شته، نور تنظیمات مه حذفوه:
-
-```json
-{
-  "ELEVENLABS_API_KEY": "دلته-خپل-پټ-API-Key",
-  "ELEVENLABS_VOICE_ID": "zHPHAoaYvoRg7Pu3lOMr",
-  "ELEVENLABS_TTS_ENABLED": "true",
-  "ELEVENLABS_TTS_MODEL": "eleven_v3"
-}
-```
-
-که په فایل کې نور تنظیمات هم وي، ټول باید د یوه JSON object دننه وي او د هرې کرښې ترمنځ کامه سمه وي. د `private-runtime-config.example.json` نمونه فایل د مثال لپاره دی؛ حقیقي API Key پکې مه لیکه. اصلي `private-runtime-config.json` په `.gitignore` کې شامل دی او باید GitHub ته پورته نه شي. د فایل له خوندي کولو وروسته SillyDev سرور Restart کړه.
-
-د دې فایل لاره د Environment Variables بدیل دی: که په دواړو ځایونو کې یو ارزښت موجود وي، غیرتش Environment Variable لومړیتوب لري. که دواړه تش وي، د محرم فایل ارزښت کارول کېږي. د ElevenLabs غږیز خدمت د ټاکلو لپاره `ELEVENLABS_TTS_ENABLED` کارېږي؛ خو تر هغې چې `ENGLISH_COURSE_AUDIO_PAUSED` په څرګنده `false` نه وي، د کورس غږیزه برخه نه فعاله کېږي.
+غږ د درس د خپرېدو یا د «درس» امر پر مهال جوړېږي او د بوټ په حافظه کې د هماغې دورې لپاره ساتل کېږي. د دې لپاره ElevenLabs ته هېڅ غوښتنه نه لېږل کېږي. د Microsoft آنلاین خدمت کارولو لپاره انټرنېټ ته اړتیا ده؛ د خدمت موجودیت او د لاسرسي شرایط د Microsoft له خوا بدلېدای شي.
 
 ## د محرمو تنظیماتو مهمه یادونه
 
